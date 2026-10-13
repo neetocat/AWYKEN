@@ -1,14 +1,233 @@
 @page "/"
-@using AWYKEN.Shared.Services
-@inject IFormFactor FormFactor
 
-<PageTitle>Home</PageTitle>
+@* AWYKEN dashboard page.
+   This page intentionally uses sample values so the UI can be developed before the backend is connected. *@
 
-<h1>Hello, world!</h1>
+<PageTitle>AWYKEN • Dashboard</PageTitle>
 
-Welcome to your new app running on <em>@factor</em> using <em>@platform</em>.
+
+<div class="app-shell">
+    <main class="dashboard-scroll">
+        <div class="dashboard-content">
+            <header class="topbar">
+                <div class="brand-mark" aria-label="AWYKEN logo">W</div>
+                <div class="greeting-copy">
+                    <p class="greeting">Good morning, @User.FirstName</p>
+                    <p class="muted">@DateTime.Now.ToString("dddd, MMMM d")</p>
+                </div>
+
+                @* BACKEND TODO: replace this click handler with navigation to the notifications/alerts page. *@
+                <button class="icon-button" aria-label="Notifications"
+                        @onclick='() => ShowMessage("Notifications", "You are all caught up.")'>
+                    ♧
+                </button>
+            </header>
+
+            <section class="day-row">
+                <div class="day-copy">
+                    <p class="eyebrow">YOUR DAY</p>
+                    <h1>You're all set for a focused day.</h1>
+                </div>
+                <div class="weather">
+                    @* BACKEND TODO: replace Weather values with the result from your weather API/service. *@
+                    <strong>@Weather.Temperature°</strong>
+                    <span>@Weather.Condition</span>
+                </div>
+            </section>
+
+            <section class="hero-card">
+                <div class="hero-top-row">
+                    <span class="next-badge">NEXT CLASS</span>
+                    @* BACKEND TODO: calculate StartsIn from the next class's actual start DateTime. *@
+                    <span class="hero-muted">Starts in @NextClass.StartsIn</span>
+                </div>
+
+                @* BACKEND TODO: populate NextClass from the signed-in user's timetable. *@
+                <p class="course-code">@NextClass.CourseCode</p>
+                <h2>@NextClass.Title</h2>
+
+                <div class="class-details">
+                    <p><span aria-hidden="true">◷</span> <span>@NextClass.StartTime</span></p>
+                    <p><span aria-hidden="true">⌖</span> <span>@NextClass.Location</span></p>
+                </div>
+
+                <div class="hero-divider"></div>
+
+                <div class="preparation-row">
+                    <div class="preparation-column">
+                        <span class="preparation-label">PREPARE BY</span>
+                        <strong>@NextClass.PrepareBy <small>AM</small></strong>
+                    </div>
+                    <div class="preparation-divider"></div>
+                    <div class="preparation-column">
+                        <span class="preparation-label">LEAVE BY</span>
+                        <strong>@NextClass.LeaveBy <small>AM</small></strong>
+                    </div>
+                </div>
+
+                @* TODO: replace this placeholder handler with navigation to a commute details page.
+                   Example: use NavigationManager.NavigateTo("/commute") once that page exists. *@
+                <button class="commute-button"
+                        @onclick='() => ShowMessage("Commute plan", "Commute planning can be connected here.")'>
+                    <span aria-hidden="true">♧</span> &nbsp; View commute plan
+                </button>
+            </section>
+
+            <section class="schedule-section">
+                <div class="schedule-heading">
+                    <div>
+                        <h2>Today's schedule</h2>
+                        @* BACKEND TODO: this count will automatically reflect the schedule list returned by the backend. *@
+                        <p class="muted">@Schedule.Count classes</p>
+                    </div>
+
+                    @* TODO: replace this handler with a link/navigation to the full schedule page, e.g. /schedule. *@
+                    <button class="text-button"
+                            @onclick='() => ShowMessage("Schedule", "Your full schedule can be added here.")'>
+                        See all
+                    </button>
+                </div>
+
+                <div class="schedule-list">
+                    @foreach (var item in Schedule)
+                    {
+                        <article class="schedule-card" @key="item.Id">
+                            <div class="time-column">
+                                <strong>@item.Time</strong>
+                                <span>@item.Period</span>
+                            </div>
+                            <div class="color-bar" style="@($"background-color: {item.ColorCode}")"></div>
+                            <div class="class-info">
+                                <h3>@item.Title</h3>
+                                <p>@item.Subtitle</p>
+                            </div>
+
+                            @if (item.Type == "online")
+                            {
+                                @* TODO: wire this button to the actual meeting URL from the backend.
+                                   For external URLs, use NavigationManager or a MAUI-aware launcher as appropriate. *@
+                                <button class="join-button" @onclick="JoinMeeting">Join</button>
+                            }
+                            else
+                            {
+                                @* TODO: navigate to a class details page, e.g. /schedule/@item.Id. *@
+                                <button class="arrow-button" aria-label="@($"View {item.Title}")"
+                                        @onclick='() => ShowMessage(item.Title, item.Subtitle)'>›</button>
+                            }
+                        </article>
+                    }
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+        @* TODO: change these placeholder click handlers to NavigationManager.NavigateTo(...) when pages exist.
+           Suggested routes: /, /schedule, /add, /alerts, /profile. *@
+        <button class='@NavClass("Home")' @onclick='() => SelectTab("Home")'>
+            <span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-label">Home</span>
+        </button>
+        <button class='@NavClass("Schedule")' @onclick='() => SelectTab("Schedule")'>
+            <span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Schedule</span>
+        </button>
+        <button class="add-nav-item" @onclick='() => ShowMessage("Add item", "Add a class or task here.")'>
+            <span class="add-button">+</span><span class="nav-label">Add</span>
+        </button>
+        <button class='@NavClass("Alerts")' @onclick='() => SelectTab("Alerts")'>
+            <span class="nav-icon" aria-hidden="true">♧</span><span class="nav-label">Alerts</span>
+        </button>
+        <button class='@NavClass("Profile")' @onclick='() => SelectTab("Profile")'>
+            <span class="nav-icon" aria-hidden="true">♙</span><span class="nav-label">Profile</span>
+        </button>
+    </nav>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <div class="toast-backdrop" @onclick="DismissMessage">
+        <section class="message-dialog" role="dialog" aria-modal="true" aria-label="@MessageTitle"
+                 @onclick:stopPropagation="true">
+            <h2>@MessageTitle</h2>
+            <p>@Message</p>
+            <button class="dialog-button" @onclick="DismissMessage">Got it</button>
+        </section>
+    </div>
+}
 
 @code {
-    private string factor => FormFactor.GetFormFactor();
-    private string platform => FormFactor.GetPlatform();
+    private string ActiveTab { get; set; } = "Home";
+    private string? MessageTitle { get; set; }
+    private string? Message { get; set; }
+
+    // SAMPLE / CONSTANT VALUES:
+    // These records are mock data for the first UI pass. Replace them with backend/API/service data later.
+    // Keep the property names (FirstName, Temperature, CourseCode, etc.) or update the markup with your model.
+    private readonly UserInfo User = new("Mika");
+    private readonly WeatherInfo Weather = new(29, "Light rain");
+    private readonly NextClassInfo NextClass = new(
+        "MATH 1102",
+        "Mathematics in the Modern World",
+        "7:30 AM",
+        "Room 204 • Main Building",
+        "6:15",
+        "6:42",
+        "1h 24m");
+
+    // SAMPLE / CONSTANT VALUES:
+    // Replace this hard-coded list with the current user's schedule from your backend.
+    // Keep the stable Id value unique for each class.
+    private readonly List<ScheduleItem> Schedule =
+    [
+        new("1", "10:00", "AM", "Understanding the Self",
+            "Room 302 • Prof. Villanueva", "in-person", "#3B82F6", null),
+        new("2", "1:00", "PM", "Data Structures",
+            "Online • Google Meet", "online", "#A855F7", "https://meet.google.com/")
+    ];
+
+    private string NavClass(string tab) =>
+        ActiveTab == tab ? "nav-item nav-active" : "nav-item";
+
+    private void SelectTab(string tab)
+    {
+        ActiveTab = tab;
+
+        // TODO: Replace these temporary dialogs with real route navigation once each page is implemented.
+        if (tab == "Home")
+            ShowMessage("Home", "You are on Home.");
+        else if (tab == "Schedule")
+            ShowMessage("Schedule", "Your schedule will appear here.");
+        else if (tab == "Alerts")
+            ShowMessage("Alerts", "No new alerts.");
+        else if (tab == "Profile")
+            ShowMessage("Profile", "Profile settings will appear here.");
+    }
+
+    private void ShowMessage(string title, string message)
+    {
+        MessageTitle = title;
+        Message = message;
+    }
+
+    private void DismissMessage()
+    {
+        MessageTitle = null;
+        Message = null;
+    }
+
+    // TODO: connect to ScheduleItem.Link when the real meeting URLs are available.
+    // This placeholder deliberately avoids calling a MAUI-only API from AWYKEN.Shared.
+    private void JoinMeeting()
+    {
+        ShowMessage("Google Meet", "Connect this button to the meeting URL when the backend is ready.");
+    }
+
+    // Simple view models for mock data. Replace with shared DTOs/models when your backend is ready.
+    private sealed record UserInfo(string FirstName);
+    private sealed record WeatherInfo(int Temperature, string Condition);
+    private sealed record NextClassInfo(
+        string CourseCode, string Title, string StartTime, string Location,
+        string PrepareBy, string LeaveBy, string StartsIn);
+    private sealed record ScheduleItem(
+        string Id, string Time, string Period, string Title, string Subtitle,
+        string Type, string ColorCode, string? Link);
 }

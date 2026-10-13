@@ -1,0 +1,476 @@
+/* AWYKEN dashboard — responsive styles for .NET MAUI Blazor Hybrid */
+:root {
+    color-scheme: light;
+    --ink: #0c1226;
+    --muted: #9299a8;
+    --page: #f5f7fa;
+    --line: #eceef2;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+body {
+    overflow: hidden;
+}
+
+button {
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.app-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    background: var(--page);
+}
+
+.dashboard-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.dashboard-content {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: max(16px, env(safe-area-inset-top)) 20px 28px;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.brand-mark {
+    display: grid;
+    flex: 0 0 46px;
+    width: 46px;
+    height: 46px;
+    place-items: center;
+    border-radius: 15px;
+    background: var(--ink);
+    color: white;
+    font-size: 25px;
+    font-weight: 800;
+}
+
+.greeting-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.greeting, .muted, .eyebrow, .course-code, .hero-muted,
+.preparation-label, .class-details p, .class-info p {
+    margin: 0;
+}
+
+.greeting {
+    font-size: 17px;
+    font-weight: 800;
+}
+
+.muted {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.icon-button {
+    display: grid;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 50%;
+    background: white;
+    color: var(--ink);
+    font-size: 22px;
+}
+
+.day-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.day-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.eyebrow {
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+}
+
+.day-copy h1 {
+    margin: 0;
+    font-size: clamp(24px, 6vw, 30px);
+    font-weight: 900;
+    line-height: 1.22;
+    letter-spacing: -.6px;
+}
+
+.weather {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    margin-top: 16px;
+}
+
+.weather strong {
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.weather span {
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.hero-card {
+    margin-bottom: 28px;
+    padding: 22px;
+    border-radius: 28px;
+    background: var(--ink);
+    color: white;
+}
+
+.hero-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.next-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: #e5f5ef;
+    color: #0c6b4b;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.hero-muted {
+    color: #a7adbc;
+    font-size: 11px;
+    text-align: right;
+}
+
+.course-code {
+    margin-bottom: 6px;
+    color: #a7adbc;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+}
+
+.hero-card h2 {
+    margin: 0 0 18px;
+    font-size: 23px;
+    font-weight: 800;
+    line-height: 1.26;
+}
+
+.class-details {
+    display: grid;
+    gap: 9px;
+}
+
+.class-details p {
+    display: flex;
+    gap: 8px;
+    color: #d1d5db;
+    font-size: 12px;
+}
+
+.hero-divider {
+    height: 1px;
+    margin: 20px 0;
+    background: #303648;
+}
+
+.preparation-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 22px;
+}
+
+.preparation-column {
+    flex: 1;
+    min-width: 0;
+}
+
+.preparation-label {
+    display: block;
+    margin-bottom: 8px;
+    color: #a7adbc;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.preparation-column strong {
+    font-size: 26px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.preparation-column small {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.preparation-divider {
+    width: 1px;
+    height: 42px;
+    margin: 0 12px;
+    background: #303648;
+}
+
+.commute-button {
+    width: 100%;
+    padding: 14px;
+    border: 0;
+    border-radius: 15px;
+    background: white;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.schedule-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.schedule-heading h2 {
+    margin: 0 0 3px;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.text-button {
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.schedule-list {
+    display: grid;
+    gap: 10px;
+}
+
+.schedule-card {
+    display: flex;
+    align-items: center;
+    min-height: 78px;
+    gap: 0;
+    padding: 13px;
+    border: 1px solid var(--line);
+    border-radius: 17px;
+    background: white;
+}
+
+.time-column {
+    display: flex;
+    flex: 0 0 52px;
+    flex-direction: column;
+    align-items: center;
+}
+
+.time-column strong {
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.time-column span {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.color-bar {
+    flex: 0 0 4px;
+    height: 38px;
+    margin: 0 12px;
+    border-radius: 4px;
+}
+
+.class-info {
+    flex: 1;
+    min-width: 0;
+    padding-right: 6px;
+}
+
+.class-info h3 {
+    margin: 0 0 5px;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.class-info p {
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+.join-button {
+    padding: 7px 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: white;
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.arrow-button {
+    flex: 0 0 30px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 26px;
+}
+
+.bottom-nav {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-around;
+    padding: 10px 6px max(8px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: white;
+}
+
+.nav-item, .add-nav-item {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+}
+
+.nav-icon {
+    height: 25px;
+    font-size: 22px;
+    line-height: 25px;
+}
+
+.nav-label {
+    font-size: 9px;
+}
+
+.nav-active {
+    color: var(--ink);
+    font-weight: 800;
+}
+
+.add-nav-item {
+    gap: 2px;
+    margin-top: -20px;
+}
+
+.add-button {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--ink);
+    color: white;
+    font-size: 30px;
+    line-height: 1;
+}
+
+.toast-backdrop {
+    position: fixed;
+    z-index: 10;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgb(12 18 38 / 40%);
+}
+
+.message-dialog {
+    width: min(100%, 360px);
+    padding: 24px;
+    border-radius: 22px;
+    background: white;
+    box-shadow: 0 20px 60px rgb(0 0 0 / 20%);
+}
+
+.message-dialog h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+}
+
+.message-dialog p {
+    margin: 0 0 20px;
+    color: #626b7b;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.dialog-button {
+    width: 100%;
+    padding: 12px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--ink);
+    color: white;
+    font-weight: 800;
+}
+
+@media (min-width: 600px) {
+    .dashboard-content {
+        padding-right: 28px;
+        padding-left: 28px;
+    }
+}
