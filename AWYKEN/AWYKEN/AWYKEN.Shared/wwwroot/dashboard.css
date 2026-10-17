@@ -66,19 +66,24 @@ button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparen
     padding: max(24px, env(safe-area-inset-top)) 20px 28px;
 }
 
-.topbar { display:flex; align-items:center; gap:12px; margin-bottom:28px; }
+.topbar { display:flex; align-items:center; gap:12px; margin-bottom:24px; padding-bottom:14px; border-bottom:1px solid var(--line); }
 .brand-mark {
-    display:grid; flex:0 0 46px; width:46px; height:46px; place-items:center;
-    border-radius:15px; background:var(--navy); color:white; font-size:25px; font-weight:800;
+    display:flex; flex:0 0 35px; width:35px; height:35px; align-items:flex-end; justify-content:center; gap:3px; padding:9px;
+    border-radius:11px; background:var(--navy); color:white;
 }
+.brand-mark span { width:4px; border-radius:3px; background:white; transform:skew(-12deg); }
+.brand-mark span:nth-child(1) { height:9px; }
+.brand-mark span:nth-child(2) { height:15px; }
+.brand-mark span:nth-child(3) { height:12px; }
 .greeting-copy { flex:1; min-width:0; }
 .greeting, .muted, .eyebrow, .course-code, .hero-muted, .preparation-label, .class-details p, .class-info p { margin:0; }
 .greeting { font-size:17px; font-weight:800; }
 .muted { margin-top:4px; color:var(--muted); font-size:12px; }
 .icon-button {
-    display:grid; flex:0 0 40px; width:40px; height:40px; place-items:center;
-    border:1px solid #e5e7eb; border-radius:13px; background:white; color:var(--ink); font-size:22px;
+    display:grid; flex:0 0 35px; width:35px; height:35px; place-items:center;
+    border:1px solid #e5e7eb; border-radius:10px; background:white; color:var(--ink); font-size:22px;
 }
+.icon-button svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
 .day-row { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:22px; }
 .day-copy { flex:1; min-width:0; }
 .eyebrow { margin-bottom:8px; color:#667085; font-size:10px; font-weight:800; letter-spacing:2px; }
@@ -121,10 +126,11 @@ button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparen
 .bottom-nav { display:flex; flex:0 0 auto; align-items:center; justify-content:space-around; padding:10px 6px max(8px, env(safe-area-inset-bottom)); border-top:1px solid var(--line); background:white; }
 .nav-item, .add-nav-item { display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-width:0; padding:0; border:0; background:transparent; color:var(--muted); }
 .nav-icon { height:25px; font-size:22px; line-height:25px; }
+.nav-icon svg { width:21px; height:21px; vertical-align:middle; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
 .nav-label { font-size:9px; }
 .nav-active { color:var(--navy); font-weight:800; }
 .add-nav-item { gap:2px; margin-top:-20px; }
-.add-button { display:grid; width:48px; height:48px; place-items:center; border:4px solid var(--page); border-radius:50%; background:var(--navy); color:white; font-size:30px; line-height:1; }
+.add-button { display:grid; width:40px; height:40px; place-items:center; border:3px solid white; border-radius:50%; background:var(--navy); color:white; font-size:26px; line-height:1; box-shadow:0 1px 4px rgb(10 20 49 / 15%); }
 
 .toast-backdrop { position:fixed; z-index:100; inset:0; display:grid; place-items:center; padding:24px; background:rgb(12 18 38 / 40%); }
 .message-dialog { width:min(100%, 360px); padding:24px; border-radius:22px; background:white; box-shadow:0 20px 60px rgb(0 0 0 / 20%); }

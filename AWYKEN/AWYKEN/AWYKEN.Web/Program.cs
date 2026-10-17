@@ -10,6 +10,7 @@ builder.Services.AddRazorComponents()
 
 // Add device-specific services used by the AWYKEN.Shared project
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
+builder.Services.AddScoped<AWYKEN.Shared.Services.DashboardState>();
 
 var app = builder.Build();
 

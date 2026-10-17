@@ -18,6 +18,7 @@ namespace AWYKEN
 
             // Add device-specific services used by the AWYKEN.Shared project
             builder.Services.AddSingleton<IFormFactor, FormFactor>();
+            builder.Services.AddScoped<AWYKEN.Shared.Services.DashboardState>();
 
             builder.Services.AddMauiBlazorWebView();
 

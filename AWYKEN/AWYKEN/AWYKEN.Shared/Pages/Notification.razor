@@ -1,0 +1,117 @@
+@page "/notification"
+@inject AWYKEN.Shared.Services.DashboardState State
+@inject NavigationManager Navigation
+
+<PageTitle>AWYKEN • Notifications</PageTitle>
+
+<div class="notification-app-shell">
+    <main class="notification-scroll">
+        <div class="notification-page">
+            <header class="notification-header">
+                <div class="notification-brand" role="img" aria-label="AWYKEN logo"><span></span><span></span><span></span></div>
+                <div class="notification-heading">
+                    <h1>Notifications</h1>
+                    <p>@State.UnreadNotificationCount new today</p>
+                </div>
+                <button class="mark-all-read" @onclick="MarkAllRead" disabled="@(State.UnreadNotificationCount == 0)">Mark all read</button>
+            </header>
+
+            @foreach (var group in new[] { "Today", "Yesterday" })
+            {
+                var notifications = State.Notifications.Where(item => item.Group == group).ToList();
+                if (notifications.Count > 0)
+                {
+                    <section class="notification-group" aria-label="@group notifications">
+                        <h2 class="notification-group-title">@group</h2>
+                        <div class="notification-list">
+                            @foreach (var item in notifications)
+                            {
+                                <article class="notification-card @(item.IsUnread ? "unread" : "")" @key="item.Id">
+                                    <div class="notification-kind @item.Kind" aria-hidden="true">
+                                        @if (item.Kind == "clock") { <span>◷</span> }
+                                        else if (item.Kind == "route") { <span>⌁</span> }
+                                        else if (item.Kind == "online") { <span>▣</span> }
+                                        else { <span>✓</span> }
+                                    </div>
+                                    <div class="notification-content">
+                                        <div class="notification-title-row">
+                                            <h3>@item.Title</h3>
+                                            <time>@item.Time</time>
+                                        </div>
+                                        <p>@item.Message</p>
+                                        @if (item.ActionLabel is not null || item.Id == "ready")
+                                        {
+                                            <div class="notification-actions">
+                                                @if (item.ActionLabel is not null)
+                                                {
+                                                    <button class="notification-primary-action" @onclick="() => HandleAction(item)">@item.ActionLabel</button>
+                                                }
+                                                @if (item.Id == "ready")
+                                                {
+                                                    <button class="notification-secondary-action" @onclick="() => Later(item)">Later</button>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    </section>
+                }
+            }
+        </div>
+    </main>
+
+    <nav class="notification-bottom-nav" aria-label="Main navigation">
+        <button @onclick='() => Navigation.NavigateTo("/")'><span class="notification-nav-icon" aria-hidden="true">⌂</span><span>Home</span></button>
+        <button @onclick='() => Navigation.NavigateTo("/schedule")'><span class="notification-nav-icon calendar" aria-hidden="true">▦</span><span>Schedule</span></button>
+        <button class="add-nav" aria-label="Add" @onclick='() => ShowMessage("Add item", "Add a class or task here.")'><span class="add-nav-circle">+</span><span>Add</span></button>
+        <button class="current" aria-current="page"><span class="notification-nav-icon bell" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></span><span>Alerts</span></button>
+        <button @onclick='() => ShowMessage("Profile", "Profile settings will appear here.")'><span class="notification-nav-icon" aria-hidden="true">♙</span><span>Profile</span></button>
+    </nav>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <div class="notification-dialog-backdrop" @onclick="DismissMessage">
+        <section class="notification-dialog" role="dialog" aria-modal="true" aria-label="@MessageTitle" @onclick:stopPropagation="true">
+            <h2>@MessageTitle</h2>
+            <p>@Message</p>
+            <button @onclick="DismissMessage">Got it</button>
+        </section>
+    </div>
+}
+
+@code {
+    private string? MessageTitle;
+    private string? Message;
+
+    private void MarkAllRead() => State.MarkAllNotificationsRead();
+
+    private void HandleAction(AWYKEN.Shared.Services.AppNotification item)
+    {
+        item.IsUnread = false;
+        if (item.Id == "ready")
+            ShowMessage("Class checklist", "Pack your notes, calculator, and school ID.");
+        else if (item.Id == "meeting")
+            ShowMessage("Online class", "Your meeting is ready for Data Structures at 1:00 PM.");
+    }
+
+    private void Later(AWYKEN.Shared.Services.AppNotification item)
+    {
+        item.IsUnread = false;
+        ShowMessage("Reminder saved", "You can return to this reminder from your notifications.");
+    }
+
+    private void ShowMessage(string title, string message)
+    {
+        MessageTitle = title;
+        Message = message;
+    }
+
+    private void DismissMessage()
+    {
+        MessageTitle = null;
+        Message = null;
+    }
+}

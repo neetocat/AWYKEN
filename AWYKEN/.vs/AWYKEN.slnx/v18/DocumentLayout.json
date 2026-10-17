@@ -11,12 +11,12 @@
       "RelativeMoniker": "D:0:0:{D68AE328-3365-5212-601B-959EFEAC432C}|AWYKEN\\AWYKEN.Shared\\AWYKEN.Shared.csproj|solutionrelative:awyken\\awyken.shared\\pages\\home.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{69DECBA8-7ED5-5C91-0153-03FD61965710}|AWYKEN\\AWYKEN\\AWYKEN.csproj|c:\\users\\loisa\\onedrive\\documents\\github\\awyken\\awyken\\awyken\\awyken\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
-      "RelativeMoniker": "D:0:0:{69DECBA8-7ED5-5C91-0153-03FD61965710}|AWYKEN\\AWYKEN\\AWYKEN.csproj|solutionrelative:awyken\\awyken\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{69DECBA8-7ED5-5C91-0153-03FD61965710}|AWYKEN\\AWYKEN\\AWYKEN.csproj|c:\\users\\loisa\\onedrive\\documents\\github\\awyken\\awyken\\awyken\\awyken\\mauiprogram.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{69DECBA8-7ED5-5C91-0153-03FD61965710}|AWYKEN\\AWYKEN\\AWYKEN.csproj|solutionrelative:awyken\\awyken\\mauiprogram.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{69DECBA8-7ED5-5C91-0153-03FD61965710}|AWYKEN\\AWYKEN\\AWYKEN.csproj|c:\\users\\loisa\\onedrive\\documents\\github\\awyken\\awyken\\awyken\\awyken\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{69DECBA8-7ED5-5C91-0153-03FD61965710}|AWYKEN\\AWYKEN\\AWYKEN.csproj|solutionrelative:awyken\\awyken\\wwwroot\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{69DECBA8-7ED5-5C91-0153-03FD61965710}|AWYKEN\\AWYKEN\\AWYKEN.csproj|c:\\users\\loisa\\onedrive\\documents\\github\\awyken\\awyken\\awyken\\awyken\\components\\_imports.razor||{40D31677-CBC0-4297-A9EF-89D907823A98}",
@@ -34,7 +34,7 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "index.html",
               "DocumentMoniker": "C:\\Users\\loisa\\OneDrive\\Documents\\GitHub\\AWYKEN\\AWYKEN\\AWYKEN\\AWYKEN\\wwwroot\\index.html",
               "RelativeDocumentMoniker": "AWYKEN\\AWYKEN\\wwwroot\\index.html",
@@ -42,8 +42,7 @@
               "RelativeToolTip": "AWYKEN\\AWYKEN\\wwwroot\\index.html",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAABJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
-              "WhenOpened": "2026-10-13T12:22:59.807Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-10-13T12:22:59.807Z"
             },
             {
               "$type": "Document",
@@ -53,23 +52,22 @@
               "RelativeDocumentMoniker": "AWYKEN\\AWYKEN.Web\\Components\\App.razor",
               "ToolTip": "C:\\Users\\loisa\\OneDrive\\Documents\\GitHub\\AWYKEN\\AWYKEN\\AWYKEN\\AWYKEN.Web\\Components\\App.razor",
               "RelativeToolTip": "AWYKEN\\AWYKEN.Web\\Components\\App.razor",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAA5AAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAABJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
               "WhenOpened": "2026-10-13T12:18:49.366Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 2,
               "Title": "MauiProgram.cs",
               "DocumentMoniker": "C:\\Users\\loisa\\OneDrive\\Documents\\GitHub\\AWYKEN\\AWYKEN\\AWYKEN\\AWYKEN\\MauiProgram.cs",
               "RelativeDocumentMoniker": "AWYKEN\\AWYKEN\\MauiProgram.cs",
               "ToolTip": "C:\\Users\\loisa\\OneDrive\\Documents\\GitHub\\AWYKEN\\AWYKEN\\AWYKEN\\AWYKEN\\MauiProgram.cs",
               "RelativeToolTip": "AWYKEN\\AWYKEN\\MauiProgram.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAJAAAAAAAAAA==",
+              "ViewState": "AgIAABAAAAAAAAAAAAAQwAkAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-10-12T04:37:00.773Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-10-12T04:37:00.773Z"
             },
             {
               "$type": "Document",
@@ -81,8 +79,7 @@
               "RelativeToolTip": "AWYKEN\\AWYKEN\\Components\\_Imports.razor",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAUAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-10-12T04:24:25.411Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-10-12T04:24:25.411Z"
             },
             {
               "$type": "Document",
@@ -92,10 +89,9 @@
               "RelativeDocumentMoniker": "AWYKEN\\AWYKEN.Shared\\Pages\\Home.razor",
               "ToolTip": "C:\\Users\\loisa\\OneDrive\\Documents\\GitHub\\AWYKEN\\AWYKEN\\AWYKEN\\AWYKEN.Shared\\Pages\\Home.razor",
               "RelativeToolTip": "AWYKEN\\AWYKEN.Shared\\Pages\\Home.razor",
-              "ViewState": "AgIAAAYAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAAAAYAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
-              "WhenOpened": "2026-10-12T03:53:59.967Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-10-12T03:53:59.967Z"
             }
           ]
         }

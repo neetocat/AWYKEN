@@ -1,4 +1,6 @@
 @page "/"
+@inject AWYKEN.Shared.Services.DashboardState State
+@inject NavigationManager Navigation
 
 @* AWYKEN dashboard page.
    This page intentionally uses sample values so the UI can be developed before the backend is connected. *@
@@ -10,16 +12,14 @@
     <main class="dashboard-scroll">
         <div class="dashboard-content">
             <header class="topbar">
-                <div class="brand-mark" aria-label="AWYKEN logo">W</div>
+                <div class="brand-mark" role="img" aria-label="AWYKEN logo"><span></span><span></span><span></span></div>
                 <div class="greeting-copy">
-                    <p class="greeting">Good morning, @User.FirstName</p>
+                    <p class="greeting">Good morning, @State.User.FirstName</p>
                     <p class="muted">@DateTime.Now.ToString("dddd, MMMM d")</p>
                 </div>
 
-                @* BACKEND TODO: replace this click handler with navigation to the notifications/alerts page. *@
-                <button class="icon-button" aria-label="Notifications"
-                        @onclick='() => ShowMessage("Notifications", "You are all caught up.")'>
-                    ♧
+                <button class="icon-button" aria-label="Notifications" @onclick="OpenNotifications">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
                 </button>
             </header>
 
@@ -30,8 +30,8 @@
                 </div>
                 <div class="weather">
                     @* BACKEND TODO: replace Weather values with the result from your weather API/service. *@
-                    <strong>@Weather.Temperature°</strong>
-                    <span>@Weather.Condition</span>
+                    <strong>@State.Weather.Temperature°</strong>
+                    <span>@State.Weather.Condition</span>
                 </div>
             </section>
 
@@ -39,16 +39,16 @@
                 <div class="hero-top-row">
                     <span class="next-badge">NEXT CLASS</span>
                     @* BACKEND TODO: calculate StartsIn from the next class's actual start DateTime. *@
-                    <span class="hero-muted">Starts in @NextClass.StartsIn</span>
+                    <span class="hero-muted">Starts in @State.NextClass.StartsIn</span>
                 </div>
 
                 @* BACKEND TODO: populate NextClass from the signed-in user's timetable. *@
-                <p class="course-code">@NextClass.CourseCode</p>
-                <h2>@NextClass.Title</h2>
+                <p class="course-code">@State.NextClass.CourseCode</p>
+                <h2>@State.NextClass.Title</h2>
 
                 <div class="class-details">
-                    <p><span aria-hidden="true">◷</span> <span>@NextClass.StartTime</span></p>
-                    <p><span aria-hidden="true">⌖</span> <span>@NextClass.Location</span></p>
+                    <p><span aria-hidden="true">◷</span> <span>@State.NextClass.StartTime</span></p>
+                    <p><span aria-hidden="true">⌖</span> <span>@State.NextClass.Location</span></p>
                 </div>
 
                 <div class="hero-divider"></div>
@@ -56,12 +56,12 @@
                 <div class="preparation-row">
                     <div class="preparation-column">
                         <span class="preparation-label">PREPARE BY</span>
-                        <strong>@NextClass.PrepareBy <small>AM</small></strong>
+                        <strong>@State.NextClass.PrepareBy <small>AM</small></strong>
                     </div>
                     <div class="preparation-divider"></div>
                     <div class="preparation-column">
                         <span class="preparation-label">LEAVE BY</span>
-                        <strong>@NextClass.LeaveBy <small>AM</small></strong>
+                        <strong>@State.NextClass.LeaveBy <small>AM</small></strong>
                     </div>
                 </div>
 
@@ -78,18 +78,18 @@
                     <div>
                         <h2>Today's schedule</h2>
                         @* BACKEND TODO: this count will automatically reflect the schedule list returned by the backend. *@
-                        <p class="muted">@Schedule.Count classes</p>
+                        <p class="muted">@State.Schedule.Count classes</p>
                     </div>
 
                     @* TODO: replace this handler with a link/navigation to the full schedule page, e.g. /schedule. *@
                     <button class="text-button"
-                            @onclick='() => ShowMessage("Schedule", "Your full schedule can be added here.")'>
+                            @onclick="OpenSchedule">
                         See all
                     </button>
                 </div>
 
                 <div class="schedule-list">
-                    @foreach (var item in Schedule)
+                    @foreach (var item in State.Schedule)
                     {
                         <article class="schedule-card" @key="item.Id">
                             <div class="time-column">
@@ -122,19 +122,18 @@
     </main>
 
     <nav class="bottom-nav" aria-label="Main navigation">
-        @* TODO: change these placeholder click handlers to NavigationManager.NavigateTo(...) when pages exist.
-           Suggested routes: /, /schedule, /add, /alerts, /profile. *@
+        @* Home and Schedule are routed pages; the other tabs remain placeholders. *@
         <button class='@NavClass("Home")' @onclick='() => SelectTab("Home")'>
             <span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-label">Home</span>
         </button>
-        <button class='@NavClass("Schedule")' @onclick='() => SelectTab("Schedule")'>
+        <button class='@NavClass("Schedule")' @onclick="OpenSchedule">
             <span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Schedule</span>
         </button>
         <button class="add-nav-item" @onclick='() => ShowMessage("Add item", "Add a class or task here.")'>
             <span class="add-button">+</span><span class="nav-label">Add</span>
         </button>
-        <button class='@NavClass("Alerts")' @onclick='() => SelectTab("Alerts")'>
-            <span class="nav-icon" aria-hidden="true">♧</span><span class="nav-label">Alerts</span>
+        <button class='@NavClass("Alerts")' @onclick="OpenNotifications">
+            <span class="nav-icon alert-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></span><span class="nav-label">Alerts</span>
         </button>
         <button class='@NavClass("Profile")' @onclick='() => SelectTab("Profile")'>
             <span class="nav-icon" aria-hidden="true">♙</span><span class="nav-label">Profile</span>
@@ -159,31 +158,6 @@
     private string? MessageTitle { get; set; }
     private string? Message { get; set; }
 
-    // SAMPLE / CONSTANT VALUES:
-    // These records are mock data for the first UI pass. Replace them with backend/API/service data later.
-    // Keep the property names (FirstName, Temperature, CourseCode, etc.) or update the markup with your model.
-    private readonly UserInfo User = new("Mika");
-    private readonly WeatherInfo Weather = new(29, "Light rain");
-    private readonly NextClassInfo NextClass = new(
-        "MATH 1102",
-        "Mathematics in the Modern World",
-        "7:30 AM",
-        "Room 204 • Main Building",
-        "6:15",
-        "6:42",
-        "1h 24m");
-
-    // SAMPLE / CONSTANT VALUES:
-    // Replace this hard-coded list with the current user's schedule from your backend.
-    // Keep the stable Id value unique for each class.
-    private readonly List<ScheduleItem> Schedule =
-    [
-        new("1", "10:00", "AM", "Understanding the Self",
-            "Room 302 • Prof. Villanueva", "in-person", "#3B82F6", null),
-        new("2", "1:00", "PM", "Data Structures",
-            "Online • Google Meet", "online", "#A855F7", "https://meet.google.com/")
-    ];
-
     private string NavClass(string tab) =>
         ActiveTab == tab ? "nav-item nav-active" : "nav-item";
 
@@ -195,12 +169,15 @@
         if (tab == "Home")
             ShowMessage("Home", "You are on Home.");
         else if (tab == "Schedule")
-            ShowMessage("Schedule", "Your schedule will appear here.");
+            OpenSchedule();
         else if (tab == "Alerts")
-            ShowMessage("Alerts", "No new alerts.");
+            OpenNotifications();
         else if (tab == "Profile")
             ShowMessage("Profile", "Profile settings will appear here.");
     }
+
+    private void OpenSchedule() => Navigation.NavigateTo("/schedule");
+    private void OpenNotifications() => Navigation.NavigateTo("/notification");
 
     private void ShowMessage(string title, string message)
     {
@@ -221,13 +198,4 @@
         ShowMessage("Google Meet", "Connect this button to the meeting URL when the backend is ready.");
     }
 
-    // Simple view models for mock data. Replace with shared DTOs/models when your backend is ready.
-    private sealed record UserInfo(string FirstName);
-    private sealed record WeatherInfo(int Temperature, string Condition);
-    private sealed record NextClassInfo(
-        string CourseCode, string Title, string StartTime, string Location,
-        string PrepareBy, string LeaveBy, string StartsIn);
-    private sealed record ScheduleItem(
-        string Id, string Time, string Period, string Title, string Subtitle,
-        string Type, string ColorCode, string? Link);
 }
