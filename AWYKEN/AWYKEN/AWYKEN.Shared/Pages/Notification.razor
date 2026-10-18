@@ -65,7 +65,7 @@
     <nav class="notification-bottom-nav" aria-label="Main navigation">
         <button @onclick='() => Navigation.NavigateTo("/")'><span class="notification-nav-icon" aria-hidden="true">⌂</span><span>Home</span></button>
         <button @onclick='() => Navigation.NavigateTo("/schedule")'><span class="notification-nav-icon calendar" aria-hidden="true">▦</span><span>Schedule</span></button>
-        <button class="add-nav" aria-label="Add" @onclick='() => ShowMessage("Add item", "Add a class or task here.")'><span class="add-nav-circle">+</span><span>Add</span></button>
+        <button class="add-nav" aria-label="Add" @onclick='() => Navigation.NavigateTo("/schedule?add=true")'><span class="add-nav-circle">+</span><span>Add</span></button>
         <button class="current" aria-current="page"><span class="notification-nav-icon bell" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></span><span>Alerts</span></button>
         <button @onclick='() => ShowMessage("Profile", "Profile settings will appear here.")'><span class="notification-nav-icon" aria-hidden="true">♙</span><span>Profile</span></button>
     </nav>

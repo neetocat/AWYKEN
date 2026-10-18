@@ -129,7 +129,7 @@
         <button class='@NavClass("Schedule")' @onclick="OpenSchedule">
             <span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Schedule</span>
         </button>
-        <button class="add-nav-item" @onclick='() => ShowMessage("Add item", "Add a class or task here.")'>
+        <button class="add-nav-item" @onclick='() => Navigation.NavigateTo("/schedule?add=true")'>
             <span class="add-button">+</span><span class="nav-label">Add</span>
         </button>
         <button class='@NavClass("Alerts")' @onclick="OpenNotifications">
