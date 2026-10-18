@@ -1,4 +1,6 @@
 @page "/schedule"
+@using AWYKEN.Shared.Components
+@using AWYKEN.Shared.Models
 @inject AWYKEN.Shared.Services.DashboardState State
 @inject NavigationManager Navigation
 
@@ -162,56 +164,11 @@
 
 @if (ShowForm)
 {
-    <div class="class-form-backdrop">
-        <section class="class-form" role="dialog" aria-modal="true"
-                 aria-label="@FormTitle">
-
-            <h2>@FormTitle</h2>
-            <p>Enter your class information below.</p>
-
-            @if (!string.IsNullOrWhiteSpace(FormError))
-            {
-                <p class="class-form-error">@FormError</p>
-            }
-
-            <label for="courseCode">Course Code</label>
-            <input id="courseCode" @bind="Draft.CourseCode"
-                   placeholder="e.g. CS 2203" />
-
-            <label for="courseTitle">Course Name</label>
-            <input id="courseTitle" @bind="Draft.Title"
-                   placeholder="e.g. Data Structures" />
-
-            <label for="startTime">Start Time</label>
-            <input id="startTime" type="time"
-                   value="@Draft.StartTime"
-                   @onchange="e => Draft.StartTime = e.Value?.ToString() ?? string.Empty" />
-
-            <label for="endTime">End Time</label>
-            <input id="endTime" type="time"
-                   value="@Draft.EndTime"
-                   @onchange="e => Draft.EndTime = e.Value?.ToString() ?? string.Empty" />
-
-            <label for="classLocation">Room / Location</label>
-            <input id="classLocation" @bind="Draft.Location"
-                   placeholder="e.g. Room 204 or Google Meet" />
-
-            <label for="instructor">Instructor</label>
-            <input id="instructor" @bind="Draft.Instructor"
-                   placeholder="e.g. Juan Dela Cruz" />
-
-            <label for="classMode">Class Mode</label>
-            <select id="classMode" @bind="Draft.Mode">
-                <option value="Face-to-face">Face-to-face</option>
-                <option value="Online">Online</option>
-            </select>
-
-            <div class="class-form-actions">
-                <button type="button" @onclick="SaveClass">Save Class</button>
-                <button type="button" @onclick="CloseForm">Cancel</button>
-            </div>
-        </section>
-    </div>
+    <ClassForm Draft="Draft"
+               FormTitle="@FormTitle"
+               Error="@FormError"
+               OnSave="SaveClass"
+               OnCancel="CloseForm" />
 }
 
 @if (!string.IsNullOrWhiteSpace(Message))
@@ -231,80 +188,6 @@
 }
 
 <style>
-    .class-form-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 1000;
-        background: rgba(0, 0, 0, 0.55);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 16px;
-        overflow-y: auto;
-    }
-
-    .class-form {
-        background: white;
-        color: #222;
-        width: 100%;
-        max-width: 460px;
-        max-height: 90vh;
-        overflow-y: auto;
-        padding: 24px;
-        border-radius: 16px;
-        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.2);
-    }
-
-        .class-form h2 {
-            margin-top: 0;
-            margin-bottom: 6px;
-        }
-
-        .class-form label {
-            display: block;
-            margin-top: 12px;
-            margin-bottom: 5px;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .class-form input,
-        .class-form select {
-            display: block;
-            width: 100%;
-            box-sizing: border-box;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font: inherit;
-            background: white;
-            color: #222;
-        }
-
-    .class-form-actions {
-        display: flex;
-        gap: 10px;
-        margin-top: 20px;
-    }
-
-        .class-form-actions button,
-        .class-actions button {
-            padding: 9px 14px;
-            border: 0;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-            .class-form-actions button:first-child {
-                background: #5268ca;
-                color: white;
-            }
-
-            .class-form-actions button:last-child {
-                background: #e8e8e8;
-                color: #222;
-            }
-
     .class-actions {
         display: flex;
         gap: 8px;
@@ -312,19 +195,20 @@
     }
 
         .class-actions button {
+            padding: 9px 14px;
+            border: 0;
+            border-radius: 8px;
+            cursor: pointer;
             background: #eeeeee;
             color: #222;
         }
-
-    .class-form-error {
-        padding: 10px;
-        background: #ffe5e5;
-        color: #a00000;
-        border-radius: 8px;
-    }
 </style>
 
 @code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "add")]
+    public bool? AddRequested { get; set; }
+
     private readonly DateOnly WeekStart =
         StartOfWeek(DateOnly.FromDateTime(DateTime.Today));
 
@@ -335,15 +219,15 @@
     private string FormTitle = "Add Class";
     private string? EditingId;
     private string? FormError;
+    private bool handledAddRequest;
 
     private string? MessageTitle;
     private string? Message;
 
-    [Parameter]
-    [SupplyParameterFromQuery(Name = "add")]
-    public bool? AddRequested { get; set; }
+    private ClassDraft Draft = new();
 
-    private bool handledAddRequest;
+    private IEnumerable<DateOnly> WeekDays =>
+        Enumerable.Range(0, 5).Select(offset => WeekStart.AddDays(offset));
 
     protected override void OnParametersSet()
     {
@@ -353,11 +237,6 @@
             OpenAddForm();
         }
     }
-
-    private ClassDraft Draft = new();
-
-    private IEnumerable<DateOnly> WeekDays =>
-        Enumerable.Range(0, 5).Select(offset => WeekStart.AddDays(offset));
 
     private static DateOnly StartOfWeek(DateOnly date) =>
         date.AddDays(-(((int)date.DayOfWeek + 6) % 7));
@@ -376,6 +255,13 @@
         return DateTime.TryParse(time, out var parsed)
             ? parsed
             : DateTime.MinValue;
+    }
+
+    private static string To24HourTime(string time)
+    {
+        return DateTime.TryParse(time, out var parsed)
+            ? parsed.ToString("HH:mm")
+            : "";
     }
 
     private void OpenAddForm()
@@ -407,36 +293,11 @@
         ShowForm = true;
     }
 
-    private static string To24HourTime(string time)
-    {
-        return DateTime.TryParse(time, out var parsed)
-            ? parsed.ToString("HH:mm")
-            : "";
-    }
-
     private void SaveClass()
     {
-        if (string.IsNullOrWhiteSpace(Draft.CourseCode) ||
-            string.IsNullOrWhiteSpace(Draft.Title) ||
-            string.IsNullOrWhiteSpace(Draft.StartTime) ||
-            string.IsNullOrWhiteSpace(Draft.EndTime) ||
-            string.IsNullOrWhiteSpace(Draft.Location) ||
-            string.IsNullOrWhiteSpace(Draft.Instructor))
+        if (!Draft.TryValidate(out var start, out var end, out var error))
         {
-            FormError = "Please fill in all fields.";
-            return;
-        }
-
-        if (!TimeSpan.TryParse(Draft.StartTime, out var start) ||
-            !TimeSpan.TryParse(Draft.EndTime, out var end))
-        {
-            FormError = "Please enter valid start and end times.";
-            return;
-        }
-
-        if (end <= start)
-        {
-            FormError = "End time must be later than start time.";
+            FormError = error;
             return;
         }
 
@@ -512,16 +373,5 @@
     {
         MessageTitle = null;
         Message = null;
-    }
-
-    private sealed class ClassDraft
-    {
-        public string CourseCode { get; set; } = "";
-        public string Title { get; set; } = "";
-        public string StartTime { get; set; } = "08:00";
-        public string EndTime { get; set; } = "09:00";
-        public string Location { get; set; } = "";
-        public string Instructor { get; set; } = "";
-        public string Mode { get; set; } = "Face-to-face";
     }
 }
