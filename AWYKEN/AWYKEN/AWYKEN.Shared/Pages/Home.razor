@@ -68,7 +68,7 @@
                 @* TODO: replace this placeholder handler with navigation to a commute details page.
                    Example: use NavigationManager.NavigateTo("/commute") once that page exists. *@
                 <button class="commute-button"
-                        @onclick='() => ShowMessage("Commute plan", "Commute planning can be connected here.")'>
+                        @onclick='() => Navigation.NavigateTo("/commute")'>
                     <span aria-hidden="true">♧</span> &nbsp; View commute plan
                 </button>
             </section>

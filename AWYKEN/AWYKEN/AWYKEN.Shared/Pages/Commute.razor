@@ -1,0 +1,554 @@
+﻿@page "/commute"
+@inject AWYKEN.Shared.Services.DashboardState State
+@inject NavigationManager Navigation
+
+<PageTitle>AWYKEN • Commute</PageTitle>
+
+<div class="app-shell commute-page">
+    <main class="dashboard-scroll">
+        <div class="dashboard-content">
+
+            <header class="topbar">
+                <button class="icon-button" aria-label="Back" @onclick="GoBack">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+                </button>
+                <div class="greeting-copy">
+                    <p class="greeting">Your commute</p>
+                    <p class="muted">For @State.NextClass.CourseCode · @State.NextClass.StartTime</p>
+                </div>
+                <div class="weather">
+                    <strong>@State.Weather.Temperature°</strong>
+                </div>
+            </header>
+
+            <section class="commute-map" aria-label="Route preview">
+                <svg class="route-line" viewBox="0 0 360 150" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M65 105 Q120 15 295 33" />
+                </svg>
+
+                <span class="map-pin map-pin-home" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6" /></svg>
+                </span>
+                <span class="map-pin map-pin-campus" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M4 4h7a1 1 0 0 1 1 1v15a3 3 0 0 0-3-3H4zM20 4h-7a1 1 0 0 0-1 1v15a3 3 0 0 1 3-3h5z" /></svg>
+                </span>
+
+                <span class="traffic-tag">LIGHT TRAFFIC</span>
+            </section>
+
+            <section class="commute-summary">
+                <div class="commute-duration">
+                    <strong>@TravelMinutes</strong>
+                    <span>MIN</span>
+                </div>
+                <div class="commute-summary-divider"></div>
+                <div class="commute-leave">
+                    <strong>Leave by @State.NextClass.LeaveBy AM</strong>
+                    <span>Includes a @(BufferMinutes)-minute buffer</span>
+                </div>
+            </section>
+
+            <section class="route-rows">
+                <button type="button" class="route-row">
+                    <span class="route-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6" /></svg>
+                    </span>
+                    <span class="route-copy">
+                        <small>FROM</small>
+                        <strong>@HomeAddress</strong>
+                    </span>
+                    <span class="route-chevron" aria-hidden="true">›</span>
+                </button>
+
+                <button type="button" class="route-row">
+                    <span class="route-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" /></svg>
+                    </span>
+                    <span class="route-copy">
+                        <small>TO</small>
+                        <strong>@CampusAddress</strong>
+                    </span>
+                    <span class="route-chevron" aria-hidden="true">›</span>
+                </button>
+            </section>
+
+            <section class="commute-timeline">
+                <h2>Your timeline</h2>
+                <p class="muted">Stay on track, without rushing</p>
+
+                <ol class="timeline">
+                    @foreach (var step in Steps)
+                    {
+                        <li class="timeline-step">
+                            <span class="timeline-dot @step.Kind" aria-hidden="true">
+                                @if (step.Kind == "done")
+                                {
+                                    <svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                                }
+                                else if (step.Kind == "active")
+                                {
+                                    <svg viewBox="0 0 24 24"><path d="M13 4.5a1.5 1.5 0 1 0 0 .01M10 21l2-6-3-3 1-5 4 2 3 1M9 12l-3 1" /></svg>
+                                }
+                                else if (step.Kind == "travel")
+                                {
+                                    <svg viewBox="0 0 24 24"><path d="M6 19a2 2 0 1 0 0-.01M18 5a2 2 0 1 0 0-.01M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6" /></svg>
+                                }
+                                else
+                                {
+                                    <svg viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" /></svg>
+                                }
+                            </span>
+                            <span class="timeline-copy">
+                                <strong>@step.Title</strong>
+                                <span>@step.Detail</span>
+                            </span>
+                            <span class="timeline-time">@step.Time</span>
+                        </li>
+                    }
+                </ol>
+            </section>
+
+            <section class="reminder-card">
+                <span class="reminder-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
+                </span>
+                <span class="reminder-copy">
+                    <strong>Leave reminder is @(ReminderOn ? "on" : "off")</strong>
+                    <span>@ReminderText</span>
+                </span>
+                <button type="button"
+                        class="switch @(ReminderOn ? "on" : "")"
+                        role="switch"
+                        aria-checked="@(ReminderOn ? "true" : "false")"
+                        aria-label="Leave reminder"
+                        @onclick="ToggleReminder">
+                    <span></span>
+                </button>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<style>
+    .commute-page {
+        --commute-tint: color-mix(in srgb, var(--navy) 6%, var(--white));
+        --commute-success: #1f8a5b;
+        --commute-on-navy: #c2c7d7;
+        --commute-navy-line: #303648;
+    }
+
+        .commute-page .topbar {
+            margin-bottom: 16px;
+        }
+
+        .commute-page .weather {
+            margin-top: 0;
+        }
+
+            .commute-page .weather strong {
+                font-size: 22px;
+            }
+
+    /* Map */
+    .commute-map {
+        position: relative;
+        height: 150px;
+        margin-bottom: 14px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: repeating-linear-gradient(120deg, var(--commute-tint) 0 22px, var(--page) 22px 44px);
+    }
+
+    .route-line {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+        .route-line path {
+            fill: none;
+            stroke: var(--navy);
+            stroke-width: 2;
+            stroke-dasharray: 6 5;
+            stroke-linecap: round;
+            vector-effect: non-scaling-stroke;
+        }
+
+    .map-pin {
+        position: absolute;
+        display: grid;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        border: 3px solid var(--white);
+        border-radius: 50%;
+        background: var(--navy);
+        color: var(--white);
+        transform: translate(-50%, -50%);
+        box-shadow: 0 1px 4px rgb(10 20 49 / 20%);
+    }
+
+        .map-pin svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+    .map-pin-home {
+        left: 18%;
+        top: 70%;
+    }
+
+    .map-pin-campus {
+        left: 82%;
+        top: 22%;
+    }
+
+    .traffic-tag {
+        position: absolute;
+        right: 10px;
+        bottom: 10px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: color-mix(in srgb, var(--commute-success) 12%, var(--white));
+        color: var(--commute-success);
+        font-size: 8px;
+        font-weight: 900;
+        letter-spacing: 1px;
+    }
+
+    /* Summary card */
+    .commute-summary {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 16px;
+        padding: 18px 20px;
+        border-radius: 18px;
+        background: var(--navy);
+        color: var(--white);
+        box-shadow: 0 12px 28px rgb(5 10 61 / 12%);
+    }
+
+    .commute-duration {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+    }
+
+        .commute-duration strong {
+            font-size: 38px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .commute-duration span {
+            color: var(--commute-on-navy);
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+    .commute-summary-divider {
+        align-self: stretch;
+        width: 1px;
+        background: var(--commute-navy-line);
+    }
+
+    .commute-leave {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+
+        .commute-leave strong {
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .commute-leave span {
+            color: var(--commute-on-navy);
+            font-size: 10px;
+        }
+
+    /* From / To rows */
+    .route-rows {
+        margin-bottom: 22px;
+    }
+
+    .route-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 2px;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        background: transparent;
+        color: var(--ink);
+        text-align: left;
+    }
+
+    .route-icon {
+        display: grid;
+        flex: 0 0 38px;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 11px;
+        background: var(--commute-tint);
+        color: var(--navy);
+    }
+
+        .route-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.7;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+    .route-copy {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+    }
+
+        .route-copy small {
+            color: var(--muted);
+            font-size: 8px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .route-copy strong {
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+    .route-chevron {
+        color: var(--ink);
+        font-size: 24px;
+        line-height: 1;
+    }
+
+    /* Timeline */
+    .commute-timeline h2 {
+        margin: 0 0 3px;
+        font-size: 16px;
+        font-weight: 800;
+    }
+
+    .timeline {
+        margin: 18px 0 8px;
+        padding: 0;
+        list-style: none;
+    }
+
+    .timeline-step {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding-bottom: 22px;
+    }
+
+        .timeline-step:not(:last-child)::before {
+            content: "";
+            position: absolute;
+            top: 38px;
+            bottom: 2px;
+            left: 17px;
+            border-left: 1.5px dashed var(--line);
+        }
+
+    .timeline-dot {
+        display: grid;
+        flex: 0 0 36px;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border: 1.5px solid var(--line);
+        border-radius: 50%;
+        background: var(--white);
+        color: var(--muted);
+    }
+
+        .timeline-dot svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .timeline-dot.done {
+            border-color: var(--commute-success);
+            background: var(--commute-success);
+            color: var(--white);
+        }
+
+        .timeline-dot.active {
+            border-color: var(--navy);
+            background: var(--navy);
+            color: var(--white);
+        }
+
+    .timeline-copy {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        padding-top: 2px;
+    }
+
+        .timeline-copy strong {
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .timeline-copy span {
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+    .timeline-time {
+        padding-top: 4px;
+        font-size: 11px;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    /* Reminder */
+    .reminder-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px;
+        border-radius: 16px;
+        background: var(--commute-tint);
+    }
+
+    .reminder-icon {
+        display: grid;
+        flex: 0 0 34px;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 10px;
+        background: var(--white);
+        color: var(--navy);
+    }
+
+        .reminder-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.7;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+    .reminder-copy {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+    }
+
+        .reminder-copy strong {
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .reminder-copy span {
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+    .switch {
+        position: relative;
+        flex: 0 0 46px;
+        width: 46px;
+        height: 26px;
+        padding: 0;
+        border: 0;
+        border-radius: 13px;
+        background: var(--line);
+        transition: background 0.2s;
+    }
+
+        .switch span {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--white);
+            transition: transform 0.2s;
+        }
+
+        .switch.on {
+            background: var(--navy);
+        }
+
+            .switch.on span {
+                transform: translateX(20px);
+            }
+</style>
+
+@code {
+    // BACKEND TODO: replace these placeholders with real values from the user's profile and a routing service.
+    private const int TravelMinutes = 35;
+    private const int BufferMinutes = 5;
+    private const string HomeAddress = "Home · Mabini Avenue";
+    private const string CampusAddress = "Main Building · Campus";
+
+    private bool ReminderOn = true;
+
+    private sealed record Step(string Title, string Detail, string Time, string Kind);
+
+    private IEnumerable<Step> Steps => new[]
+    {
+        new Step("Prepare", "Notes, calculator, school ID",
+                 $"{State.NextClass.PrepareBy} AM", "done"),
+        new Step("Leave home", "Walk to Mabini Avenue",
+                 $"{State.NextClass.LeaveBy} AM", "active"),
+        new Step("Travel", "Jeepney · Route 04",
+                 $"{AddMinutes(State.NextClass.LeaveBy, 5)} AM", "travel"),
+        new Step("Class", State.NextClass.Location,
+                 State.NextClass.StartTime, "class")
+    };
+
+    private string ReminderText => ReminderOn
+        ? $"We'll alert you at {AddMinutes(State.NextClass.LeaveBy, -5)} AM"
+        : "Turn on to get alerted before you leave";
+
+    private static string AddMinutes(string time, int minutes)
+    {
+        return DateTime.TryParse(time, out var parsed)
+            ? parsed.AddMinutes(minutes).ToString("h:mm")
+            : time;
+    }
+
+    private void ToggleReminder() => ReminderOn = !ReminderOn;
+
+    private void GoBack() => Navigation.NavigateTo("/");
+}
