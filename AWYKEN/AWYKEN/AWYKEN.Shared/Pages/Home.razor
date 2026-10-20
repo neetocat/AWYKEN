@@ -68,7 +68,7 @@
                 @* TODO: replace this placeholder handler with navigation to a commute details page.
                    Example: use NavigationManager.NavigateTo("/commute") once that page exists. *@
                 <button class="commute-button"
-                        @onclick='() => ShowMessage("Commute plan", "Commute planning can be connected here.")'>
+                        @onclick='() => Navigation.NavigateTo("/commute")'>
                     <span aria-hidden="true">♧</span> &nbsp; View commute plan
                 </button>
             </section>
@@ -129,7 +129,7 @@
         <button class='@NavClass("Schedule")' @onclick="OpenSchedule">
             <span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Schedule</span>
         </button>
-        <button class="add-nav-item" @onclick='() => ShowMessage("Add item", "Add a class or task here.")'>
+        <button class="add-nav-item" @onclick='() => Navigation.NavigateTo("/schedule?add=true")'>
             <span class="add-button">+</span><span class="nav-label">Add</span>
         </button>
         <button class='@NavClass("Alerts")' @onclick="OpenNotifications">
