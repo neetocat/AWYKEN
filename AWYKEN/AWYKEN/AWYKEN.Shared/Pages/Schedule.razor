@@ -1,4 +1,6 @@
 @page "/schedule"
+@using AWYKEN.Shared.Components
+@using AWYKEN.Shared.Models
 @inject AWYKEN.Shared.Services.DashboardState State
 @inject NavigationManager Navigation
 
@@ -7,25 +9,48 @@
 <div class="schedule-app-shell">
     <main class="schedule-scroll">
         <div class="schedule-page">
+
             <header class="schedule-header">
-                <div class="schedule-brand" aria-hidden="true"><span></span><span></span><span></span></div>
+                <div class="schedule-brand" aria-hidden="true">
+                    <span></span><span></span><span></span>
+                </div>
+
                 <div class="schedule-header-copy">
                     <h1>Schedule</h1>
                     <p>@WeekStart.ToString("MMMM d")–@WeekStart.AddDays(6).Day</p>
                 </div>
-                <button class="schedule-add" aria-label="Add a class" @onclick="ShowAddMessage">+</button>
+
+                <button class="schedule-add"
+                        aria-label="Add a class"
+                        @onclick="OpenAddForm">
+                    +
+                </button>
             </header>
 
             <div class="schedule-view-toggle" role="tablist" aria-label="Schedule view">
-                <button class="@(ViewMode == "Day" ? "selected" : "")" role="tab" aria-selected="@(ViewMode == "Day")" @onclick='() => ViewMode = "Day"'>Day</button>
-                <button class="@(ViewMode == "Week" ? "selected" : "")" role="tab" aria-selected="@(ViewMode == "Week")" @onclick='() => ViewMode = "Week"'>Week</button>
+                <button class="@(ViewMode == "Day" ? "selected" : "")"
+                        role="tab"
+                        aria-selected="@(ViewMode == "Day")"
+                        @onclick='() => ViewMode = "Day"'>
+                    Day
+                </button>
+
+                <button class="@(ViewMode == "Week" ? "selected" : "")"
+                        role="tab"
+                        aria-selected="@(ViewMode == "Week")"
+                        @onclick='() => ViewMode = "Week"'>
+                    Week
+                </button>
             </div>
 
             <div class="schedule-date-strip" aria-label="Choose a day">
                 @foreach (var day in WeekDays)
                 {
                     var active = day == SelectedDate;
-                    <button class="schedule-date @(active ? "active" : "")" aria-pressed="@active" @onclick="() => SelectedDate = day">
+
+                    <button class="schedule-date @(active ? "active" : "")"
+                            aria-pressed="@active"
+                            @onclick="() => SelectedDate = day">
                         <span>@day.ToString("ddd").Substring(0, 1)</span>
                         <strong>@day.Day</strong>
                     </button>
@@ -34,48 +59,127 @@
 
             @if (ViewMode == "Week")
             {
-                <p class="week-view-note">Your classes for the week of @WeekStart.ToString("MMMM d")</p>
+                <p class="week-view-note">
+                    Your classes for the week of @WeekStart.ToString("MMMM d")
+                </p>
             }
 
-            <section class="schedule-events" aria-label="Classes for selected day">
-                @foreach (var item in State.Schedule.OrderBy(item => DateTime.Parse(item.StartTime)))
+            <section class="schedule-events" aria-label="Classes">
+                @if (State.Schedule.Count == 0)
                 {
-                    <article class="schedule-event" @key="item.Id">
-                        <div class="event-time-label">@item.Time @item.Period</div>
-                        <div class="event-card" style="--event-accent: @item.ColorCode">
-                            <div class="event-main">
-                                <p class="event-course-code">@item.CourseCode</p>
-                                <h2>@item.Title</h2>
-                                <div class="event-details">
-                                    <span><span class="detail-icon" aria-hidden="true">◷</span>@item.StartTime–@item.EndTime</span>
-                                    <span><span class="detail-icon pin-icon" aria-hidden="true">⌖</span>@item.Location</span>
-                                </div>
-                                <div class="event-instructor">
-                                    <span class="instructor-avatar">@item.InstructorInitials</span>
-                                    <span>@item.Instructor</span>
-                                </div>
+                    <p>No classes yet. Click + to add your first class!</p>
+                }
+                else
+                {
+                    @foreach (var item in State.Schedule.OrderBy(item => ParseTime(item.StartTime)))
+                    {
+                        <article class="schedule-event" @key="item.Id">
+
+                            <div class="event-time-label">
+                                @item.Time @item.Period
                             </div>
-                            <span class="event-mode @(item.Mode == "Online" ? "online" : "in-person")">@item.Mode</span>
-                        </div>
-                    </article>
+
+                            <div class="event-card"
+                                 style="--event-accent: @item.ColorCode">
+
+                                <div class="event-main">
+                                    <p class="event-course-code">@item.CourseCode</p>
+
+                                    <h2>@item.Title</h2>
+
+                                    <div class="event-details">
+                                        <span>
+                                            <span class="detail-icon" aria-hidden="true">◷</span>
+                                            @item.StartTime–@item.EndTime
+                                        </span>
+
+                                        <span>
+                                            <span class="detail-icon pin-icon" aria-hidden="true">⌖</span>
+                                            @item.Location
+                                        </span>
+                                    </div>
+
+                                    <div class="event-instructor">
+                                        <span class="instructor-avatar">
+                                            @item.InstructorInitials
+                                        </span>
+                                        <span>@item.Instructor</span>
+                                    </div>
+
+                                    <div class="class-actions">
+                                        <button type="button"
+                                                @onclick="() => OpenEditForm(item)">
+                                            Edit
+                                        </button>
+
+                                        <button type="button"
+                                                @onclick="() => DeleteClass(item.Id)">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <span class="event-mode @(item.Mode == "Online" ? "online" : "in-person")">
+                                    @item.Mode
+                                </span>
+                            </div>
+                        </article>
+                    }
                 }
             </section>
         </div>
     </main>
 
     <nav class="schedule-bottom-nav" aria-label="Main navigation">
-        <button @onclick='() => Navigation.NavigateTo("/")'><span class="bottom-icon home-icon" aria-hidden="true">⌂</span><span>Home</span></button>
-        <button class="current" aria-current="page"><span class="bottom-icon calendar-icon" aria-hidden="true">▦</span><span>Schedule</span></button>
-        <button class="add-nav" aria-label="Add" @onclick="ShowAddMessage"><span class="add-nav-circle">+</span><span>Add</span></button>
-        <button @onclick='() => Navigation.NavigateTo("/notification")'><span class="bottom-icon alert-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></span><span>Alerts</span></button>
-        <button @onclick='() => ShowMessage("Profile", "Profile settings will appear here.")'><span class="bottom-icon profile-icon" aria-hidden="true">♙</span><span>Profile</span></button>
+        <button @onclick='() => Navigation.NavigateTo("/")'>
+            <span class="bottom-icon home-icon" aria-hidden="true">⌂</span>
+            <span>Home</span>
+        </button>
+
+        <button class="current" aria-current="page">
+            <span class="bottom-icon calendar-icon" aria-hidden="true">▦</span>
+            <span>Schedule</span>
+        </button>
+
+        <button class="add-nav" aria-label="Add" @onclick="OpenAddForm">
+            <span class="add-nav-circle">+</span>
+            <span>Add</span>
+        </button>
+
+        <button @onclick='() => Navigation.NavigateTo("/notification")'>
+            <span class="bottom-icon alert-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                    <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+                </svg>
+            </span>
+            <span>Alerts</span>
+        </button>
+
+        <button @onclick='() => ShowMessage("Profile", "Profile settings will appear here.")'>
+            <span class="bottom-icon profile-icon" aria-hidden="true">♙</span>
+            <span>Profile</span>
+        </button>
     </nav>
 </div>
+
+@if (ShowForm)
+{
+    <ClassForm Draft="Draft"
+               FormTitle="@FormTitle"
+               Error="@FormError"
+               OnSave="SaveClass"
+               OnCancel="CloseForm" />
+}
 
 @if (!string.IsNullOrWhiteSpace(Message))
 {
     <div class="schedule-toast-backdrop" @onclick="DismissMessage">
-        <section class="schedule-message" role="dialog" aria-modal="true" aria-label="@MessageTitle" @onclick:stopPropagation="true">
+        <section class="schedule-message"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-label="@MessageTitle"
+                 @onclick:stopPropagation="true">
+
             <h2>@MessageTitle</h2>
             <p>@Message</p>
             <button @onclick="DismissMessage">Got it</button>
@@ -83,24 +187,181 @@
     </div>
 }
 
+<style>
+    .class-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+        .class-actions button {
+            padding: 9px 14px;
+            border: 0;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #eeeeee;
+            color: #222;
+        }
+</style>
+
 @code {
-    private readonly DateOnly WeekStart = StartOfWeek(DateOnly.FromDateTime(DateTime.Today));
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "add")]
+    public bool? AddRequested { get; set; }
+
+    private readonly DateOnly WeekStart =
+        StartOfWeek(DateOnly.FromDateTime(DateTime.Today));
+
     private DateOnly SelectedDate = InitialSelectedDate();
     private string ViewMode = "Day";
+
+    private bool ShowForm;
+    private string FormTitle = "Add Class";
+    private string? EditingId;
+    private string? FormError;
+    private bool handledAddRequest;
+
     private string? MessageTitle;
     private string? Message;
 
-    private IEnumerable<DateOnly> WeekDays => Enumerable.Range(0, 5).Select(offset => WeekStart.AddDays(offset));
+    private ClassDraft Draft = new();
 
-    private static DateOnly StartOfWeek(DateOnly date) => date.AddDays(-(((int)date.DayOfWeek + 6) % 7));
+    private IEnumerable<DateOnly> WeekDays =>
+        Enumerable.Range(0, 5).Select(offset => WeekStart.AddDays(offset));
+
+    protected override void OnParametersSet()
+    {
+        if (AddRequested == true && !handledAddRequest)
+        {
+            handledAddRequest = true;
+            OpenAddForm();
+        }
+    }
+
+    private static DateOnly StartOfWeek(DateOnly date) =>
+        date.AddDays(-(((int)date.DayOfWeek + 6) % 7));
 
     private static DateOnly InitialSelectedDate()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
-        return today.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? StartOfWeek(today) : today;
+
+        return today.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday
+            ? StartOfWeek(today)
+            : today;
     }
 
-    private void ShowAddMessage() => ShowMessage("Add class", "Class creation can be connected here.");
+    private static DateTime ParseTime(string time)
+    {
+        return DateTime.TryParse(time, out var parsed)
+            ? parsed
+            : DateTime.MinValue;
+    }
+
+    private static string To24HourTime(string time)
+    {
+        return DateTime.TryParse(time, out var parsed)
+            ? parsed.ToString("HH:mm")
+            : "";
+    }
+
+    private void OpenAddForm()
+    {
+        Draft = new ClassDraft();
+        EditingId = null;
+        FormTitle = "Add Class";
+        FormError = null;
+        ShowForm = true;
+    }
+
+    private void OpenEditForm(AWYKEN.Shared.Services.ScheduleItem item)
+    {
+        EditingId = item.Id;
+        FormTitle = "Edit Class";
+        FormError = null;
+
+        Draft = new ClassDraft
+        {
+            CourseCode = item.CourseCode,
+            Title = item.Title,
+            StartTime = To24HourTime(item.StartTime),
+            EndTime = To24HourTime(item.EndTime),
+            Location = item.Location,
+            Instructor = item.Instructor,
+            Mode = item.Mode
+        };
+
+        ShowForm = true;
+    }
+
+    private void SaveClass()
+    {
+        if (!Draft.TryValidate(out var start, out var end, out var error))
+        {
+            FormError = error;
+            return;
+        }
+
+        var startTime = DateTime.Today.Add(start).ToString("h:mm tt");
+        var endTime = DateTime.Today.Add(end).ToString("h:mm tt");
+
+        var initials = string.Join("",
+            Draft.Instructor.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Take(2)
+                .Select(part => char.ToUpperInvariant(part[0])));
+
+        var newItem = new AWYKEN.Shared.Services.ScheduleItem(
+            EditingId ?? Guid.NewGuid().ToString(),
+            Draft.CourseCode.Trim(),
+            Draft.Title.Trim(),
+            startTime,
+            endTime,
+            Draft.Location.Trim(),
+            Draft.Instructor.Trim(),
+            initials,
+            Draft.Mode,
+            "#5268ca",
+            null
+        );
+
+        if (EditingId is not null)
+        {
+            var index = State.Schedule.FindIndex(item => item.Id == EditingId);
+
+            if (index >= 0)
+            {
+                State.Schedule[index] = newItem;
+            }
+        }
+        else
+        {
+            State.Schedule.Add(newItem);
+        }
+
+        CloseForm();
+        ShowMessage(
+            "Success",
+            EditingId is null
+                ? "Class added successfully."
+                : "Class updated successfully."
+        );
+    }
+
+    private void DeleteClass(string id)
+    {
+        var item = State.Schedule.FirstOrDefault(item => item.Id == id);
+
+        if (item is not null)
+        {
+            State.Schedule.Remove(item);
+            ShowMessage("Class deleted", "The class was removed from your schedule.");
+        }
+    }
+
+    private void CloseForm()
+    {
+        ShowForm = false;
+        FormError = null;
+    }
 
     private void ShowMessage(string title, string message)
     {

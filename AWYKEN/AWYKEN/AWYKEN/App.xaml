@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:AWYKEN"
              x:Class="AWYKEN.App">
     <Application.Resources>
-        <ResourceDictionary>
+        <ResourceDictionary>w
 
             <!--
                 For information about styling .NET MAUI pages
