@@ -135,7 +135,7 @@
         <button class='@NavClass("Alerts")' @onclick="OpenNotifications">
             <span class="nav-icon alert-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></span><span class="nav-label">Alerts</span>
         </button>
-        <button class='@NavClass("Profile")' @onclick='() => SelectTab("Profile")'>
+        <button class='@NavClass("Profile")' @onclick='() => Navigation.NavigateTo("/settings")'>
             <span class="nav-icon" aria-hidden="true">♙</span><span class="nav-label">Profile</span>
         </button>
     </nav>
@@ -173,7 +173,7 @@
         else if (tab == "Alerts")
             OpenNotifications();
         else if (tab == "Profile")
-            ShowMessage("Profile", "Profile settings will appear here.");
+            Navigation.NavigateTo("/settings");
     }
 
     private void OpenSchedule() => Navigation.NavigateTo("/schedule");
