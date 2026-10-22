@@ -14,6 +14,20 @@
 
         <button class="add-class__button add-class__button--save">Save</button>
     </header>
+
+    <main class="add-class__main">
+        <!-- CLASS DETAILS -->
+        <h2 class="add-class__subtitle">Class Details</h2>
+
+        <label class="add-class__input-label" for="subject-name">Subject Name</label>
+        <input class="add-class__input-field" id="subject-name" type="text" name="subject-name" maxlength="100" placeholder="Enter subject name..." required />
+
+        <label class="add-class__input-label" for="course-code">Course Code</label>
+        <input class="add-class__input-field" id="course-code" type="text" name="course-code" maxlength="15" placeholder="e.g., MATH 101" required />
+
+        <label class="add-class__input-label" for="instructor">Instructor (optional)</label>
+        <input class="add-class__input-field" id="instructor" type="text" name="instructor" maxlength="50" placeholder="Enter instructor name..." />
+    </main>
 </div>
 
 @code {
