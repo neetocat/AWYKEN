@@ -27,6 +27,39 @@
 
         <label class="add-class__input-label" for="instructor">Instructor (optional)</label>
         <input class="add-class__input-field" id="instructor" type="text" name="instructor" maxlength="50" placeholder="Enter instructor name..." />
+
+        <!-- SCHEDULE -->
+        <form class="add-class__form">
+            <h2 class="add-class__subtitle">Schedule</h2>
+
+            <div class="add-class__class-days-wrapper">
+                <div class="add-class__class-day-option">M</div>
+                <div class="add-class__class-day-option">T</div>
+                <div class="add-class__class-day-option">W</div>
+                <div class="add-class__class-day-option">TH</div>
+                <div class="add-class__class-day-option">F</div>
+                <div class="add-class__class-day-option">S</div>
+                <div class="add-class__class-day-option">SU</div>
+            </div>
+
+            <div class="add-class__time-wrapper">
+                <!-- Start Time -->
+                <label class="add-class__input-label" for="start-time">Starts</label>
+                <div class="add-class__time-input">
+                    <img class="add-class__icon add__icon--clock add__icon--clock-large" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
+                    <input class="add-class__input-field add-class__input-field--time" id="start-time" name="start-time" type="time" required />
+                    <img class="add-class__icon add__icon--clock add__icon--clock-small" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
+                </div>
+
+                <!-- End Time -->
+                <label class="add-class__input-label" for="end-time">Ends</label>
+                <div class="add-class__time-input">
+                    <img class="add-class__icon add__icon--clock add__icon--clock-large" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
+                    <input class="add-class__input-field add-class__input-field--time" id="end-time" name="end-time" type="time" required />
+                    <img class="add-class__icon add__icon--clock add__icon--clock-small" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
+                </div>
+            </div>
+        </form>
     </main>
 </div>
 
