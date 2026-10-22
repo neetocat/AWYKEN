@@ -1,0 +1,37 @@
+@page "/verify-schedule"
+@inject AWYKEN.Shared.Services.DashboardState State
+@inject NavigationManager Navigation
+
+<PageTitle>Verify your schedule • AWYKEN</PageTitle>
+
+<div class="flow-shell verify-screen">
+    <main class="flow-scroll">
+        <div class="flow-content">
+            <header class="flow-header">
+                <button class="back-button" @onclick='() => Navigation.NavigateTo("/import-cor")' aria-label="Back">‹</button>
+                <div><h1>Verify your schedule</h1><p>Step 2 of 2</p></div>
+                <span class="found-badge">6 FOUND</span>
+            </header>
+
+            <section class="verify-callout"><strong>✦</strong><div><b>Check before saving</b><p>We highlighted one item that needs your attention.</p></div></section>
+
+            <div class="verify-summary">
+                <div><strong>6</strong><span>Classes found</span></div><div><strong>5</strong><span>Ready to save</span></div><div><strong>1</strong><span>Needs review</span></div>
+            </div>
+
+            <section class="review-list" aria-label="Imported classes">
+                @foreach (var item in State.Schedule.Take(2))
+                {
+                    <article class="review-card accepted">
+                        <span class="review-state">✓</span><div class="review-copy"><h2>@item.Title</h2><b>@item.CourseCode · @item.StartTime - @item.EndTime</b><p>@item.Location</p></div><button class="edit-review" aria-label="Edit @item.Title">♢</button>
+                    </article>
+                }
+                <article class="review-card needs-review">
+                    <span class="review-state">!</span><div class="review-copy"><h2>Data Structures</h2><b>CS 2203 · TIMES NEEDS REVIEW</b><p>Online · Google Meet</p></div><button class="edit-review" aria-label="Edit Data Structures">♢</button>
+                </article>
+            </section>
+            <p class="review-note">Preview OCR failure state</p>
+        </div>
+    </main>
+    <div class="save-bar"><button class="primary-action" @onclick='() => Navigation.NavigateTo("/schedule")'>✓ &nbsp; Save 6 classes</button></div>
+</div>
