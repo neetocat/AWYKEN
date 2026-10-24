@@ -15,6 +15,8 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>AWYKEN</RootNamespace>
     <UseMaui>true</UseMaui>
+    <!-- Keep MAUI package versions explicit so restore does not depend on an unset workload property. -->
+    <MauiVersion>10.0.120</MauiVersion>
     <SingleProject>true</SingleProject>
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Disable MAUI CSS handling so Blazor can handle it -->

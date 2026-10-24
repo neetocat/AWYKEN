@@ -15,6 +15,10 @@ public sealed class DashboardState
     // The initial local database has no classes, so all schedule views start blank.
     public List<ScheduleItem> Schedule { get; private set; } = [];
 
+    // Parsed COR classes stay separate until the user confirms them on the review page.
+    public List<ScheduleItem> ImportPreview { get; private set; } = [];
+    public bool HasImportPreview => ImportPreview.Count > 0;
+
     // Alerts are derived from the selected day's classes; there are none when the schedule is empty.
     public List<AppNotification> Notifications { get; private set; } = [];
 
