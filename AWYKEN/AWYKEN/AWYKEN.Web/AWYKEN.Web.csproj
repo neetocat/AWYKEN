@@ -8,11 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AWYKEN.Shared\AWYKEN.Shared.csproj" />
-    <!-- Design-time package lets dotnet-ef scaffold migrations into Shared. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
 
 </Project>

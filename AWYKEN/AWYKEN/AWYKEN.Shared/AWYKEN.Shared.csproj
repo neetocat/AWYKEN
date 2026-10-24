@@ -16,12 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
-<<<<<<< HEAD
     <PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
-=======
-    <!-- Shared Web and MAUI code uses the same EF Core SQLite data model. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
->>>>>>> parent of 23b6a06 (Revert "Merge branch 'neetocat' into Binorobong-AWYKEN")
   </ItemGroup>
 
 </Project>

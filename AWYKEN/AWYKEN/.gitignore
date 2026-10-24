@@ -6,9 +6,6 @@ obj/
 .vs/
 *.user
 *.suo
-*.db
-*.db-shm
-*.db-wal
 
 # OS-generated files
 .DS_Store

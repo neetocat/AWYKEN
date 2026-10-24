@@ -1,49 +1,53 @@
 namespace AWYKEN.Shared.Services;
 
 /// <summary>
-/// The display state shared by the Dashboard, Schedule, Commute, and Alerts pages.
-/// Pages refresh this state from SQLite so they show the same profile and classes.
+/// Shared sample data for the dashboard pages. Replace these values with backend data
+/// when the signed-in user's data service is connected.
 /// </summary>
 public sealed class DashboardState
 {
-    // A null display name means the person has not set a profile name; show Guest.
-    public UserInfo User { get; private set; } = new(null, null);
+    public UserInfo User { get; } = new("Mika");
 
-    // Weather is optional and remains empty until a weather service is connected.
-    public WeatherInfo Weather { get; } = new(null, "No weather data");
+    public WeatherInfo Weather { get; } = new(29, "Light rain");
 
-    // The initial local database has no classes, so all schedule views start blank.
-    public List<ScheduleItem> Schedule { get; private set; } = [];
+    public List<ScheduleItem> Schedule { get; } =
+    [
+        new("1", "MATH 1102", "Mathematics in the Modern World", "7:30 AM", "9:00 AM",
+            "Room 204", "Elena Santos", "ES", "Face-to-face", "#5268ca", null),
+        new("2", "UTS 1001", "Understanding the Self", "10:00 AM", "11:30 AM",
+            "Room 302", "Marco Villanueva", "MV", "Face-to-face", "#e58a37", null),
+        new("3", "CS 2203", "Data Structures", "1:00 PM", "2:30 PM",
+            "Google Meet", "Iris Mendoza", "IM", "Online", "#8056a9", "https://meet.google.com/")
+    ];
 
-<<<<<<< HEAD
     public IReadOnlyList<ScheduleItem> ImportPreview { get; private set; } = [];
 
     public bool HasImportPreview => ImportPreview.Count > 0;
 
     public List<AppNotification> Notifications { get; }
-=======
-    // Alerts are derived from the selected day's classes; there are none when the schedule is empty.
-    public List<AppNotification> Notifications { get; private set; } = [];
->>>>>>> parent of 23b6a06 (Revert "Merge branch 'neetocat' into Binorobong-AWYKEN")
 
     public int UnreadNotificationCount => Notifications.Count(item => item.IsUnread);
 
-    /// <summary>Replace the shared profile and schedule after reading SQLite.</summary>
-    public void ReplaceFromDatabase(string? displayName, string? email, IEnumerable<ScheduleItem> schedule)
+    public DashboardState()
     {
-        User = new UserInfo(displayName, email);
-        Schedule = schedule.OrderBy(item => item.SortTime).ToList();
+        var nextClass = NextClass;
+        var onlineClass = Schedule.First(item => item.Mode == "Online");
 
-        // Build simple alerts from real class rows. An empty database remains quiet.
-        Notifications = Schedule.Select(item => new AppNotification(
-            $"class-{item.Id}",
-            "Today",
-            item.Title,
-            $"{item.CourseCode} starts at {item.StartTime}.",
-            item.StartTime,
-            item.Mode == "Online" ? "online" : "clock",
-            true,
-            item.Mode == "Online" ? "Join meeting" : null)).ToList();
+        Notifications =
+        [
+            new("ready", "Today", "Time to get ready",
+                $"{nextClass.Title} starts at {nextClass.StartTime}. Pack your notes, calculator, and school ID.",
+                "Now", "clock", true, "View checklist"),
+            new("leave", "Today", "Leave in 5 minutes",
+                $"Light traffic on your route. Leave by {nextClass.LeaveBy} AM to arrive comfortably.",
+                "6:37 AM", "route", true, null),
+            new("meeting", "Today", "Online class link ready",
+                $"Your {onlineClass.Title} meeting starts at {onlineClass.StartTime}.",
+                "6:30 AM", "online", true, "Join meeting"),
+            new("imported", "Yesterday", "Schedule imported",
+                $"{Schedule.Count} classes were added successfully from your COR.",
+                "4:18 PM", "imported", false, null)
+        ];
     }
 
     public void SetImportPreview(IEnumerable<ScheduleItem> classes)
@@ -67,53 +71,35 @@ public sealed class DashboardState
             item.IsUnread = false;
     }
 
-    /// <summary>Use the first upcoming class, or a clear empty-state value.</summary>
     public NextClassInfo NextClass
     {
         get
         {
-            var first = Schedule.FirstOrDefault();
-            if (first is null)
-                return new NextClassInfo("", "No upcoming classes", "—", "No location yet", "—", "—", "—");
-
+            var first = Schedule[0];
             return new NextClassInfo(
-                first.CourseCode,
-                first.Title,
-                first.StartTime,
-                first.Location,
-                "—",
-                "—",
-                "—");
+                first.CourseCode, first.Title, first.StartTime, $"{first.Location} • Main Building",
+                "6:15", "6:42", "1h 24m");
         }
     }
 }
 
-/// <summary>A null/blank profile name is intentionally displayed as Guest.</summary>
-public sealed record UserInfo(string? FirstName, string? Email)
-{
-    public string DisplayName => string.IsNullOrWhiteSpace(FirstName) ? "Guest" : FirstName;
-}
-
-public sealed record WeatherInfo(int? Temperature, string Condition);
+public sealed record UserInfo(string FirstName);
+public sealed record WeatherInfo(int Temperature, string Condition);
 public sealed record NextClassInfo(
     string CourseCode, string Title, string StartTime, string Location,
     string PrepareBy, string LeaveBy, string StartsIn);
 
-/// <summary>Display-friendly class data shared by the current pages.</summary>
 public sealed record ScheduleItem(
     string Id, string CourseCode, string Title, string StartTime, string EndTime,
     string Location, string Instructor, string InstructorInitials, string Mode,
     string ColorCode, string? Link)
 {
-    public string Time => StartTime.Contains(' ') ? StartTime[..StartTime.LastIndexOf(' ')] : StartTime;
-    public string Period => StartTime.Contains(' ') ? StartTime[(StartTime.LastIndexOf(' ') + 1)..] : "";
+    public string Time => StartTime[..StartTime.LastIndexOf(' ')];
+    public string Period => StartTime[(StartTime.LastIndexOf(' ') + 1)..];
     public string Subtitle => Mode == "Online"
         ? $"Online • {Location}"
         : $"{Location} • Prof. {Instructor}";
     public string Type => Mode == "Online" ? "online" : "in-person";
-
-    // Used only for consistent display ordering; persisted timestamps remain in the database.
-    public DateTime SortTime => DateTime.TryParse(StartTime, out var time) ? time : DateTime.MaxValue;
 }
 
 public sealed class AppNotification(
