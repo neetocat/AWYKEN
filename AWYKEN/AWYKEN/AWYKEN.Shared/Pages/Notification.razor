@@ -1,5 +1,7 @@
 @page "/notification"
+@using AWYKEN.Shared.Data
 @inject AWYKEN.Shared.Services.DashboardState State
+@inject IAwykenDataService Data
 @inject NavigationManager Navigation
 
 <PageTitle>AWYKEN • Notifications</PageTitle>
@@ -15,6 +17,11 @@
                 </div>
                 <button class="mark-all-read" @onclick="MarkAllRead" disabled="@(State.UnreadNotificationCount == 0)">Mark all read</button>
             </header>
+
+            @if (State.Notifications.Count == 0)
+            {
+                <p class="notification-group-title">No notifications yet. They will appear when you add classes.</p>
+            }
 
             @foreach (var group in new[] { "Today", "Yesterday" })
             {
@@ -67,7 +74,7 @@
         <button @onclick='() => Navigation.NavigateTo("/schedule")'><span class="notification-nav-icon calendar" aria-hidden="true">▦</span><span>Schedule</span></button>
         <button class="add-nav" aria-label="Add" @onclick='() => Navigation.NavigateTo("/schedule?add=true")'><span class="add-nav-circle">+</span><span>Add</span></button>
         <button class="current" aria-current="page"><span class="notification-nav-icon bell" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></span><span>Alerts</span></button>
-        <button @onclick='() => ShowMessage("Profile", "Profile settings will appear here.")'><span class="notification-nav-icon" aria-hidden="true">♙</span><span>Profile</span></button>
+        <button @onclick='() => Navigation.NavigateTo("/settings")'><span class="notification-nav-icon" aria-hidden="true">♙</span><span>Profile</span></button>
     </nav>
 </div>
 
@@ -86,15 +93,16 @@
     private string? MessageTitle;
     private string? Message;
 
+    // Notifications are derived from today's stored schedule, not demo entries.
+    protected override Task OnInitializedAsync() =>
+        Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+
     private void MarkAllRead() => State.MarkAllNotificationsRead();
 
     private void HandleAction(AWYKEN.Shared.Services.AppNotification item)
     {
         item.IsUnread = false;
-        if (item.Id == "ready")
-            ShowMessage("Class checklist", "Pack your notes, calculator, and school ID.");
-        else if (item.Id == "meeting")
-            ShowMessage("Online class", "Your meeting is ready for Data Structures at 1:00 PM.");
+        ShowMessage(item.Title, item.Message);
     }
 
     private void Later(AWYKEN.Shared.Services.AppNotification item)

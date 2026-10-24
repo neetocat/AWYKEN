@@ -1,6 +1,8 @@
 using AWYKEN.Shared.Services;
+using AWYKEN.Shared.Data;
 using AWYKEN.Web.Components;
 using AWYKEN.Web.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,16 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 builder.Services.AddScoped<AWYKEN.Shared.Services.DashboardState>();
 builder.Services.AddScoped<AWYKEN.Shared.Services.CorScheduleImporter>();
+
+// Keep the Web host's local database in the user's app-data folder, outside Git.
+var databaseFolder = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AWYKEN");
+Directory.CreateDirectory(databaseFolder);
+var databasePath = Path.Combine(databaseFolder, "awyken.db");
+
+builder.Services.AddDbContextFactory<AwykenDbContext>(options =>
+    options.UseSqlite($"Data Source={databasePath}"));
+builder.Services.AddScoped<IAwykenDataService, SqliteAwykenDataService>();
 
 var app = builder.Build();
 
