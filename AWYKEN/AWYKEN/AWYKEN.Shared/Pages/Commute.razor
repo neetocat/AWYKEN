@@ -1,7 +1,5 @@
 ﻿@page "/commute"
-@using AWYKEN.Shared.Data
 @inject AWYKEN.Shared.Services.DashboardState State
-@inject IAwykenDataService Data
 @inject NavigationManager Navigation
 
 <PageTitle>AWYKEN • Commute</PageTitle>
@@ -16,24 +14,13 @@
                 </button>
                 <div class="greeting-copy">
                     <p class="greeting">Your commute</p>
-                    <p class="muted">@(State.Schedule.Count == 0 ? "No class scheduled" : $"For {State.NextClass.CourseCode} · {State.NextClass.StartTime}")</p>
+                    <p class="muted">For @State.NextClass.CourseCode · @State.NextClass.StartTime</p>
                 </div>
                 <div class="weather">
-                    <strong>@(State.Weather.Temperature is int temperature ? $"{temperature}°" : "—")</strong>
+                    <strong>@State.Weather.Temperature°</strong>
                 </div>
             </header>
 
-            @if (State.Schedule.Count == 0)
-            {
-                <section class="commute-summary">
-                    <div class="commute-leave">
-                        <strong>No commute plan yet</strong>
-                        <span>Add a class to plan travel to its location.</span>
-                    </div>
-                </section>
-            }
-            else
-            {
             <section class="commute-map" aria-label="Route preview">
                 <svg class="route-line" viewBox="0 0 360 150" preserveAspectRatio="none" aria-hidden="true">
                     <path d="M65 105 Q120 15 295 33" />
@@ -138,7 +125,6 @@
                     <span></span>
                 </button>
             </section>
-            }
 
         </div>
     </main>
@@ -536,10 +522,6 @@
     private const string CampusAddress = "Main Building · Campus";
 
     private bool ReminderOn = true;
-
-    // Load the same local profile and class data shown by Home and Schedule.
-    protected override Task OnInitializedAsync() =>
-        Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
 
     private sealed record Step(string Title, string Detail, string Time, string Kind);
 

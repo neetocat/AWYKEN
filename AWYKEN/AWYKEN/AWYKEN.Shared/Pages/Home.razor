@@ -1,10 +1,9 @@
 @page "/"
 @inject AWYKEN.Shared.Services.DashboardState State
-@inject AWYKEN.Shared.Data.IAwykenDataService Data
 @inject NavigationManager Navigation
 
 @* AWYKEN dashboard page.
-   The shared state is refreshed from the local SQLite database when this page opens. *@
+   This page intentionally uses sample values so the UI can be developed before the backend is connected. *@
 
 <PageTitle>AWYKEN • Dashboard</PageTitle>
 
@@ -15,7 +14,7 @@
             <header class="topbar">
                 <div class="brand-mark" role="img" aria-label="AWYKEN logo"><span></span><span></span><span></span></div>
                 <div class="greeting-copy">
-                    <p class="greeting">Good morning, @State.User.DisplayName</p>
+                    <p class="greeting">Good morning, @State.User.FirstName</p>
                     <p class="muted">@DateTime.Now.ToString("dddd, MMMM d")</p>
                 </div>
 
@@ -31,29 +30,11 @@
                 </div>
                 <div class="weather">
                     @* BACKEND TODO: replace Weather values with the result from your weather API/service. *@
-                    @if (State.Weather.Temperature is int temperature)
-                    {
-                        <strong>@temperature°</strong>
-                    }
-                    else
-                    {
-                        <strong>—</strong>
-                    }
+                    <strong>@State.Weather.Temperature°</strong>
                     <span>@State.Weather.Condition</span>
                 </div>
             </section>
 
-            @if (State.Schedule.Count == 0)
-            {
-                <section class="hero-card">
-                    <p class="course-code">YOUR SCHEDULE</p>
-                    <h2>No classes yet</h2>
-                    <p>Add a class or import your schedule to see it here.</p>
-                    <button class="commute-button" @onclick='() => Navigation.NavigateTo("/schedule?add=true")'>Add a class</button>
-                </section>
-            }
-            else
-            {
             <section class="hero-card">
                 <div class="hero-top-row">
                     <span class="next-badge">NEXT CLASS</span>
@@ -91,14 +72,13 @@
                     <span aria-hidden="true">♧</span> &nbsp; View commute plan
                 </button>
             </section>
-            }
 
             <section class="schedule-section">
                 <div class="schedule-heading">
                     <div>
                         <h2>Today's schedule</h2>
                         @* BACKEND TODO: this count will automatically reflect the schedule list returned by the backend. *@
-                    <p class="muted">@State.Schedule.Count @(State.Schedule.Count == 1 ? "class" : "classes")</p>
+                        <p class="muted">@State.Schedule.Count classes</p>
                     </div>
 
                     @* TODO: replace this handler with a link/navigation to the full schedule page, e.g. /schedule. *@
@@ -109,10 +89,6 @@
                 </div>
 
                 <div class="schedule-list">
-                    @if (State.Schedule.Count == 0)
-                    {
-                        <p class="muted">No classes scheduled for today.</p>
-                    }
                     @foreach (var item in State.Schedule)
                     {
                         <article class="schedule-card" @key="item.Id">
@@ -159,7 +135,7 @@
         <button class='@NavClass("Alerts")' @onclick="OpenNotifications">
             <span class="nav-icon alert-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></span><span class="nav-label">Alerts</span>
         </button>
-        <button class='@NavClass("Profile")' @onclick='() => Navigation.NavigateTo("/settings")'>
+        <button class='@NavClass("Profile")' @onclick='() => SelectTab("Profile")'>
             <span class="nav-icon" aria-hidden="true">♙</span><span class="nav-label">Profile</span>
         </button>
     </nav>
@@ -182,10 +158,6 @@
     private string? MessageTitle { get; set; }
     private string? Message { get; set; }
 
-    // Load today's rows from SQLite into the shared state used across pages.
-    protected override Task OnInitializedAsync() =>
-        Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
-
     private string NavClass(string tab) =>
         ActiveTab == tab ? "nav-item nav-active" : "nav-item";
 
@@ -201,7 +173,7 @@
         else if (tab == "Alerts")
             OpenNotifications();
         else if (tab == "Profile")
-            Navigation.NavigateTo("/settings");
+            ShowMessage("Profile", "Profile settings will appear here.");
     }
 
     private void OpenSchedule() => Navigation.NavigateTo("/schedule");
