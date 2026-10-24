@@ -1,0 +1,89 @@
+@page "/settings"
+@using AWYKEN.Shared.Data
+@inject AWYKEN.Shared.Services.DashboardState State
+@inject IAwykenDataService Data
+@inject NavigationManager Navigation
+
+<PageTitle>Settings • AWYKEN</PageTitle>
+
+<div class="flow-shell settings-screen">
+    <main class="flow-scroll">
+        <div class="flow-content">
+            <header class="settings-header">
+                <div class="brand-mark" role="img" aria-label="AWYKEN logo"><span></span><span></span><span></span></div>
+                <div class="settings-title">
+                    <h1>Settings</h1>
+                    <p>Manage your AWYKEN</p>
+                </div>
+                <button class="outline-icon-button" aria-label="Notifications">♧</button>
+            </header>
+
+            <section class="profile-card">
+                <div class="avatar">@ProfileInitials</div>
+                <div class="profile-copy">
+                    <h2>@State.User.DisplayName</h2>
+                    <p>@(string.IsNullOrWhiteSpace(State.User.Email) ? "No email saved" : State.User.Email)</p>
+                </div>
+                <button class="row-action" aria-label="Edit profile">♢</button>
+            </section>
+
+            <section class="settings-section">
+                <h2>SCHEDULE</h2>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/schedule")'>
+                    <span class="row-icon">▦</span><span class="row-copy"><strong>Class schedule</strong><small>@State.Schedule.Count @(State.Schedule.Count == 1 ? "class" : "classes") saved locally</small></span><span class="row-chevron">›</span>
+                </button>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/import-cor")'>
+                    <span class="row-icon">⌗</span><span class="row-copy"><strong>Import another COR</strong><small>Scan or upload a document</small></span><span class="row-chevron">›</span>
+                </button>
+            </section>
+
+            <section class="settings-section">
+                <h2>REMINDERS</h2>
+                <div class="settings-row"><span class="row-icon">◷</span><span class="row-copy"><strong>Preparation time</strong><small>15 minutes before leaving</small></span><button class="toggle" class:on="@preparationEnabled" @onclick="() => preparationEnabled = !preparationEnabled" aria-label="Toggle preparation time"><span></span></button></div>
+                <div class="settings-row"><span class="row-icon">⌁</span><span class="row-copy"><strong>Commute reminders</strong><small>Based on live travel estimate</small></span><button class="toggle" class:on="@commuteEnabled" @onclick="() => commuteEnabled = !commuteEnabled" aria-label="Toggle commute reminders"><span></span></button></div>
+                <div class="settings-row"><span class="row-icon">♧</span><span class="row-copy"><strong>Class notifications</strong><small>10 minutes before class</small></span><button class="toggle" class:on="@notificationsEnabled" @onclick="() => notificationsEnabled = !notificationsEnabled" aria-label="Toggle class notifications"><span></span></button></div>
+            </section>
+
+            <section class="settings-section">
+                <h2>PREFERENCES</h2>
+                <button class="settings-row" @onclick="ShowLocationMessage"><span class="row-icon">⌖</span><span class="row-copy"><strong>Home location</strong><small>Not set</small></span><span class="row-chevron">›</span></button>
+                <button class="settings-row" @onclick="ShowTimeMessage"><span class="row-icon">◷</span><span class="row-copy"><strong>Time format</strong><small>12-hour</small></span><span class="row-chevron">›</span></button>
+                <button class="settings-row" @onclick="ShowAboutMessage"><span class="row-icon">ⓘ</span><span class="row-copy"><strong>About AWYKEN</strong><small>Version 1.0.0</small></span><span class="row-chevron">›</span></button>
+            </section>
+        </div>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Main navigation">
+        <button @onclick='() => Navigation.NavigateTo("/")'><span class="nav-icon">⌂</span><span class="nav-label">Home</span></button>
+        <button @onclick='() => Navigation.NavigateTo("/schedule")'><span class="nav-icon">▦</span><span class="nav-label">Schedule</span></button>
+        <button class="add-nav" @onclick='() => Navigation.NavigateTo("/import-cor")'>+</button>
+        <button @onclick='() => Navigation.NavigateTo("/notification")'><span class="nav-icon">♧</span><span class="nav-label">Alerts</span></button>
+        <button class="active"><span class="nav-icon">♙</span><span class="nav-label">Profile</span></button>
+    </nav>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <div class="flow-toast" role="status">@message</div>
+    }
+</div>
+
+@code {
+    private bool preparationEnabled = false;
+    private bool commuteEnabled = true;
+    private bool notificationsEnabled = true;
+    private string? message;
+
+    // The profile and today's class count come from the same SQLite refresh as Home.
+    protected override Task OnInitializedAsync() =>
+        Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+
+    private string ProfileInitials => string.IsNullOrWhiteSpace(State.User.FirstName)
+        ? "G"
+        : string.Concat(State.User.FirstName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2).Select(part => char.ToUpperInvariant(part[0])));
+
+    private void ShowLocationMessage() => message = "No home location has been saved yet.";
+    private void ShowTimeMessage() => message = "12-hour time format is selected.";
+    private void ShowAboutMessage() => message = "AWYKEN · Version 1.0.0";
+}
+
