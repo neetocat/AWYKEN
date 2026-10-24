@@ -20,6 +20,10 @@ public sealed class DashboardState
             "Google Meet", "Iris Mendoza", "IM", "Online", "#8056a9", "https://meet.google.com/")
     ];
 
+    public IReadOnlyList<ScheduleItem> ImportPreview { get; private set; } = [];
+
+    public bool HasImportPreview => ImportPreview.Count > 0;
+
     public List<AppNotification> Notifications { get; }
 
     public int UnreadNotificationCount => Notifications.Count(item => item.IsUnread);
@@ -44,6 +48,21 @@ public sealed class DashboardState
                 $"{Schedule.Count} classes were added successfully from your COR.",
                 "4:18 PM", "imported", false, null)
         ];
+    }
+
+    public void SetImportPreview(IEnumerable<ScheduleItem> classes)
+    {
+        ImportPreview = classes.ToList();
+    }
+
+    public void SaveImportPreview()
+    {
+        if (!HasImportPreview)
+            return;
+
+        Schedule.Clear();
+        Schedule.AddRange(ImportPreview);
+        ImportPreview = [];
     }
 
     public void MarkAllNotificationsRead()

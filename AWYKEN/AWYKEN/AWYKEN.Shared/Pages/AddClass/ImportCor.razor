@@ -1,0 +1,71 @@
+@page "/import-cor"
+@using AWYKEN.Shared.Services
+@inject NavigationManager Navigation
+@inject DashboardState State
+@inject CorScheduleImporter Importer
+
+<PageTitle>Import your COR • AWYKEN</PageTitle>
+
+<div class="flow-shell import-screen">
+    <main class="flow-scroll">
+        <div class="flow-content">
+            <header class="flow-header">
+                <button class="back-button" @onclick='() => Navigation.NavigateTo("/settings")' aria-label="Back">‹</button>
+                <div><h1>Import your COR</h1><p>Step 1 of 2</p></div>
+                <button class="outline-icon-button" aria-label="Notifications">♧</button>
+            </header>
+
+            <div class="stepper" aria-label="Import progress"><span class="current"></span><i></i><span></span></div>
+
+            <section class="import-intro">
+                <div class="scan-icon">⌗<b>✦</b></div>
+                <h2>Build your schedule<br />in one scan.</h2>
+                <p>Upload your Certificate of Registration and we'll fill in the details<br class="desktop-only" /> for you.</p>
+            </section>
+
+            <section class="upload-card">
+                <div class="upload-icon">⇧</div>
+                <h2>Upload your registration form</h2>
+                <p>PDF, JPG or PNG · Max 10 MB</p>
+                <button class="primary-action" @onclick="TakePhoto">▣ &nbsp; Take a photo</button>
+                <label class="secondary-action">⇧ &nbsp; Browse files<InputFile accept=".pdf" OnChange="SelectFile" /></label>
+            </section>
+
+            <aside class="tip-card"><strong>ⓘ</strong><div><b>For the best result</b><p>Use a clear, well-lit image with all four corners visible.</p></div></aside>
+            <p class="manual-link">Can't scan your COR? <button @onclick="EnterManually">Enter classes manually</button></p>
+
+            @if (!string.IsNullOrWhiteSpace(status))
+            {
+                <p class="flow-status" role="status">@status</p>
+            }
+        </div>
+    </main>
+</div>
+
+@code {
+    private string? status;
+
+    private void TakePhoto() => status = "Please use Browse files to select your COR PDF.";
+
+    private async Task SelectFile(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        if (file is null)
+        {
+            status = "Choose a COR PDF to continue.";
+            return;
+        }
+
+        status = "Scanning your COR...";
+        var result = await Importer.ImportAsync(file);
+        if (!result.IsSuccess)
+        {
+            status = result.Error;
+            return;
+        }
+
+        State.SetImportPreview(result.Classes);
+        Navigation.NavigateTo("/verify-schedule");
+    }
+    private void EnterManually() => Navigation.NavigateTo("/schedule");
+}

@@ -1,0 +1,56 @@
+@page "/verify-schedule"
+@using AWYKEN.Shared.Services
+@inject AWYKEN.Shared.Services.DashboardState State
+@inject NavigationManager Navigation
+
+<PageTitle>Verify your schedule • AWYKEN</PageTitle>
+
+<div class="flow-shell verify-screen">
+    <main class="flow-scroll">
+        <div class="flow-content">
+            <header class="flow-header">
+                <button class="back-button" @onclick='() => Navigation.NavigateTo("/import-cor")' aria-label="Back">‹</button>
+                <div><h1>Verify your schedule</h1><p>Step 2 of 2</p></div>
+                <span class="found-badge">@Preview.Count FOUND</span>
+            </header>
+
+            <section class="verify-callout"><strong>✦</strong><div><b>Check before saving</b><p>@(NeedsReviewCount == 0 ? "Everything was read successfully." : $"We highlighted {NeedsReviewCount} item(s) that need your attention.")</p></div></section>
+
+            <div class="verify-summary">
+                <div><strong>@Preview.Count</strong><span>Classes found</span></div><div><strong>@ReadyCount</strong><span>Ready to save</span></div><div><strong>@NeedsReviewCount</strong><span>Needs review</span></div>
+            </div>
+
+            <section class="review-list" aria-label="Imported classes">
+                @foreach (var item in Preview)
+                {
+                    <article class="review-card @(NeedsReview(item) ? "needs-review" : "accepted")">
+                        <span class="review-state">@(NeedsReview(item) ? "!" : "✓")</span><div class="review-copy"><h2>@item.Title</h2><b>@item.CourseCode · @item.StartTime@(string.IsNullOrWhiteSpace(item.EndTime) ? "" : $" - {item.EndTime}")</b><p>@item.Location</p></div><button class="edit-review" aria-label="Edit @item.Title">♢</button>
+                    </article>
+                }
+            </section>
+            <p class="review-note">Review the imported classes before saving.</p>
+        </div>
+    </main>
+    <div class="save-bar"><button class="primary-action" @onclick="SaveSchedule">✓ &nbsp; Save @Preview.Count classes</button></div>
+</div>
+
+@code {
+    private IReadOnlyList<ScheduleItem> Preview => State.HasImportPreview
+        ? State.ImportPreview
+        : State.Schedule;
+
+    private int NeedsReviewCount => Preview.Count(NeedsReview);
+
+    private int ReadyCount => Preview.Count - NeedsReviewCount;
+
+    private static bool NeedsReview(ScheduleItem item) =>
+        item.StartTime.Contains("NEEDS REVIEW", StringComparison.OrdinalIgnoreCase)
+        || item.Location.Contains("needs review", StringComparison.OrdinalIgnoreCase)
+        || item.Instructor.Contains("needs review", StringComparison.OrdinalIgnoreCase);
+
+    private void SaveSchedule()
+    {
+        State.SaveImportPreview();
+        Navigation.NavigateTo("/schedule");
+    }
+}
