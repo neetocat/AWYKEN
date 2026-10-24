@@ -1,7 +1,9 @@
 @page "/schedule"
 @using AWYKEN.Shared.Components
+@using AWYKEN.Shared.Data
 @using AWYKEN.Shared.Models
 @inject AWYKEN.Shared.Services.DashboardState State
+@inject IAwykenDataService Data
 @inject NavigationManager Navigation
 
 <PageTitle>AWYKEN • Schedule</PageTitle>
@@ -50,7 +52,7 @@
 
                     <button class="schedule-date @(active ? "active" : "")"
                             aria-pressed="@active"
-                            @onclick="() => SelectedDate = day">
+                            @onclick="() => SelectDateAsync(day)">
                         <span>@day.ToString("ddd").Substring(0, 1)</span>
                         <strong>@day.Day</strong>
                     </button>
@@ -229,6 +231,15 @@
     private IEnumerable<DateOnly> WeekDays =>
         Enumerable.Range(0, 5).Select(offset => WeekStart.AddDays(offset));
 
+    // Load the selected day's classes from the same SQLite-backed shared state.
+    protected override Task OnInitializedAsync() => Data.RefreshAsync(SelectedDate);
+
+    private async Task SelectDateAsync(DateOnly date)
+    {
+        SelectedDate = date;
+        await Data.RefreshAsync(SelectedDate);
+    }
+
     protected override void OnParametersSet()
     {
         if (AddRequested == true && !handledAddRequest)
@@ -293,7 +304,7 @@
         ShowForm = true;
     }
 
-    private void SaveClass()
+    private async Task SaveClass()
     {
         if (!Draft.TryValidate(out var start, out var end, out var error))
         {
@@ -323,18 +334,16 @@
             null
         );
 
-        if (EditingId is not null)
+        try
         {
-            var index = State.Schedule.FindIndex(item => item.Id == EditingId);
-
-            if (index >= 0)
-            {
-                State.Schedule[index] = newItem;
-            }
+            // Persist edits and additions; refresh updates the same shared state
+            // that Home, Commute, and Notifications read.
+            await Data.SaveScheduleItemAsync(newItem, SelectedDate);
         }
-        else
+        catch (Exception exception)
         {
-            State.Schedule.Add(newItem);
+            FormError = exception.Message;
+            return;
         }
 
         CloseForm();
@@ -346,14 +355,16 @@
         );
     }
 
-    private void DeleteClass(string id)
+    private async Task DeleteClass(string id)
     {
-        var item = State.Schedule.FirstOrDefault(item => item.Id == id);
-
-        if (item is not null)
+        try
         {
-            State.Schedule.Remove(item);
+            await Data.DeleteScheduleItemAsync(id, SelectedDate);
             ShowMessage("Class deleted", "The class was removed from your schedule.");
+        }
+        catch (Exception exception)
+        {
+            ShowMessage("Could not delete class", exception.Message);
         }
     }
 

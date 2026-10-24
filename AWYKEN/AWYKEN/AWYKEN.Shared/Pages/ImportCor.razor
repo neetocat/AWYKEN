@@ -43,6 +43,11 @@
     private string? status;
 
     private void TakePhoto() => Navigation.NavigateTo("/verify-schedule");
-    private void SelectFile() => Navigation.NavigateTo("/verify-schedule");
+
+    // File selection is only a UI placeholder until a COR/OCR reader exists;
+    // don't pretend the file was parsed or add made-up classes to SQLite.
+    private void SelectFile() =>
+        status = "File selected. Document extraction is not connected yet; no classes were saved.";
+
     private void EnterManually() => Navigation.NavigateTo("/schedule");
 }
