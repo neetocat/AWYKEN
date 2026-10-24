@@ -1,3 +1,30 @@
+/* VARIABLES */
+:root {
+    --primary: #000435;
+    --primary-700: #161a55;
+    --primary-500: #44477a;
+    --primary-100: #e8e9f1;
+    --primary-50: #f4f5f9;
+    --background: #f6f8fc;
+    --surface: #ffffff;
+    --text: #15172a;
+    --text-secondary: #687086;
+    --text-disabled: #9da3b1;
+    --border: #e1e5ee;
+    --success: #198754;
+    --success-soft: #e8f6ef;
+    --warning: #b85e00;
+    --warning-soft: #fff4df;
+    --error: #c92a2a;
+    --error-soft: #fff0f0;
+    --info: #2563eb;
+    --info-soft: #edf3ff;
+    font-family: "Inter", sans-serif;
+    color: var(--text);
+    background: #e9edf5;
+    font-synthesis: none;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     --maui-status-bar-safe-area-background: rgb(3, 23, 62);
@@ -58,4 +85,16 @@ h1:focus {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+
+/*     PAGES     */
+
+/* Add Class */
+.add-class {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: auto;
+    overflow: hidden auto;
+    background: var(--background);
 }
