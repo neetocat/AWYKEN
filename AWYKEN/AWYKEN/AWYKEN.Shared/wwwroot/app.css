@@ -100,3 +100,9 @@ h1:focus {
     overflow: hidden auto;
     background: var(--background);
 }
+
+.add-class__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
