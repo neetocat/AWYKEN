@@ -106,3 +106,29 @@ h1:focus {
     justify-content: space-between;
     align-items: center;
 }
+
+.add-class__header-content {
+    display: flex;
+    flex-direction: column;
+    margin-right: auto;
+    padding-left: 16px;
+    gap: 3.5px;
+}
+
+.add-class__header-title {
+    font-family: var(--font-family);
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 19px;
+    margin: 0;
+}
+
+.add-class__subheader-text {
+    font-family: var(--font-family);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    line-height: 12px;
+    margin: 0;
+}
