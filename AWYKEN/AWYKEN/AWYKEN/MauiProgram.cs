@@ -1,5 +1,7 @@
-﻿using AWYKEN.Services;
+using AWYKEN.Services;
+using AWYKEN.Shared.Data;
 using AWYKEN.Shared.Services;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace AWYKEN
@@ -20,6 +22,12 @@ namespace AWYKEN
             builder.Services.AddSingleton<IFormFactor, FormFactor>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.DashboardState>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.CorScheduleImporter>();
+
+            // Store this installation's database in its private platform app-data folder.
+            var databasePath = Path.Combine(FileSystem.AppDataDirectory, "awyken.db");
+            builder.Services.AddDbContextFactory<AwykenDbContext>(options =>
+                options.UseSqlite($"Data Source={databasePath}"));
+            builder.Services.AddScoped<IAwykenDataService, SqliteAwykenDataService>();
 
             builder.Services.AddMauiBlazorWebView();
 
