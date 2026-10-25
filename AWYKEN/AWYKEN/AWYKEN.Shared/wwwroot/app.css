@@ -132,3 +132,21 @@ h1:focus {
     line-height: 12px;
     margin: 0;
 }
+
+/* Add Class (Buttons) */
+.add-class__button--back {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--primary);
+    padding: 10px;
+}
+
+.add-class__button--back > img {
+    object-fit: contain;
+    width: 12.55px;
+    height: 12.55px;
+}
