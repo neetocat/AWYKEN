@@ -7,10 +7,13 @@ namespace AWYKEN.Shared.Data;
 /// <summary>Reads and writes the local SQLite database for all shared pages.</summary>
 public sealed class SqliteAwykenDataService(
     IDbContextFactory<AwykenDbContext> contextFactory,
-    DashboardState state) : IAwykenDataService
+    DashboardState state,
+    LocalAccountSession accountSession) : IAwykenDataService
 {
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private bool _initialized;
+
+    public bool IsAuthenticated => accountSession.IsAuthenticated;
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -28,7 +31,8 @@ public sealed class SqliteAwykenDataService(
             // Apply schema migrations first. A missing profile gets a null name,
             // which DashboardState presents as Guest; no schedule rows are seeded.
             await db.Database.MigrateAsync(cancellationToken);
-            if (!await db.Profiles.AnyAsync(cancellationToken))
+            // Keep an anonymous Guest profile for visitors even after accounts are added.
+            if (!await db.Profiles.AnyAsync(profile => profile.Email == null, cancellationToken))
             {
                 db.Profiles.Add(new UserProfileRecord { DisplayName = null, Email = null });
                 await db.SaveChangesAsync(cancellationToken);
@@ -42,17 +46,96 @@ public sealed class SqliteAwykenDataService(
         }
     }
 
+    public async Task<string?> SignUpAsync(
+        string displayName, string email, string password, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        var normalizedEmail = NormalizeEmail(email);
+        if (!IsValidEmail(normalizedEmail))
+            return "Enter a valid email address.";
+        if (normalizedEmail.Length > 200)
+            return "Email addresses must be 200 characters or fewer.";
+        if (password.Length < 8)
+            return "Use a password with at least 8 characters.";
+
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        if (await db.Profiles.AnyAsync(profile => profile.Email == normalizedEmail, cancellationToken))
+            return "An account with that email already exists. Log in instead.";
+
+        var profile = new UserProfileRecord
+        {
+            DisplayName = string.IsNullOrWhiteSpace(displayName)
+                ? normalizedEmail[..normalizedEmail.IndexOf('@')]
+                : displayName.Trim(),
+            Email = normalizedEmail,
+            PasswordHash = await Task.Run(() => LocalPasswordHasher.Hash(password), cancellationToken)
+        };
+        db.Profiles.Add(profile);
+        await db.SaveChangesAsync(cancellationToken);
+        accountSession.SignIn(profile.Id);
+        await RefreshAsync(DateOnly.FromDateTime(DateTime.Today), cancellationToken);
+        return null;
+    }
+
+    public async Task<string?> SignInAsync(
+        string email, string password, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        var normalizedEmail = NormalizeEmail(email);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profile = await db.Profiles.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Email == normalizedEmail, cancellationToken);
+        if (profile is null || !await Task.Run(() => LocalPasswordHasher.Verify(password, profile.PasswordHash), cancellationToken))
+            return "Email or password is incorrect.";
+
+        accountSession.SignIn(profile.Id);
+        await RefreshAsync(DateOnly.FromDateTime(DateTime.Today), cancellationToken);
+        return null;
+    }
+
+    public async Task SignOutAsync(DateOnly refreshDate, CancellationToken cancellationToken = default)
+    {
+        accountSession.SignOut();
+        await RefreshAsync(refreshDate, cancellationToken);
+    }
+
+    private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            return new System.Net.Mail.MailAddress(email).Address.Equals(email, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    private async Task<int> GetCurrentProfileIdAsync(AwykenDbContext db, CancellationToken cancellationToken)
+    {
+        if (accountSession.ProfileId is int signedInProfileId)
+            return signedInProfileId;
+
+        return await db.Profiles.Where(profile => profile.Email == null)
+            .Select(profile => profile.Id)
+            .FirstAsync(cancellationToken);
+    }
+
     public async Task RefreshAsync(DateOnly date, CancellationToken cancellationToken = default)
     {
         await InitializeAsync(cancellationToken);
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
         var profile = await db.Profiles.AsNoTracking()
-            .OrderBy(item => item.Id)
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(item => item.Id == profileId, cancellationToken);
 
         var startOfDay = date.ToDateTime(TimeOnly.MinValue);
         var startOfNextDay = date.AddDays(1).ToDateTime(TimeOnly.MinValue);
-        var allRows = await db.Schedule.AsNoTracking().ToListAsync(cancellationToken);
+        var allRows = await db.Schedule.AsNoTracking()
+            .Where(item => item.ProfileId == profileId)
+            .ToListAsync(cancellationToken);
         var day = date.DayOfWeek.ToString()[..3];
         var rows = allRows
             .Where(item => item.Days is null
@@ -61,43 +144,39 @@ public sealed class SqliteAwykenDataService(
             .OrderBy(item => item.StartsAt)
             .ToList();
 
-        var student = profile is null ? null : new StudentProfile(
-            profile.FullName, profile.DisplayName, profile.Email, profile.StudentNumber,
-            profile.College, profile.Program, profile.YearLevel, profile.Section, profile.AcademicTerm);
-
-        // Every page reads into the same scoped state object, so name, schedule,
-        // next class, and derived alerts agree across navigation.
-        state.ReplaceFromDatabase(
-            profile?.DisplayName,
-            profile?.Email,
-            rows.Select(ToScheduleItem),
-            student);
+        ApplyToSharedState(profile?.DisplayName, profile?.Email, rows);
     }
 
-    public async Task SaveImportedProfileAsync(
-        StudentProfile student, DateOnly referenceDate, CancellationToken cancellationToken = default)
+    public async Task RefreshWeekAsync(DateOnly weekStart, CancellationToken cancellationToken = default)
     {
         await InitializeAsync(cancellationToken);
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var profile = await db.Profiles.OrderBy(item => item.Id).FirstAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var profile = await db.Profiles.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == profileId, cancellationToken);
 
-        // Name and email are only filled in when empty, so the user's own edits are kept.
-        if (string.IsNullOrWhiteSpace(profile.DisplayName))
-            profile.DisplayName = student.FirstName;
-        if (string.IsNullOrWhiteSpace(profile.Email))
-            profile.Email = student.Email;
+        var weekStartDateTime = weekStart.ToDateTime(TimeOnly.MinValue);
+        var weekEnd = weekStart.AddDays(7).ToDateTime(TimeOnly.MinValue);
+        var weekDays = Enumerable.Range(0, 7)
+            .Select(offset => weekStart.AddDays(offset).DayOfWeek.ToString()[..3])
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var allRows = await db.Schedule.AsNoTracking()
+            .Where(item => item.ProfileId == profileId)
+            .ToListAsync(cancellationToken);
+        var rows = allRows
+            .Where(item => item.Days is null
+                ? item.StartsAt >= weekStartDateTime && item.StartsAt < weekEnd
+                : weekDays.Any(day => item.Days.Contains($"|{day}|", StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(item => item.StartsAt)
+            .ToList();
 
-        // Academic details come from the newest COR (year level and term change each semester).
-        profile.FullName = student.FullName ?? profile.FullName;
-        profile.StudentNumber = student.StudentNumber ?? profile.StudentNumber;
-        profile.College = student.College ?? profile.College;
-        profile.Program = student.Program ?? profile.Program;
-        profile.YearLevel = student.YearLevel ?? profile.YearLevel;
-        profile.Section = student.Section ?? profile.Section;
-        profile.AcademicTerm = student.AcademicTerm ?? profile.AcademicTerm;
+        ApplyToSharedState(profile?.DisplayName, profile?.Email, rows);
+    }
 
-        await db.SaveChangesAsync(cancellationToken);
-        await RefreshAsync(referenceDate, cancellationToken);
+    private void ApplyToSharedState(string? displayName, string? email, IEnumerable<ScheduleRecord> rows)
+    {
+        // Pages share this state, so every refresh keeps profile, classes, and alerts in sync.
+        state.ReplaceFromDatabase(displayName, email, rows.Select(ToScheduleItem));
     }
 
     public async Task SaveScheduleItemAsync(
@@ -105,19 +184,22 @@ public sealed class SqliteAwykenDataService(
     {
         await InitializeAsync(cancellationToken);
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
         var start = CombineDateAndTime(date, item.StartTime);
         var end = CombineDateAndTime(date, item.EndTime);
 
         ScheduleRecord record;
         if (int.TryParse(item.Id, out var id))
         {
-            record = await db.Schedule.SingleOrDefaultAsync(row => row.Id == id, cancellationToken)
+            record = await db.Schedule.SingleOrDefaultAsync(
+                row => row.Id == id && row.ProfileId == profileId, cancellationToken)
                 ?? throw new InvalidOperationException("That class no longer exists in the local database.");
         }
         else
         {
             record = new ScheduleRecord
             {
+                ProfileId = profileId,
                 CourseCode = item.CourseCode,
                 Title = item.Title,
                 Location = item.Location,
@@ -152,17 +234,20 @@ public sealed class SqliteAwykenDataService(
     {
         await InitializeAsync(cancellationToken);
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
         var imported = items.ToList();
 
         foreach (var item in imported)
         {
             var existing = await db.Schedule.FirstOrDefaultAsync(row =>
-                row.CourseCode == item.CourseCode && row.Title == item.Title && row.Section == item.Section,
+                row.ProfileId == profileId && row.CourseCode == item.CourseCode
+                && row.Title == item.Title && row.Section == item.Section,
                 cancellationToken);
             var start = CombineDateAndTimeOrDefault(referenceDate, item.StartTime);
             var end = CombineDateAndTimeOrDefault(referenceDate, item.EndTime, start);
             var record = existing ?? new ScheduleRecord
             {
+                ProfileId = profileId,
                 StartsAt = start,
                 EndsAt = end,
                 CourseCode = item.CourseCode,
@@ -203,7 +288,9 @@ public sealed class SqliteAwykenDataService(
             return;
 
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var record = await db.Schedule.SingleOrDefaultAsync(row => row.Id == parsedId, cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var record = await db.Schedule.SingleOrDefaultAsync(
+            row => row.Id == parsedId && row.ProfileId == profileId, cancellationToken);
         if (record is not null)
         {
             db.Schedule.Remove(record);

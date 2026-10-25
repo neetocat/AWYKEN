@@ -17,14 +17,9 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
         {
             entity.ToTable("Profiles");
             entity.Property(profile => profile.DisplayName).HasMaxLength(100);
-            entity.Property(profile => profile.Email).HasMaxLength(200);
-            entity.Property(profile => profile.FullName).HasMaxLength(150);
-            entity.Property(profile => profile.StudentNumber).HasMaxLength(30);
-            entity.Property(profile => profile.College).HasMaxLength(200);
-            entity.Property(profile => profile.Program).HasMaxLength(200);
-            entity.Property(profile => profile.YearLevel).HasMaxLength(40);
-            entity.Property(profile => profile.Section).HasMaxLength(80);
-            entity.Property(profile => profile.AcademicTerm).HasMaxLength(80);
+            entity.Property(profile => profile.Email).HasMaxLength(200).UseCollation("NOCASE");
+            entity.Property(profile => profile.PasswordHash).HasMaxLength(300);
+            entity.HasIndex(profile => profile.Email).IsUnique().HasFilter("\"Email\" IS NOT NULL");
         });
 
         modelBuilder.Entity<ScheduleRecord>(entity =>
@@ -42,6 +37,11 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(item => item.Days).HasMaxLength(40);
             entity.Property(item => item.MeetingTimes).HasMaxLength(300);
             entity.HasIndex(item => item.StartsAt);
+            entity.HasIndex(item => new { item.ProfileId, item.StartsAt });
+            entity.HasOne<UserProfileRecord>()
+                .WithMany()
+                .HasForeignKey(item => item.ProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

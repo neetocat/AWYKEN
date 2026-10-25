@@ -21,6 +21,7 @@ namespace AWYKEN
             // Add device-specific services used by the AWYKEN.Shared project
             builder.Services.AddSingleton<IFormFactor, FormFactor>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.DashboardState>();
+            builder.Services.AddScoped<AWYKEN.Shared.Services.LocalAccountSession>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.CorScheduleImporter>();
 
             // Store this installation's database in its private platform app-data folder.

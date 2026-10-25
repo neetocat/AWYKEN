@@ -20,16 +20,23 @@
                 <button class="outline-icon-button" aria-label="Notifications">@Icon("bell")</button>
             </header>
 
-            <section class="profile-card" role="button" tabindex="0" style="cursor: pointer;"
-                     aria-label="Open profile"
-                     @onclick='() => Navigation.NavigateTo("/profile")'
-                     @onkeydown="OpenProfileOnKey">
+            <section class="profile-card account-trigger" tabindex="0"
+                     @onclick="OpenAccountCard" @onkeydown="HandleProfileKeyDown">
                 <div class="avatar">@ProfileInitials</div>
                 <div class="profile-copy">
                     <h2>@(State.Student.FullName ?? State.User.DisplayName)</h2>
                     <p>@(string.IsNullOrWhiteSpace(State.User.Email) ? "No email saved" : State.User.Email)</p>
                 </div>
-                <span class="row-action" aria-hidden="true">@Icon("pencil")</span>
+                @if (Data.IsAuthenticated)
+                {
+                    <button class="row-action logout-action" aria-label="Log out"
+                            @onclick="OpenLogoutConfirmation" @onclick:stopPropagation="true">Log out</button>
+                }
+                else
+                {
+                    <button class="row-action" aria-label="Log in or sign up"
+                            @onclick="OpenAccountCard" @onclick:stopPropagation="true">♢</button>
+                }
             </section>
 
             <section class="settings-section">
@@ -77,11 +84,81 @@
     }
 </div>
 
+@if (ShowAccountCard && !Data.IsAuthenticated)
+{
+    <div class="account-modal-backdrop" @onclick="CloseAccountCard">
+        <section class="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-card-title"
+                 @onclick:stopPropagation="true">
+            <button class="account-modal-close" aria-label="Close" @onclick="CloseAccountCard">×</button>
+            <h2 id="account-card-title">Your AWYKEN account</h2>
+            <p class="account-modal-subtitle">Sign in to keep your schedule with your local profile.</p>
+            <div class="account-mode-toggle" role="tablist" aria-label="Account action">
+                <button class="@(AccountMode == "Login" ? "selected" : "")" role="tab"
+                        aria-selected="@(AccountMode == "Login")" @onclick='() => SetAccountMode("Login")'>Log in</button>
+                <button class="@(AccountMode == "SignUp" ? "selected" : "")" role="tab"
+                        aria-selected="@(AccountMode == "SignUp")" @onclick='() => SetAccountMode("SignUp")'>Sign up</button>
+            </div>
+
+            @if (AccountMode == "SignUp")
+            {
+                <label class="account-field">Name <span>(optional)</span>
+                    <input @bind="DisplayNameInput" autocomplete="name" maxlength="100" />
+                </label>
+            }
+            <label class="account-field">Email
+                <input type="email" @bind="EmailInput" autocomplete="email" />
+            </label>
+            <label class="account-field">Password
+                <input type="password" @bind="PasswordInput" autocomplete="@(AccountMode == "Login" ? "current-password" : "new-password")" />
+            </label>
+            @if (AccountMode == "SignUp")
+            {
+                <label class="account-field">Confirm password
+                    <input type="password" @bind="ConfirmPasswordInput" autocomplete="new-password" />
+                </label>
+                <p class="account-password-hint">Use at least 8 characters.</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(AccountError))
+            {
+                <p class="account-error" role="alert">@AccountError</p>
+            }
+            <button class="account-submit" disabled="@Working" @onclick="SubmitAccount">
+                @(Working ? "Please wait…" : AccountMode == "Login" ? "Log in" : "Create account")
+            </button>
+            <p class="account-local-note">This account and its password hash are stored in this app’s local database.</p>
+        </section>
+    </div>
+}
+
+@if (ShowLogoutPrompt)
+{
+    <div class="account-modal-backdrop" @onclick="CancelLogout">
+        <section class="account-confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="logout-title"
+                 @onclick:stopPropagation="true">
+            <h2 id="logout-title">Log out?</h2>
+            <p>Are you sure you want to log out of @State.User.DisplayName?</p>
+            <div class="account-confirm-actions">
+                <button @onclick="CancelLogout">No, stay logged in</button>
+                <button class="confirm-logout" @onclick="Logout">Yes, log out</button>
+            </div>
+        </section>
+    </div>
+}
+
 @code {
     private bool preparationEnabled = false;
     private bool commuteEnabled = true;
     private bool notificationsEnabled = true;
     private string? message;
+    private bool ShowAccountCard;
+    private bool ShowLogoutPrompt;
+    private bool Working;
+    private string AccountMode = "Login";
+    private string DisplayNameInput = "";
+    private string EmailInput = "";
+    private string PasswordInput = "";
+    private string ConfirmPasswordInput = "";
+    private string? AccountError;
 
     // Line icons (24x24 grid, stroke follows the text color so active/inactive states just work).
     private static readonly Dictionary<string, string> IconPaths = new()
@@ -114,30 +191,68 @@
         : string.Concat(State.User.FirstName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Take(2).Select(part => char.ToUpperInvariant(part[0])));
 
-    // "2026-2027 - First Semester" -> "First semester"
-    private string? TermLabel
+    private void OpenAccountCard()
     {
-        get
+        if (Data.IsAuthenticated) return;
+        ShowAccountCard = true;
+        AccountError = null;
+    }
+
+    private void CloseAccountCard() => ShowAccountCard = false;
+    private void SetAccountMode(string mode) { AccountMode = mode; AccountError = null; }
+
+    private void HandleProfileKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or " ") OpenAccountCard();
+    }
+
+    private void OpenLogoutConfirmation() => ShowLogoutPrompt = true;
+    private void CancelLogout() => ShowLogoutPrompt = false;
+
+    private async Task SubmitAccount()
+    {
+        AccountError = null;
+        if (string.IsNullOrWhiteSpace(EmailInput) || string.IsNullOrWhiteSpace(PasswordInput))
         {
-            var term = State.Student.AcademicTerm;
-            if (string.IsNullOrWhiteSpace(term))
-                return null;
-            var label = term[(term.LastIndexOf('-') + 1)..].Trim();
-            return label.Length == 0 ? null : label[..1] + label[1..].ToLowerInvariant();
+            AccountError = "Enter your email and password.";
+            return;
+        }
+        if (AccountMode == "SignUp" && PasswordInput != ConfirmPasswordInput)
+        {
+            AccountError = "The passwords do not match.";
+            return;
+        }
+
+        Working = true;
+        try
+        {
+            AccountError = AccountMode == "Login"
+                ? await Data.SignInAsync(EmailInput, PasswordInput)
+                : await Data.SignUpAsync(DisplayNameInput, EmailInput, PasswordInput);
+            if (AccountError is null)
+            {
+                ShowAccountCard = false;
+                DisplayNameInput = EmailInput = PasswordInput = ConfirmPasswordInput = "";
+                message = AccountMode == "Login" ? "You are logged in." : "Your account was created.";
+            }
+        }
+        catch
+        {
+            AccountError = "We couldn't complete that account action. Please try again.";
+        }
+        finally
+        {
+            Working = false;
         }
     }
 
-    private string ClassSummary =>
-        $"{State.Schedule.Count} {(State.Schedule.Count == 1 ? "class" : "classes")}"
-        + (TermLabel is null ? " saved locally" : $" · {TermLabel}");
-
-    private void OpenProfileOnKey(KeyboardEventArgs args)
+    private async Task Logout()
     {
-        if (args.Key is "Enter" or " ")
-            Navigation.NavigateTo("/profile");
+        await Data.SignOutAsync(DateOnly.FromDateTime(DateTime.Today));
+        ShowLogoutPrompt = false;
+        message = "You have been logged out.";
     }
 
-    private void SignOut() => message = "Sign out isn't available yet. Your data stays on this device.";
     private void ShowLocationMessage() => message = "No home location has been saved yet.";
     private void ShowTimeMessage() => message = "12-hour time format is selected.";
     private void ShowAboutMessage() => message = "AWYKEN · Version 1.0.0";
