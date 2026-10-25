@@ -144,7 +144,7 @@ public sealed class SqliteAwykenDataService(
             .OrderBy(item => item.StartsAt)
             .ToList();
 
-        ApplyToSharedState(profile?.DisplayName, profile?.Email, rows);
+        ApplyToSharedState(profile, rows);
     }
 
     public async Task RefreshWeekAsync(DateOnly weekStart, CancellationToken cancellationToken = default)
@@ -170,13 +170,42 @@ public sealed class SqliteAwykenDataService(
             .OrderBy(item => item.StartsAt)
             .ToList();
 
-        ApplyToSharedState(profile?.DisplayName, profile?.Email, rows);
+        ApplyToSharedState(profile, rows);
     }
 
-    private void ApplyToSharedState(string? displayName, string? email, IEnumerable<ScheduleRecord> rows)
+    private void ApplyToSharedState(UserProfileRecord? profile, IEnumerable<ScheduleRecord> rows)
     {
         // Pages share this state, so every refresh keeps profile, classes, and alerts in sync.
-        state.ReplaceFromDatabase(displayName, email, rows.Select(ToScheduleItem));
+        var student = profile is null
+            ? StudentProfile.Empty
+            : new StudentProfile(profile.FullName, profile.DisplayName, profile.StudentEmail,
+                profile.StudentNumber, profile.College, profile.Program, profile.YearLevel,
+                profile.Section, profile.AcademicTerm);
+        state.ReplaceFromDatabase(profile?.DisplayName, profile?.Email, rows.Select(ToScheduleItem), student);
+    }
+
+    public async Task SaveImportedProfileAsync(
+        StudentProfile student, DateOnly referenceDate, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var profile = await db.Profiles.SingleAsync(item => item.Id == profileId, cancellationToken);
+
+        // Keep login email separate from the school email parsed from a COR.
+        profile.FullName = student.FullName ?? profile.FullName;
+        profile.StudentEmail = student.Email ?? profile.StudentEmail;
+        profile.StudentNumber = student.StudentNumber ?? profile.StudentNumber;
+        profile.College = student.College ?? profile.College;
+        profile.Program = student.Program ?? profile.Program;
+        profile.YearLevel = student.YearLevel ?? profile.YearLevel;
+        profile.Section = student.Section ?? profile.Section;
+        profile.AcademicTerm = student.AcademicTerm ?? profile.AcademicTerm;
+        if (string.IsNullOrWhiteSpace(profile.DisplayName))
+            profile.DisplayName = student.FirstName ?? student.FullName;
+
+        await db.SaveChangesAsync(cancellationToken);
+        await RefreshAsync(referenceDate, cancellationToken);
     }
 
     public async Task SaveScheduleItemAsync(
