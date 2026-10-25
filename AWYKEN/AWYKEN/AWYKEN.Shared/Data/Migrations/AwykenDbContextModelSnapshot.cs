@@ -23,13 +23,13 @@ namespace AWYKEN.Shared.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Cfn")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ColorCode")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Cfn")
-                        .HasMaxLength(40)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("CourseCode")
@@ -37,11 +37,11 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("EndsAt")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Days")
                         .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EndsAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Instructor")
@@ -67,6 +67,9 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("ProfileId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Section")
                         .HasMaxLength(80)
                         .HasColumnType("TEXT");
@@ -86,6 +89,8 @@ namespace AWYKEN.Shared.Data.Migrations
 
                     b.HasIndex("StartsAt");
 
+                    b.HasIndex("ProfileId", "StartsAt");
+
                     b.ToTable("Schedule", (string)null);
                 });
 
@@ -101,11 +106,29 @@ namespace AWYKEN.Shared.Data.Migrations
 
                     b.Property<string>("Email")
                         .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasFilter("\"Email\" IS NOT NULL");
+
                     b.ToTable("Profiles", (string)null);
+                });
+
+            modelBuilder.Entity("AWYKEN.Shared.Data.ScheduleRecord", b =>
+                {
+                    b.HasOne("AWYKEN.Shared.Data.UserProfileRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
