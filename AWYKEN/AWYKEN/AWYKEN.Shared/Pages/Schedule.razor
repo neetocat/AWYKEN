@@ -33,14 +33,14 @@
                 <button class="@(ViewMode == "Day" ? "selected" : "")"
                         role="tab"
                         aria-selected="@(ViewMode == "Day")"
-                        @onclick='() => ViewMode = "Day"'>
+                        @onclick='() => SetViewModeAsync("Day")'>
                     Day
                 </button>
 
                 <button class="@(ViewMode == "Week" ? "selected" : "")"
                         role="tab"
                         aria-selected="@(ViewMode == "Week")"
-                        @onclick='() => ViewMode = "Week"'>
+                        @onclick='() => SetViewModeAsync("Week")'>
                     Week
                 </button>
             </div>
@@ -69,7 +69,7 @@
             <section class="schedule-events" aria-label="Classes">
                 @if (State.Schedule.Count == 0)
                 {
-                    <p>No classes yet. Click + to add your first class!</p>
+                    <p>@(ViewMode == "Week" ? "No classes scheduled for this week." : "No classes scheduled for this day. Select another day or click + to add a class.")</p>
                 }
                 else
                 {
@@ -111,7 +111,9 @@
                                         <span class="instructor-avatar">
                                             @item.InstructorInitials
                                         </span>
-                                        <span>@item.Instructor</span>
+                                        <span>@(ViewMode == "Week" && !string.IsNullOrWhiteSpace(item.Days)
+                                            ? $"{item.Instructor} · {item.Days}"
+                                            : item.Instructor)</span>
                                     </div>
 
                                     <div class="class-actions">
@@ -238,13 +240,23 @@
         Enumerable.Range(0, 7).Select(offset => WeekStart.AddDays(offset));
 
     // Load the selected day's classes from the same SQLite-backed shared state.
-    protected override Task OnInitializedAsync() => Data.RefreshAsync(SelectedDate);
+    protected override Task OnInitializedAsync() => RefreshSelectedViewAsync();
 
     private async Task SelectDateAsync(DateOnly date)
     {
         SelectedDate = date;
-        await Data.RefreshAsync(SelectedDate);
+        await RefreshSelectedViewAsync();
     }
+
+    private async Task SetViewModeAsync(string mode)
+    {
+        ViewMode = mode;
+        await RefreshSelectedViewAsync();
+    }
+
+    private Task RefreshSelectedViewAsync() => ViewMode == "Week"
+        ? Data.RefreshWeekAsync(WeekStart)
+        : Data.RefreshAsync(SelectedDate);
 
     protected override void OnParametersSet()
     {

@@ -7,6 +7,8 @@ namespace AWYKEN.Shared.Data;
 public sealed class ScheduleRecord
 {
     public int Id { get; set; }
+    // Keep each local schedule private to the profile that created or imported it.
+    public int ProfileId { get; set; }
     public DateTime StartsAt { get; set; }
     public DateTime EndsAt { get; set; }
     public required string CourseCode { get; set; }

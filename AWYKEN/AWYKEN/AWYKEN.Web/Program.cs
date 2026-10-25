@@ -11,6 +11,7 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 builder.Services.AddScoped<AWYKEN.Shared.Services.DashboardState>();
+builder.Services.AddScoped<AWYKEN.Shared.Services.LocalAccountSession>();
 builder.Services.AddScoped<AWYKEN.Shared.Services.CorScheduleImporter>();
 
 // Keep the Web host's local database in the user's app-data folder, outside Git.
