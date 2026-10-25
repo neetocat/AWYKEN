@@ -384,7 +384,10 @@ public sealed class CorScheduleImporter
     private static List<LayoutWord> GetPdfWords(UglyToad.PdfPig.Content.Page page)
     {
         var letters = page.Letters
-            .Where(letter => !string.IsNullOrWhiteSpace(letter.Value))
+            // Keep PDF space glyphs: discarding them here makes the later
+            // word-boundary handling ineffective for PDFs that encode spaces
+            // as explicit glyphs with very narrow advances.
+            .Where(letter => !string.IsNullOrEmpty(letter.Value))
             .Select(letter => new LayoutLetter(letter.Value, letter.Location.X,
                 page.Height - letter.Location.Y, letter.Width, letter.FontSize))
             .OrderBy(letter => letter.Y).ThenBy(letter => letter.X).ToList();
@@ -445,9 +448,15 @@ public sealed class CorScheduleImporter
 
         var columnNames = new[] { "CFN", "Course", "Descriptive", "Section", "Units", "Time", "Days", "Room" };
         var defaults = new[] { .05, .116, .236, .512, .624, .661, .791, .845 };
+        var cfnHeader = words.Where(word => IsCfnHeader(word.Text))
+            .OrderBy(word => word.Y).FirstOrDefault();
+        var headerY = cfnHeader?.Y ?? double.NaN;
         var anchors = defaults.Select((fraction, index) =>
         {
-            var header = words.FirstOrDefault(word => MatchesColumnHeader(word.Text, columnNames[index]));
+            var matchingHeaders = words.Where(word => MatchesColumnHeader(word.Text, columnNames[index]));
+            var header = double.IsNaN(headerY)
+                ? matchingHeaders.FirstOrDefault()
+                : matchingHeaders.OrderBy(word => Math.Abs(word.Y - headerY)).FirstOrDefault();
             return header is null ? fraction * pageWidth : header.X;
         }).ToArray();
 
@@ -456,17 +465,18 @@ public sealed class CorScheduleImporter
             var column = 0;
             for (var index = 1; index < anchors.Length; index++)
             {
-                // Treat header positions as the left edge of their columns, but
-                // allow small PDF glyph-position differences around that edge.
-                var boundary = (anchors[index - 1] + anchors[index]) / 2;
-                if (word.X < boundary) break;
+                // A word belongs to the column whose header starts before it.
+                // Midpoint boundaries split rightmost words (such as the final
+                // "PM" in a time range) into the next column when the PDF has
+                // narrow inter-word spacing.
+                if (word.X < anchors[index]) break;
                 column = index;
             }
             return column;
         }
 
-        var headerY = words.Where(word => ColumnFor(word) == 0 && IsCfnHeader(word.Text))
-            .Select(word => word.Y).DefaultIfEmpty(-12).Max();
+        if (double.IsNaN(headerY))
+            headerY = -12;
         var unitLabels = words.Where(word => Regex.Replace(word.Text, @"[^A-Z]", "", RegexOptions.IgnoreCase)
             .Equals("UNITS", StringComparison.OrdinalIgnoreCase)).ToList();
         var tableEndY = words.Where(word =>
@@ -476,7 +486,11 @@ public sealed class CorScheduleImporter
                         .Equals("TOTAL", StringComparison.OrdinalIgnoreCase)
                     && unitLabels.Any(units => Math.Abs(units.Y - word.Y) <= 18 && units.X > word.X)))
             .Select(word => word.Y).DefaultIfEmpty(double.MaxValue).Min();
+        // Text elsewhere on the COR can look like a CFN to the loose OCR
+        // candidate check (for example "Date: 07/14/2026"). Never let a
+        // footer candidate extend the final course row past the table total.
         var rowStarts = words.Where(word => ColumnFor(word) == 0
+                && word.Y < tableEndY
                 && word.Y > headerY + 10 && IsCfnCandidate(word.Text))
             .OrderBy(word => word.Y).ToList();
         var results = new List<ScheduleItem>();
@@ -640,7 +654,9 @@ public sealed class CorScheduleImporter
         normalized = Regex.Replace(normalized, @"(?<=\d)\.(?=\d{2}\s*(?:AM|PM))", ":");
         normalized = Regex.Replace(normalized, @"(AM|PM)00(?=\d{3}\s*(?:AM|PM))", "$1-0");
         normalized = Regex.Replace(normalized, @"(AM|PM)0(?=\d{3}\s*(?:AM|PM))", "$1-0");
-        normalized = Regex.Replace(normalized, @"\b00\s*PM(?=\s*[-–])", "12:00 PM");
+        // Correct a scan that reads noon as "00 PM", while preserving normal
+        // times whose minutes are :00 (for example, "06:00 PM").
+        normalized = Regex.Replace(normalized, @"(?<!\d:)\b00\s*PM(?=\s*[-–])", "12:00 PM");
         normalized = Regex.Replace(normalized, @"(AM|PM)\s*[^0-9A-Z]*\s*(?=\d{1,2}:?\d{2}\s*(?:AM|PM))", "$1-");
         normalized = Regex.Replace(normalized, @"(AM|PM)(?=\d{1,2}:?\d{2}\s*(?:AM|PM))", "$1-");
         return normalized;
