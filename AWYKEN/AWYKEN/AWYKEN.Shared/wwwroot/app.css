@@ -1,7 +1,36 @@
+/* VARIABLES */
+:root {
+    --primary: #000435;
+    --primary-700: #161a55;
+    --primary-500: #44477a;
+    --primary-100: #e8e9f1;
+    --primary-50: #f4f5f9;
+    --background: #f6f8fc;
+    --surface: #ffffff;
+    --text: #15172a;
+    --text-secondary: #687086;
+    --text-disabled: #9da3b1;
+    --border: #e1e5ee;
+    --success: #198754;
+    --success-soft: #e8f6ef;
+    --warning: #b85e00;
+    --warning-soft: #fff4df;
+    --error: #c92a2a;
+    --error-soft: #fff0f0;
+    --info: #2563eb;
+    --info-soft: #edf3ff;
+    font-family: "Inter", sans-serif;
+    color: var(--text);
+    background: #e9edf5;
+    font-synthesis: none;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     --maui-status-bar-safe-area-background: rgb(3, 23, 62);
 }
+
+html::-webkit-scrollbar { display: none; }
 
 a, .btn-link {
     color: #006bb7;
@@ -18,7 +47,7 @@ a, .btn-link {
 }
 
 .content {
-    padding-top: 1.1rem;
+    padding: 0;
 }
 
 h1:focus {
@@ -52,10 +81,75 @@ h1:focus {
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-    color: var(--bs-secondary-color);
     text-align: end;
 }
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+
+/*     PAGES     */
+
+/* Add Class */
+.add-class {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: auto;
+    overflow: hidden auto;
+    background: var(--background);
+}
+
+.add-class__header {
+    display: flex;
+    width: 100%;
+    height: 8vh;
+    justify-content: space-between;
+    align-items: flex-end;
+    border: 2.1px solid var(--border);
+    padding: 18px 12px 18px;
+}
+
+.add-class__header-content {
+    display: flex;
+    flex-direction: column;
+    margin-right: auto;
+    padding-left: 16px;
+    gap: 3.5px;
+}
+
+.add-class__header-title {
+    font-family: var(--font-family);
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 19px;
+    margin: 0;
+}
+
+.add-class__subheader-text {
+    font-family: var(--font-family);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    line-height: 12px;
+    margin: 0;
+}
+
+/* Add Class (Buttons) */
+.add-class__button--back {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--primary);
+    padding: 10px;
+}
+
+.add-class__button--back > img {
+    object-fit: contain;
+    width: 12.55px;
+    height: 12.55px;
 }

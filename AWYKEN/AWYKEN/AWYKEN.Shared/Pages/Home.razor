@@ -6,14 +6,16 @@
 @* AWYKEN dashboard page.
    The shared state is refreshed from the local SQLite database when this page opens. *@
 
-<PageTitle>AWYKEN • Dashboard</PageTitle>
+<PageTitle>AWYKEN</PageTitle>
 
 
 <div class="app-shell">
     <main class="dashboard-scroll">
         <div class="dashboard-content">
             <header class="topbar">
-                <div class="brand-mark" role="img" aria-label="AWYKEN logo"><span></span><span></span><span></span></div>
+                <div class="brand-mark" role="img" aria-label="AWYKEN logo">
+                    <img src="_content/AWYKEN.Shared/images/icon/awyken-logo-transparent-cut.png" alt="AWYKEN logo" />
+                </div>
                 <div class="greeting-copy">
                     <p class="greeting">Good morning, @State.User.DisplayName</p>
                     <p class="muted">@DateTime.Now.ToString("dddd, MMMM d")</p>

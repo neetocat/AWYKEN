@@ -1,0 +1,106 @@
+﻿@page "/add-class"
+@using AWYKEN.Shared.Components
+@inject NavigationManager Navigation
+
+<PageTitle>AWYKEN</PageTitle>
+
+<div class="add-class">
+    <header class="add-class__header">
+        <button class="add-class__button add-class__button--back">
+            <img src="_content/AWYKEN.Shared/images/icon/awyken-back-icon.png" alt="AWYKEN Back Icon" />
+        </button>
+        
+        <div class="add-class__header-content">
+            <h1 class="add-class__header-title">Add class</h1>
+            <p class="add-class__subheader-text">Create a new class schedule</p>
+        </div>
+
+        <button class="add-class__button add-class__button--save">Save</button>
+    </header>
+
+    <main class="add-class__main">
+        <!-- CLASS DETAILS -->
+        <h2 class="add-class__subtitle">Class Details</h2>
+
+        <label class="add-class__input-label" for="subject-name">Subject Name</label>
+        <input class="add-class__input-field" id="subject-name" type="text" name="subject-name" maxlength="100" placeholder="Enter subject name..." required />
+
+        <label class="add-class__input-label" for="course-code">Course Code</label>
+        <input class="add-class__input-field" id="course-code" type="text" name="course-code" maxlength="15" placeholder="e.g., MATH 101" required />
+
+        <label class="add-class__input-label" for="instructor">Instructor (optional)</label>
+        <input class="add-class__input-field" id="instructor" type="text" name="instructor" maxlength="50" placeholder="Enter instructor name..." />
+
+        <!-- SCHEDULE -->
+        <form class="add-class__form">
+            <h2 class="add-class__subtitle">Schedule</h2>
+
+            <div class="add-class__class-days-wrapper">
+                <div class="add-class__class-day-option">M</div>
+                <div class="add-class__class-day-option">T</div>
+                <div class="add-class__class-day-option">W</div>
+                <div class="add-class__class-day-option">TH</div>
+                <div class="add-class__class-day-option">F</div>
+                <div class="add-class__class-day-option">S</div>
+                <div class="add-class__class-day-option">SU</div>
+            </div>
+
+            <div class="add-class__time-wrapper">
+                <!-- Start Time -->
+                <label class="add-class__input-label" for="start-time">Starts</label>
+                <div class="add-class__time-input">
+                    <img class="add-class__icon add__icon--clock add__icon--clock-large" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
+                    <input class="add-class__input-field add-class__input-field--time" id="start-time" name="start-time" type="time" required />
+                    <img class="add-class__icon add__icon--clock add__icon--clock-small" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
+                </div>
+
+                <!-- End Time -->
+                <label class="add-class__input-label" for="end-time">Ends</label>
+                <div class="add-class__time-input">
+                    <img class="add-class__icon add__icon--clock add__icon--clock-large" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
+                    <input class="add-class__input-field add-class__input-field--time" id="end-time" name="end-time" type="time" required />
+                    <img class="add-class__icon add__icon--clock add__icon--clock-small" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
+                </div>
+            </div>
+
+            <!-- CLASS TYPE -->
+            <div class="add-class__class-type-outer-wrapper">
+                <h2 class="add-class__subtitle">Class Type</h2>
+
+                <!-- Face-to-Face Option -->
+                <div class="add-class__class-type-inner-wrapper">
+                    <div class="add-class__class-type-option add-class__class-type-option--face-to-face" data-selected="true">
+                        <img class="add-class__icon add-class__icon--location" src="_content/AWYKEN.Shared/images/icon/awyken-location-icon.png" alt="AWYKEN Location Icon" />
+                        
+                        <div class="add-class__text-wrapper">
+                            <p class="add-class__option-text">Face-to-face</p>
+                            <p class="add-class__option-description">On campus</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Online Option -->
+                <div class="add-class__class-type-inner-wrapper">
+                    <div class="add-class__class-type-option add-class__class-type-option--face-to-face" data-selected="true">
+                        <img class="add-class__icon add-class__icon--location" src="_content/AWYKEN.Shared/images/icon/awyken-video-icon.png" alt="AWYKEN Meeting Icon" />
+                        
+                        <div class="add-class__text-wrapper">
+                            <p class="add-class__option-text">Online</p>
+                            <p class="add-class__option-description">Video meeting</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ADD CLASS BUTTON -->
+            <button class="add-class__button add-class__button--add-schedule" type="submit">
+                <span class="add-class__plus-icon">+</span>
+                <p class="add-class__button-text">Add to schedule</p>
+            </button>
+        </form>
+    </main>
+</div>
+
+@code {
+
+}

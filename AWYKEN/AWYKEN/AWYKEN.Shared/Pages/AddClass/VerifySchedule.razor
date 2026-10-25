@@ -2,10 +2,9 @@
 @using AWYKEN.Shared.Services
 @using AWYKEN.Shared.Data
 @inject AWYKEN.Shared.Services.DashboardState State
-@inject NavigationManager Navigation    
+@inject NavigationManager Navigation
 @inject IAwykenDataService Data
 
-<PageTitle>Verify your schedule • AWYKEN</PageTitle>
 
 <div class="flow-shell verify-screen">
     <main class="flow-scroll">
@@ -13,13 +12,10 @@
             <header class="flow-header">
                 <button class="back-button" @onclick='() => Navigation.NavigateTo("/import-cor")' aria-label="Back">‹</button>
                 <div><h1>Verify your schedule</h1><p>Step 2 of 2</p></div>
-                <span class="found-badge">@Preview.Count FOUND</span>
             </header>
 
-            <section class="verify-callout"><strong>✦</strong><div><b>Check before saving</b><p>@(NeedsReviewCount == 0 ? "Everything was read successfully." : $"We highlighted {NeedsReviewCount} item(s) that need your attention.")</p></div></section>
 
             <div class="verify-summary">
-                <div><strong>@Preview.Count</strong><span>Classes found</span></div><div><strong>@ReadyCount</strong><span>Ready to save</span></div><div><strong>@NeedsReviewCount</strong><span>Needs review</span></div>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(SaveError))
@@ -28,23 +24,15 @@
             }
 
             <section class="review-list" aria-label="Imported classes">
-                @foreach (var item in Preview)
                 {
-                    <article class="review-card schedule-review-card @(NeedsReview(item) ? "needs-review" : "accepted")" style="--event-accent: @item.ColorCode">
-                        <div class="review-card-main">
-                            <div class="review-card-heading"><span class="review-course-code">@item.CourseCode</span><span class="review-cfn">@item.Cfn</span></div>
-                            <h2>@item.Title</h2>
-                            <div class="review-details"><span><b>◷</b> @item.DisplayTimes</span><span><b>⌖</b> @item.Location</span></div>
-                            <div class="review-meta"><span>@(string.IsNullOrWhiteSpace(item.Days) ? "Days need review" : item.Days)</span><span>@(string.IsNullOrWhiteSpace(item.Section) ? "Section needs review" : item.Section)</span>@if (item.Units is decimal units) { <span>@units units</span> }</div>
-                        </div>
-                        <button class="edit-review" @onclick="() => BeginEdit(item)" aria-label="Edit @item.Title">Edit</button>
                     </article>
                 }
+                <article class="review-card needs-review">
+                    <span class="review-state">!</span><div class="review-copy"><h2>Data Structures</h2><b>CS 2203 · TIMES NEEDS REVIEW</b><p>Online · Google Meet</p></div><button class="edit-review" aria-label="Edit Data Structures">♢</button>
+                </article>
             </section>
-            <p class="review-note">Review the imported classes before saving.</p>
         </div>
     </main>
-    <div class="save-bar"><button class="primary-action" disabled="@Saving" @onclick="SaveSchedule">@(Saving ? "Saving…" : $"✓   Save {Preview.Count} classes")</button></div>
 </div>
 
 @if (Editing is not null)
