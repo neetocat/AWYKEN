@@ -63,10 +63,6 @@
                 <button class="settings-row" @onclick="ShowAboutMessage"><span class="row-icon">@Icon("info")</span><span class="row-copy"><strong>About AWYKEN</strong><small>Version 1.0.0</small></span><span class="row-chevron">@Icon("chevron")</span></button>
             </section>
 
-            <button style="display:block;margin:20px auto 96px;padding:8px 16px;background:none;border:0;color:var(--error);font-size:14px;font-weight:700;cursor:pointer;"
-                    @onclick="SignOut">
-                Sign out
-            </button>
         </div>
     </main>
 
@@ -159,6 +155,8 @@
     private string PasswordInput = "";
     private string ConfirmPasswordInput = "";
     private string? AccountError;
+
+    private string ClassSummary => $"{State.Schedule.Count} {(State.Schedule.Count == 1 ? "class" : "classes")} saved locally";
 
     // Line icons (24x24 grid, stroke follows the text color so active/inactive states just work).
     private static readonly Dictionary<string, string> IconPaths = new()
