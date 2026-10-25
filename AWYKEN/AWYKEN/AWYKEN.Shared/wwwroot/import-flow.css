@@ -635,6 +635,48 @@
     line-height: 1;
 }
 
+.schedule-review-card {
+    position: relative;
+    align-items: stretch;
+    min-height: 122px;
+    gap: 12px;
+    padding: 15px 14px 14px 17px;
+    overflow: hidden;
+}
+
+.schedule-review-card::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 5px;
+    background: var(--event-accent, #5268ca);
+    content: "";
+}
+
+.review-card-main { flex: 1; min-width: 0; }
+.review-card-heading { display: flex; align-items: center; gap: 8px; }
+.review-course-code { color: #68758f; font-size: 12px; font-weight: 900; letter-spacing: 1px; }
+.review-cfn { color: #97a0b2; font-size: 9px; }
+.review-card-main > h2 { margin: 7px 0 10px; color: #151a30; font-size: 14px; line-height: 1.3; }
+.review-details { display: grid; gap: 5px; color: #68758f; font-size: 10px; }
+.review-details > span { display: flex; gap: 7px; align-items: baseline; }
+.review-details b { color: #73809a; font-size: 13px; }
+.review-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.review-meta span { padding: 4px 7px; border-radius: 8px; background: #f0f2f8; color: #5e6982; font-size: 9px; font-weight: 700; }
+.edit-review { align-self: flex-start; flex: 0 0 auto; padding: 7px 10px; border: 1px solid #dce2ec; border-radius: 9px; background: #fff; color: #273d8f; font-size: 10px; font-weight: 800; }
+.review-edit-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 18px; background: #11182e88; }
+.review-edit-dialog { display: grid; gap: 10px; width: min(100%, 440px); max-height: 90vh; overflow-y: auto; padding: 20px; border-radius: 16px; background: #fff; box-shadow: 0 15px 50px #11182e33; }
+.review-edit-dialog h2 { margin: 0 0 4px; font-size: 18px; }
+.review-edit-dialog label { display: grid; gap: 5px; color: #59657d; font-size: 10px; font-weight: 800; }
+.review-edit-dialog input { min-width: 0; padding: 9px 10px; border: 1px solid #dce2ec; border-radius: 8px; color: #151a30; font: inherit; font-weight: 500; }
+.review-edit-actions { display: flex; gap: 8px; margin-top: 5px; }
+.review-edit-actions button { flex: 1; min-height: 38px; border: 1px solid #dce2ec; border-radius: 9px; background: #fff; color: #27314e; font-size: 10px; font-weight: 800; }
+.review-edit-actions .primary-action { border: 0; background: #050a3d; color: #fff; }
+.upload-action { position: relative; overflow: hidden; cursor: pointer; }
+.upload-action input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+.event-cor-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; color: #68758f; font-size: 9px; }
+.event-cor-meta span { padding: 3px 6px; border-radius: 6px; background: #f0f2f8; }
+
 .flow-toast {
     position: fixed;
     bottom: 65px;

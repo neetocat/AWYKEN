@@ -57,6 +57,15 @@ public sealed class DashboardState
         ImportPreview = [];
     }
 
+    public void UpdateImportPreview(ScheduleItem updated)
+    {
+        var index = ImportPreview.FindIndex(item => item.Id == updated.Id);
+        if (index >= 0)
+            ImportPreview[index] = updated;
+    }
+
+    public void ClearImportPreview() => ImportPreview = [];
+
     public void MarkAllNotificationsRead()
     {
         foreach (var item in Notifications)
@@ -99,8 +108,12 @@ public sealed record NextClassInfo(
 public sealed record ScheduleItem(
     string Id, string CourseCode, string Title, string StartTime, string EndTime,
     string Location, string Instructor, string InstructorInitials, string Mode,
-    string ColorCode, string? Link)
+    string ColorCode, string? Link, string? Cfn = null, string? Section = null,
+    decimal? Units = null, string? Days = null, string? MeetingTimes = null)
 {
+    public string DisplayTimes => string.IsNullOrWhiteSpace(MeetingTimes)
+        ? $"{StartTime}{(string.IsNullOrWhiteSpace(EndTime) ? "" : $" – {EndTime}")}"
+        : MeetingTimes;
     public string Time => StartTime.Contains(' ') ? StartTime[..StartTime.LastIndexOf(' ')] : StartTime;
     public string Period => StartTime.Contains(' ') ? StartTime[(StartTime.LastIndexOf(' ') + 1)..] : "";
     public string Subtitle => Mode == "Online"

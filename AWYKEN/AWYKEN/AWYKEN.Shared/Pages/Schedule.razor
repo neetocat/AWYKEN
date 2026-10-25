@@ -92,13 +92,19 @@
                                     <div class="event-details">
                                         <span>
                                             <span class="detail-icon" aria-hidden="true">◷</span>
-                                            @item.StartTime–@item.EndTime
+                                            @item.DisplayTimes
                                         </span>
 
                                         <span>
                                             <span class="detail-icon pin-icon" aria-hidden="true">⌖</span>
                                             @item.Location
                                         </span>
+                                    </div>
+
+                                    <div class="event-cor-meta">
+                                        @if (!string.IsNullOrWhiteSpace(item.Section)) { <span>@item.Section</span> }
+                                        @if (item.Units is decimal units) { <span>@units units</span> }
+                                        @if (!string.IsNullOrWhiteSpace(item.Days)) { <span>@item.Days</span> }
                                     </div>
 
                                     <div class="event-instructor">
@@ -229,7 +235,7 @@
     private ClassDraft Draft = new();
 
     private IEnumerable<DateOnly> WeekDays =>
-        Enumerable.Range(0, 5).Select(offset => WeekStart.AddDays(offset));
+        Enumerable.Range(0, 7).Select(offset => WeekStart.AddDays(offset));
 
     // Load the selected day's classes from the same SQLite-backed shared state.
     protected override Task OnInitializedAsync() => Data.RefreshAsync(SelectedDate);

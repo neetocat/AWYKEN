@@ -1,7 +1,9 @@
 @page "/verify-schedule"
 @using AWYKEN.Shared.Services
+@using AWYKEN.Shared.Data
 @inject AWYKEN.Shared.Services.DashboardState State
 @inject NavigationManager Navigation    
+@inject IAwykenDataService Data
 
 <PageTitle>Verify your schedule • AWYKEN</PageTitle>
 
@@ -20,19 +22,47 @@
                 <div><strong>@Preview.Count</strong><span>Classes found</span></div><div><strong>@ReadyCount</strong><span>Ready to save</span></div><div><strong>@NeedsReviewCount</strong><span>Needs review</span></div>
             </div>
 
+            @if (!string.IsNullOrWhiteSpace(SaveError))
+            {
+                <p class="flow-status" role="alert">@SaveError</p>
+            }
+
             <section class="review-list" aria-label="Imported classes">
                 @foreach (var item in Preview)
                 {
-                    <article class="review-card @(NeedsReview(item) ? "needs-review" : "accepted")">
-                        <span class="review-state">@(NeedsReview(item) ? "!" : "✓")</span><div class="review-copy"><h2>@item.Title</h2><b>@item.CourseCode · @item.StartTime@(string.IsNullOrWhiteSpace(item.EndTime) ? "" : $" - {item.EndTime}")</b><p>@item.Location</p></div><button class="edit-review" aria-label="Edit @item.Title">♢</button>
+                    <article class="review-card schedule-review-card @(NeedsReview(item) ? "needs-review" : "accepted")" style="--event-accent: @item.ColorCode">
+                        <div class="review-card-main">
+                            <div class="review-card-heading"><span class="review-course-code">@item.CourseCode</span><span class="review-cfn">@item.Cfn</span></div>
+                            <h2>@item.Title</h2>
+                            <div class="review-details"><span><b>◷</b> @item.DisplayTimes</span><span><b>⌖</b> @item.Location</span></div>
+                            <div class="review-meta"><span>@(string.IsNullOrWhiteSpace(item.Days) ? "Days need review" : item.Days)</span><span>@(string.IsNullOrWhiteSpace(item.Section) ? "Section needs review" : item.Section)</span>@if (item.Units is decimal units) { <span>@units units</span> }</div>
+                        </div>
+                        <button class="edit-review" @onclick="() => BeginEdit(item)" aria-label="Edit @item.Title">Edit</button>
                     </article>
                 }
             </section>
             <p class="review-note">Review the imported classes before saving.</p>
         </div>
     </main>
-    <div class="save-bar"><button class="primary-action" @onclick="SaveSchedule">✓ &nbsp; Save @Preview.Count classes</button></div>
+    <div class="save-bar"><button class="primary-action" disabled="@Saving" @onclick="SaveSchedule">@(Saving ? "Saving…" : $"✓   Save {Preview.Count} classes")</button></div>
 </div>
+
+@if (Editing is not null)
+{
+    <div class="review-edit-backdrop" @onclick="CancelEdit">
+        <section class="review-edit-dialog" role="dialog" aria-modal="true" aria-label="Edit class" @onclick:stopPropagation="true">
+            <h2>Edit class schedule</h2>
+            <label>Course code<input @bind="Editing.CourseCode" /></label>
+            <label>Subject<input @bind="Editing.Title" /></label>
+            <label>Section<input @bind="Editing.Section" /></label>
+            <label>Units<input inputmode="decimal" @bind="Editing.Units" /></label>
+            <label>Days<input @bind="Editing.Days" placeholder="Mon, Wed" /></label>
+            <label>Time<input @bind="Editing.MeetingTimes" placeholder="7:30 PM–9:00 PM" /></label>
+            <label>Room<input @bind="Editing.Location" /></label>
+            <div class="review-edit-actions"><button @onclick="CancelEdit">Cancel</button><button class="primary-action" @onclick="ApplyEdit">Save changes</button></div>
+        </section>
+    </div>
+}
 
 @code {
     private IReadOnlyList<ScheduleItem> Preview => State.HasImportPreview
@@ -43,14 +73,128 @@
 
     private int ReadyCount => Preview.Count - NeedsReviewCount;
 
-    private static bool NeedsReview(ScheduleItem item) =>
-        item.StartTime.Contains("NEEDS REVIEW", StringComparison.OrdinalIgnoreCase)
-        || item.Location.Contains("needs review", StringComparison.OrdinalIgnoreCase)
-        || item.Instructor.Contains("needs review", StringComparison.OrdinalIgnoreCase);
+    private bool Saving;
+    private string? SaveError;
+    private ScheduleEditDraft? Editing;
+    private string? EditingId;
 
-    private void SaveSchedule()
+    private static bool NeedsReview(ScheduleItem item) =>
+        string.IsNullOrWhiteSpace(item.CourseCode)
+        || string.IsNullOrWhiteSpace(item.Title)
+        || HasUnspacedTitle(item.Title)
+        || HasNoisyTitle(item.Title)
+        || HasUnreasonableTimes(item.DisplayTimes)
+        || string.IsNullOrWhiteSpace(item.DisplayTimes)
+        || !System.Text.RegularExpressions.Regex.IsMatch(item.DisplayTimes,
+            @"\d{1,2}:?\d{2}\s*(?:AM|PM)\s*[–-]\s*\d{1,2}:?\d{2}\s*(?:AM|PM)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+        || string.IsNullOrWhiteSpace(item.Location)
+        || item.Location.Equals("Room needs review", StringComparison.OrdinalIgnoreCase)
+        || string.IsNullOrWhiteSpace(item.Days)
+        || string.IsNullOrWhiteSpace(item.Section);
+
+    private static bool HasNoisyTitle(string title) =>
+        title.Length > 80
+        || System.Text.RegularExpressions.Regex.IsMatch(title,
+            @"SOC\s*STUD|[£§#=]|\b(?:AND|WITH|TOWARD)$|^TNE\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    private static bool HasUnreasonableTimes(string value)
     {
-        State.SaveImportPreview();
-        Navigation.NavigateTo("/schedule");
+        var ranges = System.Text.RegularExpressions.Regex.Matches(value,
+            @"(?<start>\d{1,2}:?\d{2}\s*(?:AM|PM))\s*[–-]\s*(?<end>\d{1,2}:?\d{2}\s*(?:AM|PM))",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (ranges.Count == 0)
+            return true;
+
+        return ranges.Cast<System.Text.RegularExpressions.Match>().Any(range =>
+        {
+            if (!DateTime.TryParse(range.Groups["start"].Value, out var start)
+                || !DateTime.TryParse(range.Groups["end"].Value, out var end))
+                return true;
+            var duration = end - start;
+            return start.TimeOfDay < TimeSpan.FromHours(6)
+                || duration <= TimeSpan.Zero
+                || duration > TimeSpan.FromHours(4);
+        });
+    }
+
+    private static bool HasUnspacedTitle(string title)
+    {
+        var letters = title.Where(char.IsLetter).ToArray();
+        return letters.Length >= 12
+            && letters.All(char.IsUpper)
+            && !title.Any(char.IsWhiteSpace);
+    }
+
+    private void BeginEdit(ScheduleItem item)
+    {
+        EditingId = item.Id;
+        Editing = new ScheduleEditDraft
+        {
+            CourseCode = item.CourseCode,
+            Title = item.Title,
+            Section = item.Section ?? "",
+            Units = item.Units?.ToString() ?? "",
+            Days = item.Days ?? "",
+            MeetingTimes = item.DisplayTimes,
+            Location = item.Location
+        };
+    }
+
+    private void CancelEdit() { Editing = null; EditingId = null; }
+
+    private void ApplyEdit()
+    {
+        if (Editing is null || EditingId is null) return;
+        var original = Preview.FirstOrDefault(item => item.Id == EditingId);
+        if (original is null) return;
+
+        decimal? units = decimal.TryParse(Editing.Units, out var parsedUnits) ? parsedUnits : null;
+        var firstTime = System.Text.RegularExpressions.Regex.Match(Editing.MeetingTimes,
+            @"(?<start>\d{1,2}:?\d{0,2}\s*(?:AM|PM))\s*[–-]\s*(?<end>\d{1,2}:?\d{0,2}\s*(?:AM|PM))",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var start = firstTime.Success && DateTime.TryParse(firstTime.Groups["start"].Value, out var s)
+            ? s.ToString("h:mm tt") : original.StartTime;
+        var end = firstTime.Success && DateTime.TryParse(firstTime.Groups["end"].Value, out var e)
+            ? e.ToString("h:mm tt") : original.EndTime;
+
+        State.UpdateImportPreview(original with
+        {
+            CourseCode = Editing.CourseCode.Trim(), Title = Editing.Title.Trim(),
+            Section = Editing.Section.Trim(), Units = units, Days = Editing.Days.Trim(),
+            MeetingTimes = Editing.MeetingTimes.Trim(), StartTime = start, EndTime = end,
+            Location = Editing.Location.Trim()
+        });
+        CancelEdit();
+    }
+
+    private async Task SaveSchedule()
+    {
+        if (Preview.Count == 0) return;
+        Saving = true;
+        SaveError = null;
+        try
+        {
+            await Data.SaveImportedScheduleAsync(Preview, DateOnly.FromDateTime(DateTime.Today));
+            State.ClearImportPreview();
+            Navigation.NavigateTo("/schedule");
+        }
+        catch (Exception)
+        {
+            SaveError = "We couldn't save the schedule. Your reviewed classes are still here; please try again.";
+        }
+        finally { Saving = false; }
+    }
+
+    private sealed class ScheduleEditDraft
+    {
+        public string CourseCode { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Section { get; set; } = "";
+        public string Units { get; set; } = "";
+        public string Days { get; set; } = "";
+        public string MeetingTimes { get; set; } = "";
+        public string Location { get; set; } = "";
     }
 }

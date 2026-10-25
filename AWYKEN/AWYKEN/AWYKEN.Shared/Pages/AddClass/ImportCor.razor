@@ -26,9 +26,8 @@
             <section class="upload-card">
                 <div class="upload-icon">⇧</div>
                 <h2>Upload your registration form</h2>
-                <p>PDF, JPG or PNG · Max 10 MB</p>
-                <button class="primary-action" @onclick="TakePhoto">▣ &nbsp; Take a photo</button>
-                <label class="secondary-action">⇧ &nbsp; Browse files<InputFile accept=".pdf" OnChange="SelectFile" /></label>
+                <p>PDF, JPG, PNG, BMP or TIFF · Max 10 MB</p>
+                <label class="primary-action upload-action">⇧ &nbsp; Browse files<InputFile accept=".pdf,.jpg,.jpeg,.png,.bmp,.tif,.tiff" OnChange="SelectFile" /></label>
             </section>
 
             <aside class="tip-card"><strong>ⓘ</strong><div><b>For the best result</b><p>Use a clear, well-lit image with all four corners visible.</p></div></aside>
@@ -45,8 +44,6 @@
 @code {
     private string? status;
 
-    private void TakePhoto() => status = "Please use Browse files to select your COR PDF.";
-
     private async Task SelectFile(InputFileChangeEventArgs args)
     {
         var file = args.File;
@@ -57,7 +54,16 @@
         }
 
         status = "Scanning your COR...";
-        var result = await Importer.ImportAsync(file);
+        CorImportResult result;
+        try
+        {
+            result = await Importer.ImportAsync(file);
+        }
+        catch (Exception)
+        {
+            status = "The file could not be scanned. Try a clearer PDF or image.";
+            return;
+        }
         if (!result.IsSuccess)
         {
             status = result.Error;

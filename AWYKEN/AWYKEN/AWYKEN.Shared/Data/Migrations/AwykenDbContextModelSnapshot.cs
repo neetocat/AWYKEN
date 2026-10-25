@@ -28,12 +28,20 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Cfn")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("CourseCode")
                         .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("EndsAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Days")
+                        .HasMaxLength(40)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Instructor")
@@ -50,9 +58,17 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("MeetingTimes")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Mode")
                         .IsRequired()
                         .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Section")
+                        .HasMaxLength(80)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("StartsAt")
@@ -61,6 +77,9 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(180)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("Units")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

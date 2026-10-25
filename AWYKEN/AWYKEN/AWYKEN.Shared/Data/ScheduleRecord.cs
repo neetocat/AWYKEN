@@ -16,4 +16,9 @@ public sealed class ScheduleRecord
     public required string Mode { get; set; }
     public required string ColorCode { get; set; }
     public string? MeetingLink { get; set; }
+    public string? Cfn { get; set; }
+    public string? Section { get; set; }
+    public decimal? Units { get; set; }
+    public string? Days { get; set; }
+    public string? MeetingTimes { get; set; }
 }
