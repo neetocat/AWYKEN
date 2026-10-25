@@ -5,6 +5,7 @@
 @inject NavigationManager Navigation
 @inject IAwykenDataService Data
 
+<PageTitle>AWYKEN</PageTitle>
 
 <div class="flow-shell verify-screen">
     <main class="flow-scroll">
@@ -14,8 +15,9 @@
                 <div><h1>Verify your schedule</h1><p>Step 2 of 2</p></div>
             </header>
 
-
             <div class="verify-summary">
+                <strong>@Preview.Count @(Preview.Count == 1 ? "class" : "classes") found</strong>
+                <p>@ReadyCount ready · @NeedsReviewCount need review</p>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(SaveError))
@@ -24,13 +26,24 @@
             }
 
             <section class="review-list" aria-label="Imported classes">
+                @foreach (var item in Preview)
                 {
+                    var needsReview = NeedsReview(item);
+                    <article class="review-card @(needsReview ? "needs-review" : "")">
+                        <span class="review-state">@(needsReview ? "!" : "✓")</span>
+                        <div class="review-copy">
+                            <h2>@item.Title</h2>
+                            <b>@item.CourseCode · @(string.IsNullOrWhiteSpace(item.DisplayTimes) ? "TIMES NEED REVIEW" : item.DisplayTimes)</b>
+                            <p>@(string.IsNullOrWhiteSpace(item.Days) ? "Days need review" : item.Days) · @item.Location</p>
+                        </div>
+                        <button class="edit-review" aria-label="Edit @item.Title" @onclick="() => BeginEdit(item)">♢</button>
                     </article>
                 }
-                <article class="review-card needs-review">
-                    <span class="review-state">!</span><div class="review-copy"><h2>Data Structures</h2><b>CS 2203 · TIMES NEEDS REVIEW</b><p>Online · Google Meet</p></div><button class="edit-review" aria-label="Edit Data Structures">♢</button>
-                </article>
             </section>
+
+            <button class="primary-action" disabled="@(Saving || Preview.Count == 0)" @onclick="SaveSchedule">
+                @(Saving ? "Saving..." : "Save schedule")
+            </button>
         </div>
     </main>
 </div>
@@ -149,9 +162,14 @@
 
         State.UpdateImportPreview(original with
         {
-            CourseCode = Editing.CourseCode.Trim(), Title = Editing.Title.Trim(),
-            Section = Editing.Section.Trim(), Units = units, Days = Editing.Days.Trim(),
-            MeetingTimes = Editing.MeetingTimes.Trim(), StartTime = start, EndTime = end,
+            CourseCode = Editing.CourseCode.Trim(),
+            Title = Editing.Title.Trim(),
+            Section = Editing.Section.Trim(),
+            Units = units,
+            Days = Editing.Days.Trim(),
+            MeetingTimes = Editing.MeetingTimes.Trim(),
+            StartTime = start,
+            EndTime = end,
             Location = Editing.Location.Trim()
         });
         CancelEdit();
@@ -164,6 +182,10 @@
         SaveError = null;
         try
         {
+            // Save the student details from the COR first, then the classes.
+            if (State.ImportProfilePreview is { } student)
+                await Data.SaveImportedProfileAsync(student, DateOnly.FromDateTime(DateTime.Today));
+
             await Data.SaveImportedScheduleAsync(Preview, DateOnly.FromDateTime(DateTime.Today));
             State.ClearImportPreview();
             Navigation.NavigateTo("/schedule");

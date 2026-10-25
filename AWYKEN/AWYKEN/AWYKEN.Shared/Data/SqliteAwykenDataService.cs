@@ -61,12 +61,43 @@ public sealed class SqliteAwykenDataService(
             .OrderBy(item => item.StartsAt)
             .ToList();
 
+        var student = profile is null ? null : new StudentProfile(
+            profile.FullName, profile.DisplayName, profile.Email, profile.StudentNumber,
+            profile.College, profile.Program, profile.YearLevel, profile.Section, profile.AcademicTerm);
+
         // Every page reads into the same scoped state object, so name, schedule,
         // next class, and derived alerts agree across navigation.
         state.ReplaceFromDatabase(
             profile?.DisplayName,
             profile?.Email,
-            rows.Select(ToScheduleItem));
+            rows.Select(ToScheduleItem),
+            student);
+    }
+
+    public async Task SaveImportedProfileAsync(
+        StudentProfile student, DateOnly referenceDate, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profile = await db.Profiles.OrderBy(item => item.Id).FirstAsync(cancellationToken);
+
+        // Name and email are only filled in when empty, so the user's own edits are kept.
+        if (string.IsNullOrWhiteSpace(profile.DisplayName))
+            profile.DisplayName = student.FirstName;
+        if (string.IsNullOrWhiteSpace(profile.Email))
+            profile.Email = student.Email;
+
+        // Academic details come from the newest COR (year level and term change each semester).
+        profile.FullName = student.FullName ?? profile.FullName;
+        profile.StudentNumber = student.StudentNumber ?? profile.StudentNumber;
+        profile.College = student.College ?? profile.College;
+        profile.Program = student.Program ?? profile.Program;
+        profile.YearLevel = student.YearLevel ?? profile.YearLevel;
+        profile.Section = student.Section ?? profile.Section;
+        profile.AcademicTerm = student.AcademicTerm ?? profile.AcademicTerm;
+
+        await db.SaveChangesAsync(cancellationToken);
+        await RefreshAsync(referenceDate, cancellationToken);
     }
 
     public async Task SaveScheduleItemAsync(

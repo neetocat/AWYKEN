@@ -18,6 +18,13 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.ToTable("Profiles");
             entity.Property(profile => profile.DisplayName).HasMaxLength(100);
             entity.Property(profile => profile.Email).HasMaxLength(200);
+            entity.Property(profile => profile.FullName).HasMaxLength(150);
+            entity.Property(profile => profile.StudentNumber).HasMaxLength(30);
+            entity.Property(profile => profile.College).HasMaxLength(200);
+            entity.Property(profile => profile.Program).HasMaxLength(200);
+            entity.Property(profile => profile.YearLevel).HasMaxLength(40);
+            entity.Property(profile => profile.Section).HasMaxLength(80);
+            entity.Property(profile => profile.AcademicTerm).HasMaxLength(80);
         });
 
         modelBuilder.Entity<ScheduleRecord>(entity =>

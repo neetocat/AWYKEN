@@ -11,7 +11,7 @@
         <div class="flow-content">
             <header class="settings-header">
                 <div class="brand-mark" role="img" aria-label="AWYKEN logo">
-                    <img src="_content/AWYKEN.Shared/images/icon/awyken-logo-transparent-cut.png" alt="AWYKEN logo"/>
+                    <img src="_content/AWYKEN.Shared/images/icon/awyken-logo-transparent-cut.png" alt="AWYKEN logo" />
                 </div>
                 <div class="settings-title">
                     <h1>Settings</h1>
@@ -20,13 +20,16 @@
                 <button class="outline-icon-button" aria-label="Notifications">♧</button>
             </header>
 
-            <section class="profile-card">
+            <section class="profile-card" role="button" tabindex="0" style="cursor: pointer;"
+                     aria-label="Open profile"
+                     @onclick='() => Navigation.NavigateTo("/profile")'
+                     @onkeydown="OpenProfileOnKey">
                 <div class="avatar">@ProfileInitials</div>
                 <div class="profile-copy">
-                    <h2>@State.User.DisplayName</h2>
+                    <h2>@(State.Student.FullName ?? State.User.DisplayName)</h2>
                     <p>@(string.IsNullOrWhiteSpace(State.User.Email) ? "No email saved" : State.User.Email)</p>
                 </div>
-                <button class="row-action" aria-label="Edit profile">♢</button>
+                <span class="row-action" aria-hidden="true">›</span>
             </section>
 
             <section class="settings-section">
@@ -84,8 +87,13 @@
         : string.Concat(State.User.FirstName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
             .Take(2).Select(part => char.ToUpperInvariant(part[0])));
 
+    private void OpenProfileOnKey(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or " ")
+            Navigation.NavigateTo("/profile");
+    }
+
     private void ShowLocationMessage() => message = "No home location has been saved yet.";
     private void ShowTimeMessage() => message = "12-hour time format is selected.";
     private void ShowAboutMessage() => message = "AWYKEN · Version 1.0.0";
 }
-

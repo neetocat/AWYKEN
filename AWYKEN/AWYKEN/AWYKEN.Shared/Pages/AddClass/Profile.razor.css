@@ -1,0 +1,40 @@
+.cor-empty {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 16px 0;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--primary-50);
+}
+
+    .cor-empty strong {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .cor-empty p {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--text-secondary);
+    }
+
+.cor-empty__action {
+    align-self: flex-start;
+    margin-top: 8px;
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+    .cor-empty__action:focus-visible {
+        outline: 2px solid var(--info);
+        outline-offset: 2px;
+    }

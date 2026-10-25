@@ -9,6 +9,9 @@ public sealed class DashboardState
     // A null display name means the person has not set a profile name; show Guest.
     public UserInfo User { get; private set; } = new(null, null);
 
+    // Student details (student number, program, year level...) read from the COR.
+    public StudentProfile Student { get; private set; } = StudentProfile.Empty;
+
     // Weather is optional and remains empty until a weather service is connected.
     public WeatherInfo Weather { get; } = new(null, "No weather data");
 
@@ -19,15 +22,21 @@ public sealed class DashboardState
     public List<ScheduleItem> ImportPreview { get; private set; } = [];
     public bool HasImportPreview => ImportPreview.Count > 0;
 
+    // The student details read from the COR also wait for the user's confirmation.
+    public StudentProfile? ImportProfilePreview { get; private set; }
+
     // Alerts are derived from the selected day's classes; there are none when the schedule is empty.
     public List<AppNotification> Notifications { get; private set; } = [];
 
     public int UnreadNotificationCount => Notifications.Count(item => item.IsUnread);
 
     /// <summary>Replace the shared profile and schedule after reading SQLite.</summary>
-    public void ReplaceFromDatabase(string? displayName, string? email, IEnumerable<ScheduleItem> schedule)
+    public void ReplaceFromDatabase(
+        string? displayName, string? email, IEnumerable<ScheduleItem> schedule,
+        StudentProfile? student = null)
     {
         User = new UserInfo(displayName, email);
+        Student = student ?? StudentProfile.Empty;
         Schedule = schedule.OrderBy(item => item.SortTime).ToList();
 
         // Build simple alerts from real class rows. An empty database remains quiet.
@@ -42,9 +51,10 @@ public sealed class DashboardState
             item.Mode == "Online" ? "Join meeting" : null)).ToList();
     }
 
-    public void SetImportPreview(IEnumerable<ScheduleItem> classes)
+    public void SetImportPreview(IEnumerable<ScheduleItem> classes, StudentProfile? profile = null)
     {
         ImportPreview = classes.ToList();
+        ImportProfilePreview = profile;
     }
 
     public void SaveImportPreview()
@@ -64,7 +74,11 @@ public sealed class DashboardState
             ImportPreview[index] = updated;
     }
 
-    public void ClearImportPreview() => ImportPreview = [];
+    public void ClearImportPreview()
+    {
+        ImportPreview = [];
+        ImportProfilePreview = null;
+    }
 
     public void MarkAllNotificationsRead()
     {

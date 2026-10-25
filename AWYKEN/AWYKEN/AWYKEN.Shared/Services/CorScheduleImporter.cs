@@ -35,6 +35,7 @@ public sealed class CorScheduleImporter
 
         try
         {
+            StudentProfile? profile = null;
             List<ScheduleItem> classes;
             if (extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase))
             {
@@ -44,6 +45,7 @@ public sealed class CorScheduleImporter
                 classes = [];
                 foreach (var page in pages)
                 {
+                    profile ??= CorProfileParser.Parse(page.Text);
                     var pageClasses = ParseTableRows(GetPdfWords(page), page.Width);
                     if (pageClasses.Count == 0)
                         pageClasses = ParseClasses(page.Text);
@@ -80,9 +82,14 @@ public sealed class CorScheduleImporter
             classes = classes
                 .GroupBy(item => (item.CourseCode, item.Section), StringTupleComparer.Instance)
                 .Select(group => group.First()).ToList();
+            var section = classes.Where(c => !string.IsNullOrWhiteSpace(c.Section))
+                .GroupBy(c => c.Section!, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(g => g.Count()).Select(g => g.Key).FirstOrDefault();
+            profile = profile is null ? null : profile with { Section = section };
+
             return classes.Count == 0
                 ? CorImportResult.Failure("No class rows were recognized. Use a clear COR image or PDF and review the file format.")
-                : CorImportResult.Success(classes);
+                : CorImportResult.Success(classes, profile);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -780,9 +787,4 @@ public sealed class CorScheduleImporter
     private sealed record LayoutLetter(string Value, double X, double Y, double Width, double FontSize);
 }
 
-public sealed record CorImportResult(IReadOnlyList<ScheduleItem> Classes, string? Error)
-{
-    public bool IsSuccess => Error is null && Classes.Count > 0;
-    public static CorImportResult Success(IReadOnlyList<ScheduleItem> classes) => new(classes, null);
-    public static CorImportResult Failure(string error) => new([], error);
-}
+

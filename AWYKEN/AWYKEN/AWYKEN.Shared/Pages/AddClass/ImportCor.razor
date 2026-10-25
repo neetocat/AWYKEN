@@ -70,7 +70,8 @@
             return;
         }
 
-        State.SetImportPreview(result.Classes);
+        // The profile details travel with the classes and are saved when the user confirms.
+        State.SetImportPreview(result.Classes, result.Profile);
         Navigation.NavigateTo("/verify-schedule");
     }
     private void EnterManually() => Navigation.NavigateTo("/schedule");
