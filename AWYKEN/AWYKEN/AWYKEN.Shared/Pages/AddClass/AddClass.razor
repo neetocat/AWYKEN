@@ -1,106 +1,113 @@
 ﻿@page "/add-class"
-@using AWYKEN.Shared.Components
 @inject NavigationManager Navigation
 
-<PageTitle>AWYKEN</PageTitle>
+<PageTitle>Add class | AWYKEN</PageTitle>
 
 <div class="add-class">
     <header class="add-class__header">
-        <button class="add-class__button add-class__button--back">
-            <img src="_content/AWYKEN.Shared/images/icon/awyken-back-icon.png" alt="AWYKEN Back Icon" />
+        <button class="add-class__button add-class__button--back" type="button" aria-label="Go back" @onclick='() => Navigation.NavigateTo("/")'>
+            <img src="_content/AWYKEN.Shared/images/icon/awyken-back-icon.png" alt="" />
         </button>
-        
+
         <div class="add-class__header-content">
             <h1 class="add-class__header-title">Add class</h1>
             <p class="add-class__subheader-text">Create a new class schedule</p>
         </div>
 
-        <button class="add-class__button add-class__button--save">Save</button>
+        <button class="add-class__button add-class__button--save" type="button">Save</button>
     </header>
 
     <main class="add-class__main">
-        <!-- CLASS DETAILS -->
-        <h2 class="add-class__subtitle">Class Details</h2>
-
-        <label class="add-class__input-label" for="subject-name">Subject Name</label>
-        <input class="add-class__input-field" id="subject-name" type="text" name="subject-name" maxlength="100" placeholder="Enter subject name..." required />
-
-        <label class="add-class__input-label" for="course-code">Course Code</label>
-        <input class="add-class__input-field" id="course-code" type="text" name="course-code" maxlength="15" placeholder="e.g., MATH 101" required />
-
-        <label class="add-class__input-label" for="instructor">Instructor (optional)</label>
-        <input class="add-class__input-field" id="instructor" type="text" name="instructor" maxlength="50" placeholder="Enter instructor name..." />
-
-        <!-- SCHEDULE -->
         <form class="add-class__form">
-            <h2 class="add-class__subtitle">Schedule</h2>
+            <section class="add-class__section" aria-labelledby="class-details-heading">
+                <h2 class="add-class__subtitle" id="class-details-heading">Class Details</h2>
 
-            <div class="add-class__class-days-wrapper">
-                <div class="add-class__class-day-option">M</div>
-                <div class="add-class__class-day-option">T</div>
-                <div class="add-class__class-day-option">W</div>
-                <div class="add-class__class-day-option">TH</div>
-                <div class="add-class__class-day-option">F</div>
-                <div class="add-class__class-day-option">S</div>
-                <div class="add-class__class-day-option">SU</div>
-            </div>
+                <label class="add-class__input-label" for="subject-name">Subject name</label>
+                <input class="add-class__input-field" id="subject-name" type="text" name="subject-name" maxlength="100" value="Human-Computer Interaction" required />
 
-            <div class="add-class__time-wrapper">
-                <!-- Start Time -->
-                <label class="add-class__input-label" for="start-time">Starts</label>
-                <div class="add-class__time-input">
-                    <img class="add-class__icon add__icon--clock add__icon--clock-large" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
-                    <input class="add-class__input-field add-class__input-field--time" id="start-time" name="start-time" type="time" required />
-                    <img class="add-class__icon add__icon--clock add__icon--clock-small" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
+                <label class="add-class__input-label" for="course-code">Course code</label>
+                <input class="add-class__input-field" id="course-code" type="text" name="course-code" maxlength="15" value="CS 3204" required />
+
+                <label class="add-class__input-label" for="instructor">Instructor (optional)</label>
+                <div class="add-class__input-with-icon">
+                    <svg class="add-class__field-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a7 7 0 0 0-14 0v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" /></svg>
+                    <input class="add-class__input-field" id="instructor" type="text" name="instructor" maxlength="50" value="Prof. Andrea Lim" />
+                </div>
+            </section>
+
+            <section class="add-class__section add-class__section--schedule" aria-labelledby="schedule-heading">
+                <h2 class="add-class__subtitle" id="schedule-heading">Schedule</h2>
+
+                <label class="add-class__input-label">Class days</label>
+                <div class="add-class__class-days-wrapper" aria-label="Class days">
+                    <button class="add-class__class-day-option" type="button" aria-label="Monday" aria-pressed="false">M</button>
+                    <button class="add-class__class-day-option add-class__class-day-option--selected" type="button" aria-label="Tuesday" aria-pressed="true">T</button>
+                    <button class="add-class__class-day-option" type="button" aria-label="Wednesday" aria-pressed="false">W</button>
+                    <button class="add-class__class-day-option add-class__class-day-option--selected" type="button" aria-label="Thursday" aria-pressed="true">T</button>
+                    <button class="add-class__class-day-option" type="button" aria-label="Friday" aria-pressed="false">F</button>
+                    <button class="add-class__class-day-option" type="button" aria-label="Saturday" aria-pressed="false">S</button>
+                    <button class="add-class__class-day-option" type="button" aria-label="Sunday" aria-pressed="false">S</button>
                 </div>
 
-                <!-- End Time -->
-                <label class="add-class__input-label" for="end-time">Ends</label>
-                <div class="add-class__time-input">
-                    <img class="add-class__icon add__icon--clock add__icon--clock-large" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
-                    <input class="add-class__input-field add-class__input-field--time" id="end-time" name="end-time" type="time" required />
-                    <img class="add-class__icon add__icon--clock add__icon--clock-small" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="AWYKEN Clock Icon" />
-                </div>
-            </div>
-
-            <!-- CLASS TYPE -->
-            <div class="add-class__class-type-outer-wrapper">
-                <h2 class="add-class__subtitle">Class Type</h2>
-
-                <!-- Face-to-Face Option -->
-                <div class="add-class__class-type-inner-wrapper">
-                    <div class="add-class__class-type-option add-class__class-type-option--face-to-face" data-selected="true">
-                        <img class="add-class__icon add-class__icon--location" src="_content/AWYKEN.Shared/images/icon/awyken-location-icon.png" alt="AWYKEN Location Icon" />
-                        
-                        <div class="add-class__text-wrapper">
-                            <p class="add-class__option-text">Face-to-face</p>
-                            <p class="add-class__option-description">On campus</p>
+                <div class="add-class__time-wrapper">
+                    <div class="add-class__time-field">
+                        <label class="add-class__input-label" for="start-time">Starts</label>
+                        <div class="add-class__time-input">
+                            <img class="add-class__time-icon" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="" />
+                            <input class="add-class__input-field add-class__input-field--time" id="start-time" name="start-time" type="time" value="09:00" required />
+                        </div>
+                    </div>
+                    <div class="add-class__time-field">
+                        <label class="add-class__input-label" for="end-time">Ends</label>
+                        <div class="add-class__time-input">
+                            <img class="add-class__time-icon" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="" />
+                            <input class="add-class__input-field add-class__input-field--time" id="end-time" name="end-time" type="time" value="10:30" required />
                         </div>
                     </div>
                 </div>
+            </section>
 
-                <!-- Online Option -->
-                <div class="add-class__class-type-inner-wrapper">
-                    <div class="add-class__class-type-option add-class__class-type-option--face-to-face" data-selected="true">
-                        <img class="add-class__icon add-class__icon--location" src="_content/AWYKEN.Shared/images/icon/awyken-video-icon.png" alt="AWYKEN Meeting Icon" />
-                        
-                        <div class="add-class__text-wrapper">
-                            <p class="add-class__option-text">Online</p>
-                            <p class="add-class__option-description">Video meeting</p>
-                        </div>
-                    </div>
+            <section class="add-class__section add-class__section--type" aria-labelledby="class-type-heading">
+                <h2 class="add-class__subtitle" id="class-type-heading">Class Type</h2>
+                <div class="add-class__class-type-options" role="group" aria-label="Class type">
+                    <button class="add-class__class-type-option add-class__class-type-option--selected" type="button" aria-pressed="true">
+                        <img class="add-class__type-icon" src="_content/AWYKEN.Shared/images/icon/awyken-location-icon.png" alt="" />
+                        <span class="add-class__text-wrapper">
+                            <span class="add-class__option-text">Face-to-face</span>
+                            <span class="add-class__option-description">On campus</span>
+                        </span>
+                    </button>
+                    <button class="add-class__class-type-option" type="button" aria-pressed="false">
+                        <img class="add-class__type-icon" src="_content/AWYKEN.Shared/images/icon/awyken-video-icon.png" alt="" />
+                        <span class="add-class__text-wrapper">
+                            <span class="add-class__option-text">Online</span>
+                            <span class="add-class__option-description">Video meeting</span>
+                        </span>
+                    </button>
                 </div>
+
+                <label class="add-class__input-label" for="room">Room &amp; building</label>
+                <div class="add-class__input-with-icon">
+                    <img class="add-class__field-icon" src="_content/AWYKEN.Shared/images/icon/awyken-location-icon.png" alt="" />
+                    <input class="add-class__input-field" id="room" type="text" name="room" value="Room 408 - IT Building" />
+                </div>
+            </section>
+
+            <div class="add-class__reminder">
+                <span class="add-class__reminder-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
+                </span>
+                <span class="add-class__reminder-copy">
+                    <span class="add-class__reminder-title">Preparation reminder</span>
+                    <span class="add-class__reminder-description">Alert me 15 minutes before leaving</span>
+                </span>
+                <button class="add-class__toggle" type="button" role="switch" aria-checked="true" aria-label="Preparation reminder"></button>
             </div>
-            
-            <!-- ADD CLASS BUTTON -->
-            <button class="add-class__button add-class__button--add-schedule" type="submit">
-                <span class="add-class__plus-icon">+</span>
-                <p class="add-class__button-text">Add to schedule</p>
+
+            <button class="add-class__button add-class__button--add-schedule" type="button">
+                <span class="add-class__plus-icon" aria-hidden="true">+</span>
+                <span class="add-class__button-text">Add to schedule</span>
             </button>
         </form>
     </main>
 </div>
-
-@code {
-
-}
