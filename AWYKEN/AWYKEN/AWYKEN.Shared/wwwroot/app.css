@@ -91,65 +91,410 @@ h1:focus {
 /*     PAGES     */
 
 /* Add Class */
+.add-class,
+.add-class * {
+    box-sizing: border-box;
+}
+
 .add-class {
     display: flex;
     flex-direction: column;
-    width: 100vw;
-    height: auto;
-    overflow: hidden auto;
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
     background: var(--background);
+    color: var(--primary);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 .add-class__header {
     display: flex;
-    width: 100%;
-    height: 8vh;
-    justify-content: space-between;
-    align-items: flex-end;
-    border: 2.1px solid var(--border);
-    padding: 18px 12px 18px;
+    flex: 0 0 62px;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
 }
 
 .add-class__header-content {
     display: flex;
+    flex: 1;
     flex-direction: column;
-    margin-right: auto;
-    padding-left: 16px;
-    gap: 3.5px;
+    gap: 2px;
 }
 
 .add-class__header-title {
-    font-family: var(--font-family);
-    font-size: 19px;
-    font-weight: 700;
-    color: var(--primary);
-    font-size: 19px;
     margin: 0;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 17px;
 }
 
 .add-class__subheader-text {
-    font-family: var(--font-family);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    line-height: 12px;
     margin: 0;
+    color: var(--text-secondary);
+    font-size: 8px;
+    font-weight: 400;
+    line-height: 10px;
 }
 
-/* Add Class (Buttons) */
+.add-class__button {
+    font: inherit;
+    cursor: pointer;
+}
+
 .add-class__button--back {
     display: flex;
+    width: 28px;
+    height: 29px;
+    flex: 0 0 28px;
     justify-content: center;
     align-items: center;
-    border: 2px solid var(--border);
-    border-radius: 6px;
-    background: transparent;
-    color: var(--primary);
-    padding: 10px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
 }
 
 .add-class__button--back > img {
+    width: 12px;
+    height: 12px;
     object-fit: contain;
-    width: 12.55px;
-    height: 12.55px;
+}
+
+.add-class__button--save {
+    padding: 8px 0 8px 8px;
+    border: 0;
+    background: transparent;
+    color: var(--primary);
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.add-class__main {
+    width: 100%;
+    flex: 1;
+    padding: 14px 14px 24px;
+}
+
+.add-class__form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0;
+}
+
+.add-class__section {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.add-class__subtitle {
+    margin: 0 0 3px;
+    color: var(--primary-500);
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    line-height: 10px;
+    text-transform: uppercase;
+}
+
+.add-class__input-label {
+    display: block;
+    margin: 0;
+    color: var(--primary-500);
+    font-size: 7px;
+    font-weight: 400;
+    line-height: 9px;
+}
+
+.add-class__input-field {
+    display: block;
+    width: 100%;
+    height: 34px;
+    min-width: 0;
+    padding: 0 9px;
+    border: 1px solid #d9dfeb;
+    border-radius: 9px;
+    outline: none;
+    background: var(--surface);
+    color: var(--primary-700);
+    font: inherit;
+    font-size: 8px;
+}
+
+.add-class__input-field:focus {
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 2px rgb(0 4 53 / 8%);
+}
+
+.add-class__input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.add-class__input-with-icon .add-class__input-field {
+    padding-left: 30px;
+}
+
+.add-class__field-icon {
+    position: absolute;
+    z-index: 1;
+    left: 10px;
+    width: 13px;
+    height: 13px;
+    object-fit: contain;
+    color: var(--text-secondary);
+}
+
+svg.add-class__field-icon {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.5;
+}
+
+.add-class__section--schedule {
+    gap: 7px;
+}
+
+.add-class__class-days-wrapper {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.add-class__class-day-option {
+    display: flex;
+    height: 43px;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    border: 1px solid #d9dfeb;
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--primary-500);
+    font: inherit;
+    font-size: 8px;
+    cursor: pointer;
+}
+
+.add-class__class-day-option--selected {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--surface);
+    font-weight: 700;
+}
+
+.add-class__time-wrapper {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.add-class__time-field {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.add-class__time-input {
+    position: relative;
+    display: flex;
+    height: 34px;
+    align-items: center;
+}
+
+.add-class__time-icon {
+    position: absolute;
+    left: 10px;
+    width: 13px;
+    height: 13px;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+.add-class__input-field--time {
+    height: 34px;
+    padding: 0 7px 0 30px;
+    color-scheme: light;
+}
+
+.add-class__class-type-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.add-class__class-type-option {
+    display: flex;
+    min-width: 0;
+    height: 41px;
+    align-items: center;
+    gap: 9px;
+    padding: 5px 9px;
+    border: 1px solid #d9dfeb;
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--primary);
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.add-class__class-type-option--selected {
+    border: 2px solid var(--primary);
+    padding: 4px 8px;
+}
+
+.add-class__type-icon {
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    object-fit: contain;
+}
+
+.add-class__text-wrapper {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.add-class__option-text {
+    color: var(--primary);
+    font-size: 7px;
+    font-weight: 700;
+    line-height: 9px;
+}
+
+.add-class__option-description {
+    color: var(--primary-500);
+    font-size: 6px;
+    line-height: 8px;
+}
+
+.add-class__section--type {
+    gap: 7px;
+}
+
+.add-class__reminder {
+    display: flex;
+    min-height: 46px;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 9px;
+    border: 1px solid #d9dfeb;
+    border-radius: 10px;
+    background: var(--surface);
+}
+
+.add-class__reminder-icon {
+    display: flex;
+    width: 25px;
+    height: 25px;
+    flex: 0 0 25px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 6px;
+    background: var(--primary-50);
+}
+
+.add-class__reminder-icon svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: var(--primary);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.5;
+}
+
+.add-class__reminder-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.add-class__reminder-title {
+    color: var(--primary);
+    font-size: 8px;
+    font-weight: 600;
+    line-height: 10px;
+}
+
+.add-class__reminder-description {
+    color: var(--text-secondary);
+    font-size: 6px;
+    line-height: 8px;
+}
+
+.add-class__toggle {
+    position: relative;
+    width: 26px;
+    height: 15px;
+    flex: 0 0 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: var(--primary);
+    cursor: pointer;
+}
+
+.add-class__toggle::after {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--surface);
+    content: "";
+}
+
+.add-class__button--add-schedule {
+    display: flex;
+    width: 100%;
+    height: 33px;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 9px;
+    background: var(--primary);
+    color: var(--surface);
+}
+
+.add-class__plus-icon {
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1;
+}
+
+.add-class__button-text {
+    font-size: 8px;
+    font-weight: 700;
+}
+
+.add-class button:focus-visible {
+    outline: 2px solid var(--info);
+    outline-offset: 2px;
+}
+
+@media (min-width: 600px) {
+    .add-class {
+        max-width: 480px;
+        margin: 0 auto;
+        box-shadow: 0 0 24px rgb(0 4 53 / 8%);
+    }
 }
