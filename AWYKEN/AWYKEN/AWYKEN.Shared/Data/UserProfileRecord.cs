@@ -18,4 +18,11 @@ public sealed class UserProfileRecord
     public string? YearLevel { get; set; }
     public string? Section { get; set; }
     public string? AcademicTerm { get; set; }
+    // Store both user-entered addresses and resolved coordinates to avoid repeat lookups.
+    public string? HomeAddress { get; set; }
+    public double? HomeLatitude { get; set; }
+    public double? HomeLongitude { get; set; }
+    public string? SchoolAddress { get; set; }
+    public double? SchoolLatitude { get; set; }
+    public double? SchoolLongitude { get; set; }
 }

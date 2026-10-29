@@ -1,7 +1,10 @@
 ﻿@page "/commute"
 @using AWYKEN.Shared.Data
+@using AWYKEN.Shared.Services
 @inject AWYKEN.Shared.Services.DashboardState State
 @inject IAwykenDataService Data
+@inject ICommuteMapService MapService
+@inject IJSRuntime JS
 @inject NavigationManager Navigation
 
 <PageTitle>AWYKEN</PageTitle>
@@ -23,44 +26,66 @@
                 </div>
             </header>
 
+            <section class="commute-location-editor" aria-labelledby="commute-location-title">
+                <h2 id="commute-location-title">Route locations</h2>
+                <label>
+                    <span>Home address</span>
+                    <input @bind="HomeAddressInput" autocomplete="street-address" maxlength="300"
+                           placeholder="Enter your home address" />
+                </label>
+                <label>
+                    <span>School or campus address</span>
+                    <input @bind="SchoolAddressInput" autocomplete="street-address" maxlength="300"
+                           placeholder="Enter your campus address" />
+                </label>
+                <button type="button" class="route-search-button" disabled="@IsLoading"
+                        @onclick="CalculateRouteAsync">
+                    @(IsLoading ? "Finding route…" : "Show route")
+                </button>
+                <small>When you tap Show route, addresses are sent to OpenStreetMap Nominatim for lookup. Map data © OpenStreetMap contributors.</small>
+            </section>
+
+            @if (!string.IsNullOrWhiteSpace(MapError))
+            {
+                <p class="commute-error" role="alert">@MapError</p>
+            }
+
+            <section class="commute-map" aria-label="Map showing your route">
+                <div id="commute-map-canvas"></div>
+            </section>
+
+            @if (CurrentRoute is not null)
+            {
+                <section class="commute-summary">
+                    <div class="commute-duration">
+                        <strong>@TravelMinutes</strong><span>MIN</span>
+                    </div>
+                    <div class="commute-summary-divider"></div>
+                    <div class="commute-leave">
+                        <strong>Driving estimate · @DistanceKilometers km</strong>
+                        @if (State.Schedule.Count > 0)
+                        {
+                            <span>Leave by @LeaveByDisplay for @State.NextClass.StartTime</span>
+                        }
+                        else
+                        {
+                            <span>Estimated road time from home to campus</span>
+                        }
+                    </div>
+                </section>
+            }
+
             @if (State.Schedule.Count == 0)
             {
                 <section class="commute-summary">
                     <div class="commute-leave">
-                        <strong>No commute plan yet</strong>
-                        <span>Add a class to plan travel to its location.</span>
+                        <strong>No class scheduled today</strong>
+                        <span>Your home-to-campus map is ready above. Add a class to calculate when to leave.</span>
                     </div>
                 </section>
             }
             else
             {
-            <section class="commute-map" aria-label="Route preview">
-                <svg class="route-line" viewBox="0 0 360 150" preserveAspectRatio="none" aria-hidden="true">
-                    <path d="M65 105 Q120 15 295 33" />
-                </svg>
-
-                <span class="map-pin map-pin-home" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6" /></svg>
-                </span>
-                <span class="map-pin map-pin-campus" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M4 4h7a1 1 0 0 1 1 1v15a3 3 0 0 0-3-3H4zM20 4h-7a1 1 0 0 0-1 1v15a3 3 0 0 1 3-3h5z" /></svg>
-                </span>
-
-                <span class="traffic-tag">LIGHT TRAFFIC</span>
-            </section>
-
-            <section class="commute-summary">
-                <div class="commute-duration">
-                    <strong>@TravelMinutes</strong>
-                    <span>MIN</span>
-                </div>
-                <div class="commute-summary-divider"></div>
-                <div class="commute-leave">
-                    <strong>Leave by @State.NextClass.LeaveBy AM</strong>
-                    <span>Includes a @(BufferMinutes)-minute buffer</span>
-                </div>
-            </section>
-
             <section class="route-rows">
                 <button type="button" class="route-row">
                     <span class="route-icon" aria-hidden="true">
@@ -68,7 +93,7 @@
                     </span>
                     <span class="route-copy">
                         <small>FROM</small>
-                        <strong>@HomeAddress</strong>
+                        <strong>@(string.IsNullOrWhiteSpace(HomeAddressInput) ? "Home address not set" : HomeAddressInput)</strong>
                     </span>
                     <span class="route-chevron" aria-hidden="true">›</span>
                 </button>
@@ -79,7 +104,7 @@
                     </span>
                     <span class="route-copy">
                         <small>TO</small>
-                        <strong>@CampusAddress</strong>
+                        <strong>@(string.IsNullOrWhiteSpace(SchoolAddressInput) ? "Campus address not set" : SchoolAddressInput)</strong>
                     </span>
                     <span class="route-chevron" aria-hidden="true">›</span>
                 </button>
@@ -167,13 +192,34 @@
     /* Map */
     .commute-map {
         position: relative;
-        height: 150px;
+        height: 280px;
         margin-bottom: 14px;
         overflow: hidden;
         border: 1px solid var(--line);
         border-radius: 18px;
-        background: repeating-linear-gradient(120deg, var(--commute-tint) 0 22px, var(--page) 22px 44px);
+        background: var(--commute-tint);
     }
+
+    #commute-map-canvas { position: absolute; inset: 0; min-height: 280px; z-index: 1; }
+
+    .commute-location-editor {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 14px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--white);
+    }
+
+    .commute-location-editor h2 { margin: 0 0 2px; font-size: 14px; font-weight: 800; }
+    .commute-location-editor label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; font-weight: 800; }
+    .commute-location-editor input { width: 100%; min-height: 40px; box-sizing: border-box; padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--white); color: var(--ink); font: inherit; font-size: 12px; }
+    .commute-location-editor input:focus { outline: 2px solid color-mix(in srgb, var(--navy) 25%, transparent); border-color: var(--navy); }
+    .route-search-button { min-height: 42px; border: 0; border-radius: 10px; background: var(--navy); color: var(--white); font-size: 12px; font-weight: 800; cursor: pointer; }
+    .route-search-button:disabled { opacity: .65; cursor: wait; }
+    .commute-location-editor small { color: var(--muted); font-size: 9px; line-height: 1.5; }
+    .commute-error { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: #fff0f0; color: #a33c42; font-size: 11px; }
 
     .route-line {
         position: absolute;
@@ -529,42 +575,157 @@
 </style>
 
 @code {
-    // BACKEND TODO: replace these placeholders with real values from the user's profile and a routing service.
-    private const int TravelMinutes = 35;
     private const int BufferMinutes = 5;
-    private const string HomeAddress = "Home · Mabini Avenue";
-    private const string CampusAddress = "Main Building · Campus";
+    private const int PreparationMinutes = 15;
+    private const string MapElementId = "commute-map-canvas";
 
+    private string HomeAddressInput = "";
+    private string SchoolAddressInput = "";
+    private bool IsLoading;
+    private bool MapBootFailed;
+    private string? MapError;
+    private DrivingRoute? CurrentRoute;
     private bool ReminderOn = true;
 
-    // Load the same local profile and class data shown by Home and Schedule.
-    protected override Task OnInitializedAsync() =>
-        Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+    private int TravelMinutes => CurrentRoute is null
+        ? 0
+        : Math.Max(1, (int)Math.Ceiling(CurrentRoute.DurationSeconds / 60));
+    private string DistanceKilometers => CurrentRoute is null
+        ? "0.0"
+        : (CurrentRoute.DistanceMeters / 1000).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+    private DateTime? ClassStart => DateTime.TryParse(State.NextClass.StartTime, out var value) ? value : null;
+    private DateTime? LeaveTime => CurrentRoute is null || ClassStart is null
+        ? null
+        : ClassStart.Value.AddMinutes(-TravelMinutes - BufferMinutes);
+    private string LeaveByDisplay => LeaveTime?.ToString("h:mm tt") ?? "Set a class time to calculate departure";
+
+    // Load stored endpoint addresses and classes before rendering the map.
+    protected override async Task OnInitializedAsync()
+    {
+        await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+        HomeAddressInput = State.CommuteLocations.HomeAddress ?? "";
+        SchoolAddressInput = State.CommuteLocations.SchoolAddress ?? "";
+    }
+
+    // Leaflet is loaded by the shared JS helper; subsequent renders update its markers and route.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (MapBootFailed)
+            return;
+
+        try
+        {
+            var home = State.CommuteLocations;
+            var routeCoordinates = CurrentRoute?.Coordinates
+                .Select(point => new[] { point.Latitude, point.Longitude }).ToArray() ?? [];
+            await JS.InvokeVoidAsync("awykenCommuteMap.render", MapElementId,
+                home.HomeLatitude, home.HomeLongitude, home.SchoolLatitude, home.SchoolLongitude,
+                routeCoordinates);
+        }
+        catch (JSException)
+        {
+            MapBootFailed = true;
+            MapError = "The map could not load. Check your internet connection and reopen this page.";
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task CalculateRouteAsync()
+    {
+        MapError = null;
+        if (string.IsNullOrWhiteSpace(HomeAddressInput) || string.IsNullOrWhiteSpace(SchoolAddressInput))
+        {
+            MapError = "Enter both a home address and a school or campus address.";
+            return;
+        }
+
+        IsLoading = true;
+        try
+        {
+            var saved = State.CommuteLocations;
+            var home = await GetCoordinatesAsync(HomeAddressInput, saved.HomeAddress,
+                saved.HomeLatitude, saved.HomeLongitude);
+            if (home is null)
+            {
+                MapError = "We couldn't find that home address. Add a city or postal code and try again.";
+                return;
+            }
+
+            var school = await GetCoordinatesAsync(SchoolAddressInput, saved.SchoolAddress,
+                saved.SchoolLatitude, saved.SchoolLongitude);
+            if (school is null)
+            {
+                MapError = "We couldn't find that school address. Add a city or postal code and try again.";
+                return;
+            }
+
+            var newLocations = new CommuteLocationSettings(
+                HomeAddressInput.Trim(), home.Latitude, home.Longitude,
+                SchoolAddressInput.Trim(), school.Latitude, school.Longitude);
+
+            // Save the addresses and coordinates so future visits do not geocode them again.
+            await Data.SaveCommuteLocationsAsync(newLocations, DateOnly.FromDateTime(DateTime.Today));
+            CurrentRoute = await MapService.GetDrivingRouteAsync(home, school);
+        }
+        catch (HttpRequestException)
+        {
+            MapError = "The map service couldn't be reached. Check your internet connection and try again.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            MapError = "The map service returned an unreadable response. Please try again later.";
+        }
+        catch (TaskCanceledException)
+        {
+            MapError = "The map service took too long to respond. Please try again.";
+        }
+        catch (InvalidOperationException exception)
+        {
+            MapError = exception.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task<MapCoordinate?> GetCoordinatesAsync(
+        string address, string? savedAddress, double? savedLatitude, double? savedLongitude)
+    {
+        if (address.Trim().Equals(savedAddress?.Trim(), StringComparison.OrdinalIgnoreCase)
+            && savedLatitude is double latitude && savedLongitude is double longitude)
+            return new MapCoordinate(latitude, longitude);
+
+        // Nominatim is called only after the user taps Show route; there is no autocomplete.
+        return await MapService.GeocodeAddressAsync(address);
+    }
 
     private sealed record Step(string Title, string Detail, string Time, string Kind);
 
-    private IEnumerable<Step> Steps => new[]
+    private IEnumerable<Step> Steps
     {
-        new Step("Prepare", "Notes, calculator, school ID",
-                 $"{State.NextClass.PrepareBy} AM", "done"),
-        new Step("Leave home", "Walk to Mabini Avenue",
-                 $"{State.NextClass.LeaveBy} AM", "active"),
-        new Step("Travel", "Jeepney · Route 04",
-                 $"{AddMinutes(State.NextClass.LeaveBy, 5)} AM", "travel"),
-        new Step("Class", State.NextClass.Location,
-                 State.NextClass.StartTime, "class")
-    };
+        get
+        {
+            if (ClassStart is not DateTime classStart || LeaveTime is not DateTime leaveTime)
+                return [new Step("Class", State.NextClass.Title, State.NextClass.StartTime, "class")];
+
+            return
+            [
+                new Step("Prepare", "Notes, calculator, school ID",
+                    leaveTime.AddMinutes(-PreparationMinutes).ToString("h:mm tt"), "done"),
+                new Step("Leave home", "Using your saved home address",
+                    leaveTime.ToString("h:mm tt"), "active"),
+                new Step("Drive to campus", $"OSRM estimate · {DistanceKilometers} km",
+                    leaveTime.AddMinutes(TravelMinutes).ToString("h:mm tt"), "travel"),
+                new Step("Class", State.NextClass.Location,
+                    classStart.ToString("h:mm tt"), "class")
+            ];
+        }
+    }
 
     private string ReminderText => ReminderOn
-        ? $"We'll alert you at {AddMinutes(State.NextClass.LeaveBy, -5)} AM"
+        ? LeaveTime is DateTime leave ? $"We'll alert you at {leave.AddMinutes(-5):h:mm tt}" : "Add a class and calculate a route to set a reminder time"
         : "Turn on to get alerted before you leave";
-
-    private static string AddMinutes(string time, int minutes)
-    {
-        return DateTime.TryParse(time, out var parsed)
-            ? parsed.AddMinutes(minutes).ToString("h:mm")
-            : time;
-    }
 
     private void ToggleReminder() => ReminderOn = !ReminderOn;
 

@@ -18,5 +18,6 @@ public interface IAwykenDataService
     Task SaveScheduleItemAsync(ScheduleItem item, DateOnly date, CancellationToken cancellationToken = default);
     Task SaveImportedScheduleAsync(IEnumerable<ScheduleItem> items, DateOnly referenceDate, CancellationToken cancellationToken = default);
     Task SaveImportedProfileAsync(StudentProfile student, DateOnly referenceDate, CancellationToken cancellationToken = default);
+    Task SaveCommuteLocationsAsync(CommuteLocationSettings locations, DateOnly refreshDate, CancellationToken cancellationToken = default);
     Task DeleteScheduleItemAsync(string id, DateOnly date, CancellationToken cancellationToken = default);
 }

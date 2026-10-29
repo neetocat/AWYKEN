@@ -12,6 +12,9 @@ public sealed class DashboardState
     // Student details (student number, program, year level...) read from the COR.
     public StudentProfile Student { get; private set; } = StudentProfile.Empty;
 
+    // Home and campus endpoints are loaded from the current profile's SQLite row.
+    public CommuteLocationSettings CommuteLocations { get; private set; } = CommuteLocationSettings.Empty;
+
     // Weather is optional and remains empty until a weather service is connected.
     public WeatherInfo Weather { get; } = new(null, "No weather data");
 
@@ -33,10 +36,11 @@ public sealed class DashboardState
     /// <summary>Replace the shared profile and schedule after reading SQLite.</summary>
     public void ReplaceFromDatabase(
         string? displayName, string? email, IEnumerable<ScheduleItem> schedule,
-        StudentProfile? student = null)
+        StudentProfile? student = null, CommuteLocationSettings? commuteLocations = null)
     {
         User = new UserInfo(displayName, email);
         Student = student ?? StudentProfile.Empty;
+        CommuteLocations = commuteLocations ?? CommuteLocationSettings.Empty;
         Schedule = schedule.OrderBy(item => item.SortTime).ToList();
 
         // Build simple alerts from real class rows. An empty database remains quiet.
@@ -105,6 +109,14 @@ public sealed class DashboardState
                 "—");
         }
     }
+}
+
+/// <summary>Saved address and map coordinates for the two commute endpoints.</summary>
+public sealed record CommuteLocationSettings(
+    string? HomeAddress, double? HomeLatitude, double? HomeLongitude,
+    string? SchoolAddress, double? SchoolLatitude, double? SchoolLongitude)
+{
+    public static CommuteLocationSettings Empty { get; } = new(null, null, null, null, null, null);
 }
 
 /// <summary>A null/blank profile name is intentionally displayed as Guest.</summary>
