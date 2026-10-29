@@ -31,6 +31,9 @@ public sealed class SqliteAwykenDataService(
             // Apply schema migrations first. A missing profile gets a null name,
             // which DashboardState presents as Guest; no schedule rows are seeded.
             await db.Database.MigrateAsync(cancellationToken);
+            // Repair databases whose migration history says the student-profile
+            // migration ran even though the column was not written to the file.
+            await EnsureAcademicTermColumnAsync(db, cancellationToken);
             // Keep an anonymous Guest profile for visitors even after accounts are added.
             if (!await db.Profiles.AnyAsync(profile => profile.Email == null, cancellationToken))
             {
@@ -43,6 +46,34 @@ public sealed class SqliteAwykenDataService(
         finally
         {
             _initializationLock.Release();
+        }
+    }
+
+    private static async Task EnsureAcademicTermColumnAsync(
+        AwykenDbContext db, CancellationToken cancellationToken)
+    {
+        await using var command = db.Database.GetDbConnection().CreateCommand();
+        command.CommandText = "PRAGMA table_info(Profiles);";
+        await db.Database.OpenConnectionAsync(cancellationToken);
+
+        var hasAcademicTerm = false;
+        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                if (string.Equals(reader.GetString(1), "AcademicTerm", StringComparison.OrdinalIgnoreCase))
+                {
+                    hasAcademicTerm = true;
+                    break;
+                }
+            }
+        }
+
+        if (!hasAcademicTerm)
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE \"Profiles\" ADD COLUMN \"AcademicTerm\" TEXT NULL;",
+                cancellationToken);
         }
     }
 
