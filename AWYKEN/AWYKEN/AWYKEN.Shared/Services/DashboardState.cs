@@ -15,8 +15,11 @@ public sealed class DashboardState
     // Home and campus endpoints are loaded from the current profile's SQLite row.
     public CommuteLocationSettings CommuteLocations { get; private set; } = CommuteLocationSettings.Empty;
 
-    // Weather is optional and remains empty until a weather service is connected.
-    public WeatherInfo Weather { get; } = new(null, "No weather data");
+    // Weather is refreshed from the saved home coordinates when Home opens.
+    public WeatherInfo Weather { get; private set; } = new(null, "Set home location");
+
+    // The latest OSRM estimate is reused to calculate dashboard departure times.
+    public int? EstimatedTravelMinutes { get; private set; }
 
     // The initial local database has no classes, so all schedule views start blank.
     public List<ScheduleItem> Schedule { get; private set; } = [];
@@ -32,6 +35,10 @@ public sealed class DashboardState
     public List<AppNotification> Notifications { get; private set; } = [];
 
     public int UnreadNotificationCount => Notifications.Count(item => item.IsUnread);
+
+    public void SetWeather(WeatherInfo weather) => Weather = weather;
+
+    public void SetEstimatedTravelMinutes(int? minutes) => EstimatedTravelMinutes = minutes;
 
     /// <summary>Replace the shared profile and schedule after reading SQLite.</summary>
     public void ReplaceFromDatabase(
@@ -95,19 +102,50 @@ public sealed class DashboardState
     {
         get
         {
-            var first = Schedule.FirstOrDefault();
-            if (first is null)
-                return new NextClassInfo("", "No upcoming classes", "—", "No location yet", "—", "—", "—");
+            var now = DateTime.Now;
+            var next = Schedule
+                .Select(item => new { Item = item, StartsAt = GetTodayStart(item.StartTime) })
+                .Where(item => item.StartsAt is DateTime startsAt && startsAt >= now)
+                .OrderBy(item => item.StartsAt)
+                .FirstOrDefault();
+            if (next is null || next.StartsAt is not DateTime classStart)
+                return new NextClassInfo("", "No more classes today", "—", "No location yet", "—", "—", "—", false);
+
+            var leaveBy = EstimatedTravelMinutes is int travelMinutes
+                ? classStart.AddMinutes(-travelMinutes - 5).ToString("h:mm tt")
+                : "Set route";
+            var prepareBy = EstimatedTravelMinutes is int
+                ? classStart.AddMinutes(-EstimatedTravelMinutes.Value - 5 - 15).ToString("h:mm tt")
+                : "Set route";
 
             return new NextClassInfo(
-                first.CourseCode,
-                first.Title,
-                first.StartTime,
-                first.Location,
-                "—",
-                "—",
-                "—");
+                next.Item.CourseCode,
+                next.Item.Title,
+                classStart.ToString("h:mm tt"),
+                next.Item.Location,
+                prepareBy,
+                leaveBy,
+                FormatStartsIn(classStart - now),
+                true);
         }
+    }
+
+    private static DateTime? GetTodayStart(string time)
+    {
+        if (!TimeOnly.TryParse(time, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var parsed))
+            return null;
+        return DateTime.Today.Add(parsed.ToTimeSpan());
+    }
+
+    private static string FormatStartsIn(TimeSpan remaining)
+    {
+        if (remaining <= TimeSpan.FromMinutes(1))
+            return "now";
+        var minutes = (int)Math.Ceiling(remaining.TotalMinutes);
+        return minutes < 60
+            ? $"{minutes}m"
+            : $"{minutes / 60}h {minutes % 60}m";
     }
 }
 
@@ -128,7 +166,7 @@ public sealed record UserInfo(string? FirstName, string? Email)
 public sealed record WeatherInfo(int? Temperature, string Condition);
 public sealed record NextClassInfo(
     string CourseCode, string Title, string StartTime, string Location,
-    string PrepareBy, string LeaveBy, string StartsIn);
+    string PrepareBy, string LeaveBy, string StartsIn, bool HasUpcomingClass = true);
 
 /// <summary>Display-friendly class data shared by the current pages.</summary>
 public sealed record ScheduleItem(

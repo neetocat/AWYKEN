@@ -31,6 +31,7 @@ namespace AWYKEN
                 return client;
             });
             builder.Services.AddSingleton<ICommuteMapService, OpenStreetMapCommuteService>();
+            builder.Services.AddSingleton<ICurrentWeatherService, OpenMeteoWeatherService>();
 
             // Store this installation's database in its private platform app-data folder.
             var databasePath = Path.Combine(FileSystem.AppDataDirectory, "awyken.db");

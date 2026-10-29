@@ -204,6 +204,8 @@ public sealed class SqliteAwykenDataService(
         profile.SchoolLongitude = locations.SchoolLongitude;
 
         await db.SaveChangesAsync(cancellationToken);
+        // A changed endpoint invalidates the in-memory estimate until the next route lookup.
+        state.SetEstimatedTravelMinutes(null);
         await RefreshAsync(refreshDate, cancellationToken);
     }
 

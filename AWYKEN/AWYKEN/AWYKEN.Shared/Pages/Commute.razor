@@ -666,6 +666,7 @@
             // Save the addresses and coordinates so future visits do not geocode them again.
             await Data.SaveCommuteLocationsAsync(newLocations, DateOnly.FromDateTime(DateTime.Today));
             CurrentRoute = await MapService.GetDrivingRouteAsync(home, school);
+            State.SetEstimatedTravelMinutes(Math.Max(1, (int)Math.Ceiling(CurrentRoute.DurationSeconds / 60)));
         }
         catch (HttpRequestException)
         {
