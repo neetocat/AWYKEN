@@ -541,7 +541,7 @@ svg.add-class__field-icon {
 
 @media (max-width: 599px) {
     .add-class__header {
-        padding-top: max(12px, env(safe-area-inset-top));
+        padding-top: max(15px, env(safe-area-inset-top));
     }
 
     .add-class__header-inner {
