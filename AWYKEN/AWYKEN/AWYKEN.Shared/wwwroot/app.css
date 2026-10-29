@@ -461,6 +461,33 @@ svg.add-class__field-icon {
     content: "";
 }
 
+.add-class__toggle--off {
+    background: #aeb5c3;
+}
+
+.add-class__toggle--off::after {
+    right: auto;
+    left: 2px;
+}
+
+.add-class__form-message {
+    margin: 0;
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 8px;
+    line-height: 1.4;
+}
+
+.add-class__form-message--error {
+    background: var(--error-soft);
+    color: var(--error);
+}
+
+.add-class__form-message--success {
+    background: var(--success-soft);
+    color: var(--success);
+}
+
 .add-class__button--add-schedule {
     display: flex;
     width: 100%;
