@@ -51,7 +51,7 @@
                     <p class="course-code">YOUR SCHEDULE</p>
                     <h2>No classes today</h2>
                     <p>Check another day in Schedule, or add a class to today.</p>
-                    <button class="commute-button" @onclick='() => Navigation.NavigateTo("/schedule?add=true")'>Add a class</button>
+                    <button class="commute-button" @onclick='() => Navigation.NavigateTo("/add-class")'>Add a class</button>
                 </section>
             }
             else
@@ -155,7 +155,7 @@
         <button class='@NavClass("Schedule")' @onclick="OpenSchedule">
             <span class="nav-icon" aria-hidden="true">▦</span><span class="nav-label">Schedule</span>
         </button>
-        <button class="add-nav-item" @onclick='() => Navigation.NavigateTo("/schedule?add=true")'>
+        <button class="add-nav-item" @onclick='() => Navigation.NavigateTo("/add-class")'>
             <span class="add-button">+</span><span class="nav-label">Add</span>
         </button>
         <button class='@NavClass("Alerts")' @onclick="OpenNotifications">

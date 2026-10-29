@@ -24,7 +24,7 @@
 
                 <button class="schedule-add"
                         aria-label="Add a class"
-                        @onclick="OpenAddForm">
+                        @onclick='() => Navigation.NavigateTo("/add-class")'>
                     +
                 </button>
             </header>
@@ -151,7 +151,7 @@
             <span>Schedule</span>
         </button>
 
-        <button class="add-nav" aria-label="Add" @onclick="OpenAddForm">
+        <button class="add-nav" aria-label="Add" @onclick='() => Navigation.NavigateTo("/add-class")'>
             <span class="add-nav-circle">+</span>
             <span>Add</span>
         </button>
