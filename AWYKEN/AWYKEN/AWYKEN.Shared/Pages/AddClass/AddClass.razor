@@ -1,5 +1,9 @@
 ﻿@page "/add-class"
+@using System.Globalization
+@using AWYKEN.Shared.Data
+@using AWYKEN.Shared.Services
 @inject NavigationManager Navigation
+@inject IAwykenDataService Data
 
 <PageTitle>Add class | AWYKEN</PageTitle>
 
@@ -14,24 +18,33 @@
             <p class="add-class__subheader-text">Create a new class schedule</p>
         </div>
 
-        <button class="add-class__button add-class__button--save" type="button">Save</button>
+        <button class="add-class__button add-class__button--save" type="submit" form="add-class-form" disabled="@IsSaving">Save</button>
     </header>
 
     <main class="add-class__main">
-        <form class="add-class__form">
+        <form id="add-class-form" class="add-class__form" @onsubmit="SaveClassAsync" @onsubmit:preventDefault="true">
+            @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+            {
+                <p class="add-class__form-message add-class__form-message--error" role="alert">@ErrorMessage</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(SuccessMessage))
+            {
+                <p class="add-class__form-message add-class__form-message--success" role="status">@SuccessMessage</p>
+            }
+
             <section class="add-class__section" aria-labelledby="class-details-heading">
                 <h2 class="add-class__subtitle" id="class-details-heading">Class Details</h2>
 
                 <label class="add-class__input-label" for="subject-name">Subject name</label>
-                <input class="add-class__input-field" id="subject-name" type="text" name="subject-name" maxlength="100" value="Human-Computer Interaction" required />
+                <input class="add-class__input-field" id="subject-name" type="text" name="subject-name" maxlength="100" @bind="Title" required />
 
                 <label class="add-class__input-label" for="course-code">Course code</label>
-                <input class="add-class__input-field" id="course-code" type="text" name="course-code" maxlength="15" value="CS 3204" required />
+                <input class="add-class__input-field" id="course-code" type="text" name="course-code" maxlength="15" @bind="CourseCode" required />
 
                 <label class="add-class__input-label" for="instructor">Instructor (optional)</label>
                 <div class="add-class__input-with-icon">
                     <svg class="add-class__field-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a7 7 0 0 0-14 0v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" /></svg>
-                    <input class="add-class__input-field" id="instructor" type="text" name="instructor" maxlength="50" value="Prof. Andrea Lim" />
+                    <input class="add-class__input-field" id="instructor" type="text" name="instructor" maxlength="50" @bind="Instructor" />
                 </div>
             </section>
 
@@ -39,14 +52,14 @@
                 <h2 class="add-class__subtitle" id="schedule-heading">Schedule</h2>
 
                 <label class="add-class__input-label">Class days</label>
-                <div class="add-class__class-days-wrapper" aria-label="Class days">
-                    <button class="add-class__class-day-option" type="button" aria-label="Monday" aria-pressed="false">M</button>
-                    <button class="add-class__class-day-option add-class__class-day-option--selected" type="button" aria-label="Tuesday" aria-pressed="true">T</button>
-                    <button class="add-class__class-day-option" type="button" aria-label="Wednesday" aria-pressed="false">W</button>
-                    <button class="add-class__class-day-option add-class__class-day-option--selected" type="button" aria-label="Thursday" aria-pressed="true">T</button>
-                    <button class="add-class__class-day-option" type="button" aria-label="Friday" aria-pressed="false">F</button>
-                    <button class="add-class__class-day-option" type="button" aria-label="Saturday" aria-pressed="false">S</button>
-                    <button class="add-class__class-day-option" type="button" aria-label="Sunday" aria-pressed="false">S</button>
+                <div class="add-class__class-days-wrapper" role="group" aria-label="Class days">
+                    @foreach (var day in WeekDays)
+                    {
+                        var selected = SelectedDays.Contains(day);
+                        <button class="@(selected ? "add-class__class-day-option add-class__class-day-option--selected" : "add-class__class-day-option")"
+                                type="button" aria-label="@day" aria-pressed="@selected"
+                                @onclick="() => ToggleDay(day)">@day.ToString()[..1]</button>
+                    }
                 </div>
 
                 <div class="add-class__time-wrapper">
@@ -54,14 +67,14 @@
                         <label class="add-class__input-label" for="start-time">Starts</label>
                         <div class="add-class__time-input">
                             <img class="add-class__time-icon" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="" />
-                            <input class="add-class__input-field add-class__input-field--time" id="start-time" name="start-time" type="time" value="09:00" required />
+                            <input class="add-class__input-field add-class__input-field--time" id="start-time" name="start-time" type="time" @bind="StartTime" required />
                         </div>
                     </div>
                     <div class="add-class__time-field">
                         <label class="add-class__input-label" for="end-time">Ends</label>
                         <div class="add-class__time-input">
                             <img class="add-class__time-icon" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="" />
-                            <input class="add-class__input-field add-class__input-field--time" id="end-time" name="end-time" type="time" value="10:30" required />
+                            <input class="add-class__input-field add-class__input-field--time" id="end-time" name="end-time" type="time" @bind="EndTime" required />
                         </div>
                     </div>
                 </div>
@@ -70,14 +83,16 @@
             <section class="add-class__section add-class__section--type" aria-labelledby="class-type-heading">
                 <h2 class="add-class__subtitle" id="class-type-heading">Class Type</h2>
                 <div class="add-class__class-type-options" role="group" aria-label="Class type">
-                    <button class="add-class__class-type-option add-class__class-type-option--selected" type="button" aria-pressed="true">
+                    <button class="@(Mode == "Face-to-face" ? "add-class__class-type-option add-class__class-type-option--selected" : "add-class__class-type-option")"
+                            type="button" aria-pressed="@(Mode == "Face-to-face")" @onclick='() => SelectMode("Face-to-face")'>
                         <img class="add-class__type-icon" src="_content/AWYKEN.Shared/images/icon/awyken-location-icon.png" alt="" />
                         <span class="add-class__text-wrapper">
                             <span class="add-class__option-text">Face-to-face</span>
                             <span class="add-class__option-description">On campus</span>
                         </span>
                     </button>
-                    <button class="add-class__class-type-option" type="button" aria-pressed="false">
+                    <button class="@(Mode == "Online" ? "add-class__class-type-option add-class__class-type-option--selected" : "add-class__class-type-option")"
+                            type="button" aria-pressed="@(Mode == "Online")" @onclick='() => SelectMode("Online")'>
                         <img class="add-class__type-icon" src="_content/AWYKEN.Shared/images/icon/awyken-video-icon.png" alt="" />
                         <span class="add-class__text-wrapper">
                             <span class="add-class__option-text">Online</span>
@@ -86,10 +101,10 @@
                     </button>
                 </div>
 
-                <label class="add-class__input-label" for="room">Room &amp; building</label>
+                <label class="add-class__input-label" for="room">@(Mode == "Online" ? "Meeting platform / link" : "Room & building")</label>
                 <div class="add-class__input-with-icon">
                     <img class="add-class__field-icon" src="_content/AWYKEN.Shared/images/icon/awyken-location-icon.png" alt="" />
-                    <input class="add-class__input-field" id="room" type="text" name="room" value="Room 408 - IT Building" />
+                    <input class="add-class__input-field" id="room" type="text" name="room" @bind="Location" />
                 </div>
             </section>
 
@@ -99,15 +114,111 @@
                 </span>
                 <span class="add-class__reminder-copy">
                     <span class="add-class__reminder-title">Preparation reminder</span>
-                    <span class="add-class__reminder-description">Alert me 15 minutes before leaving</span>
+                    <span class="add-class__reminder-description">@(ReminderEnabled ? "Alert me 15 minutes before leaving" : "No preparation alert")</span>
                 </span>
-                <button class="add-class__toggle" type="button" role="switch" aria-checked="true" aria-label="Preparation reminder"></button>
+                <button class="@(ReminderEnabled ? "add-class__toggle" : "add-class__toggle add-class__toggle--off")"
+                        type="button" role="switch" aria-checked="@ReminderEnabled"
+                        aria-label="Preparation reminder" @onclick="ToggleReminder"></button>
             </div>
 
-            <button class="add-class__button add-class__button--add-schedule" type="button">
+            <button class="add-class__button add-class__button--add-schedule" type="submit" disabled="@IsSaving">
                 <span class="add-class__plus-icon" aria-hidden="true">+</span>
-                <span class="add-class__button-text">Add to schedule</span>
+                <span class="add-class__button-text">@(IsSaving ? "Saving..." : "Add to schedule")</span>
             </button>
         </form>
     </main>
 </div>
+
+@code {
+    private static readonly DayOfWeek[] WeekDays =
+    [
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
+    ];
+
+    private readonly HashSet<DayOfWeek> SelectedDays = [];
+    private string Title = "";
+    private string CourseCode = "";
+    private string Instructor = "";
+    private TimeOnly? StartTime = new TimeOnly(9, 0);
+    private TimeOnly? EndTime = new TimeOnly(10, 30);
+    private string Location = "";
+    private string Mode = "Face-to-face";
+    private bool ReminderEnabled = true;
+    private bool IsSaving;
+    private string? ErrorMessage;
+    private string? SuccessMessage;
+
+    private void ToggleDay(DayOfWeek day)
+    {
+        if (!SelectedDays.Add(day))
+            SelectedDays.Remove(day);
+        ErrorMessage = null;
+        SuccessMessage = null;
+    }
+
+    private void SelectMode(string mode)
+    {
+        Mode = mode;
+        SuccessMessage = null;
+    }
+
+    private void ToggleReminder() => ReminderEnabled = !ReminderEnabled;
+
+    private async Task SaveClassAsync()
+    {
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        if (string.IsNullOrWhiteSpace(Title) || string.IsNullOrWhiteSpace(CourseCode))
+        {
+            ErrorMessage = "Enter a subject name and course code.";
+            return;
+        }
+
+        if (SelectedDays.Count == 0)
+        {
+            ErrorMessage = "Select at least one class day.";
+            return;
+        }
+
+        if (StartTime is not TimeOnly start || EndTime is not TimeOnly end || end <= start)
+        {
+            ErrorMessage = "Enter a valid end time later than the start time.";
+            return;
+        }
+
+        var instructor = Instructor.Trim();
+        var initials = string.Join("", instructor.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2).Select(part => char.ToUpperInvariant(part[0])));
+        var days = string.Join(", ", WeekDays.Where(SelectedDays.Contains).Select(day => day.ToString()[..3]));
+        var item = new ScheduleItem(
+            Guid.NewGuid().ToString(),
+            CourseCode.Trim(),
+            Title.Trim(),
+            DateTime.Today.Add(start.ToTimeSpan()).ToString("h:mm tt", CultureInfo.InvariantCulture),
+            DateTime.Today.Add(end.ToTimeSpan()).ToString("h:mm tt", CultureInfo.InvariantCulture),
+            Location.Trim(),
+            instructor,
+            initials,
+            Mode,
+            "#5268ca",
+            null,
+            Days: days);
+
+        IsSaving = true;
+        try
+        {
+            await Data.SaveScheduleItemAsync(item, DateOnly.FromDateTime(DateTime.Today));
+            SuccessMessage = "Class added to your schedule.";
+        }
+        catch (Exception exception)
+        {
+            ErrorMessage = $"Could not save the class: {exception.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+}
