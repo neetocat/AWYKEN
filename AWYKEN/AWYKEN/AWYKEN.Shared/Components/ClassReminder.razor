@@ -1,0 +1,95 @@
+@implements IAsyncDisposable
+@using AWYKEN.Shared.Services
+@inject AWYKEN.Shared.Services.DashboardState State
+@inject IJSRuntime JS
+
+@if (reminder is not null)
+{
+    <div class="class-reminder-backdrop" @onclick="Dismiss">
+        <section class="class-reminder-dialog" role="alertdialog" aria-modal="true" aria-labelledby="class-reminder-title" @onclick:stopPropagation="true">
+            <div class="class-reminder-icon" aria-hidden="true">◷</div>
+            <div>
+                <h2 id="class-reminder-title">Class starting soon</h2>
+                <p><strong>@reminder.Title</strong> (@reminder.CourseCode) starts in 5 minutes.</p>
+                <p class="class-reminder-details">@reminder.StartTime · @reminder.Location</p>
+            </div>
+            <button class="class-reminder-dismiss" @onclick="Dismiss">Got it</button>
+        </section>
+    </div>
+}
+
+@code {
+    private readonly HashSet<string> notifiedClasses = [];
+    private CancellationTokenSource? cancellation;
+    private ScheduleItem? reminder;
+
+    protected override void OnInitialized()
+    {
+        cancellation = new CancellationTokenSource();
+        _ = CheckScheduleAsync(cancellation.Token);
+    }
+
+    private async Task CheckScheduleAsync(CancellationToken token)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+
+        try
+        {
+            do
+            {
+                await CheckForUpcomingClassAsync();
+            }
+            while (await timer.WaitForNextTickAsync(token));
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task CheckForUpcomingClassAsync()
+    {
+        var now = DateTime.Now;
+        var today = DateOnly.FromDateTime(now);
+
+        foreach (var item in State.Schedule)
+        {
+            if (!DateTime.TryParse(item.StartTime, out var parsedStart))
+                continue;
+
+            var start = today.ToDateTime(TimeOnly.FromTimeSpan(parsedStart.TimeOfDay));
+            var key = $"{today:yyyy-MM-dd}:{item.Id}:{start:HHmm}";
+
+            if (notifiedClasses.Contains(key) || now < start.AddMinutes(-5) || now >= start)
+                continue;
+
+            notifiedClasses.Add(key);
+            reminder = item;
+            await InvokeAsync(StateHasChanged);
+
+            try
+            {
+                await JS.InvokeVoidAsync("awykenNotifications.playReminderSound");
+            }
+            catch (JSException)
+            {
+                // The popup remains available when the browser blocks autoplay.
+            }
+
+            break;
+        }
+    }
+
+    private void Dismiss()
+    {
+        reminder = null;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (cancellation is null)
+            return;
+
+        await cancellation.CancelAsync();
+        cancellation.Dispose();
+    }
+}
