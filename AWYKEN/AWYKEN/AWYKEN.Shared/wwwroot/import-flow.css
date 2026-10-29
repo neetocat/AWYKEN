@@ -24,11 +24,15 @@
     padding: 10px 15px 28px;
 }
 
+.profile-screen .flow-content {
+    padding: max(24px, env(safe-area-inset-top)) 20px 28px;
+}
+
 .flow-header,
 .settings-header {
     display: flex;
     align-items: center;
-    gap: 11px;
+    gap: 12px;
     min-height: 45px;
     padding-bottom: 10px;
     border-bottom: 1px solid #dfe3ed;
@@ -90,7 +94,7 @@
     gap: 3px;
     padding: 9px;
     border-radius: 11px;
-    background: #050a3d;
+    background: var(--ink);
     color: #fff;
 }
 
@@ -583,17 +587,20 @@
     flex: 0 0 auto;
     align-items: center;
     justify-content: space-around;
-    padding: 9px 6px max(8px, env(safe-area-inset-bottom));
+    padding: 10px 6px max(8px, env(safe-area-inset-bottom));
     border-top: 1px solid #dce2ec;
     background: #fff;
 }
 
     .bottom-nav button {
         display: flex;
+        flex: 1;
         align-items: center;
         flex-direction: column;
+        justify-content: center;
         gap: 3px;
-        min-width: 42px;
+        min-width: 0;
+        padding: 0;
         border: 0;
         background: transparent;
         color: #758096;
@@ -604,25 +611,54 @@
         }
 
 .nav-icon {
-    font-size: 18px;
-    line-height: 17px;
+    height: 25px;
+    font-size: 22px;
+    line-height: 25px;
+}
+
+.nav-icon svg {
+    width: 21px;
+    height: 21px;
+    vertical-align: middle;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
 }
 
 .nav-label {
-    font-size: 8px;
+    font-size: 9px;
 }
 
 .bottom-nav .add-nav {
-    display: grid;
-    place-items: center;
-    width: 27px;
-    height: 27px;
-    min-width: 27px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    height: auto;
     margin-top: -20px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #9299a8;
+    font-size: inherit;
+    line-height: normal;
+}
+
+.bottom-nav .add-button {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    place-items: center;
     border-radius: 50%;
-    background: #050a3d;
-    color: #fff;
-    font-size: 22px;
+    background: #0c1226;
+    color: white;
+    font-size: 30px;
     line-height: 1;
 }
 
@@ -714,9 +750,24 @@
         border-right: 1px solid #e1e5ee;
     }
 
+    .settings-screen {
+        max-width: none;
+        margin: 0;
+        border: 0;
+    }
+
     .settings-screen .flow-content {
         padding-left: 28px;
         padding-right: 28px;
+    }
+
+    .profile-screen {
+        min-height: 100vh;
+        height: auto;
+    }
+
+    .profile-screen .flow-content {
+        padding-top: 32px;
     }
 }
 

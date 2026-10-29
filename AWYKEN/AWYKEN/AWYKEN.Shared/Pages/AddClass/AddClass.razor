@@ -9,16 +9,18 @@
 
 <div class="add-class">
     <header class="add-class__header">
-        <button class="add-class__button add-class__button--back" type="button" aria-label="Go back" @onclick='() => Navigation.NavigateTo("/")'>
-            <img src="_content/AWYKEN.Shared/images/icon/awyken-back-icon.png" alt="" />
-        </button>
+        <div class="add-class__header-inner">
+            <button class="add-class__button add-class__button--back" type="button" aria-label="Go back" @onclick='() => Navigation.NavigateTo("/")'>
+                <img src="_content/AWYKEN.Shared/images/icon/awyken-back-icon.png" alt="" />
+            </button>
 
-        <div class="add-class__header-content">
-            <h1 class="add-class__header-title">Add class</h1>
-            <p class="add-class__subheader-text">Create a new class schedule</p>
+            <div class="add-class__header-content">
+                <h1 class="add-class__header-title">Add class</h1>
+                <p class="add-class__subheader-text">Create a new class schedule</p>
+            </div>
+
+            <button class="add-class__button add-class__button--save" type="submit" form="add-class-form" disabled="@IsSaving">Save</button>
         </div>
-
-        <button class="add-class__button add-class__button--save" type="submit" form="add-class-form" disabled="@IsSaving">Save</button>
     </header>
 
     <main class="add-class__main">

@@ -52,14 +52,15 @@
 .event-mode { flex: 0 0 auto; margin-top: 0; padding: 13px 9px; border-radius: 20px; font-size: 7px; font-weight: 800; letter-spacing: .15px; text-transform: uppercase; white-space: nowrap; }
 .event-mode.in-person { background: #e7f5ef; color: #08714d; }
 .event-mode.online { background: #edf2ff; color: #2863dc; }
-.schedule-bottom-nav { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-around; padding: 10px 6px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: white; }
+.schedule-bottom-nav { position: relative; z-index: 2; display: flex; flex: 0 0 auto; align-items: center; justify-content: space-around; padding: 10px 6px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: white; }
 .schedule-bottom-nav button { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 9px; }
 .schedule-bottom-nav button.current { color: var(--navy); font-weight: 800; }
 .bottom-icon { height: 25px; font-size: 22px; line-height: 25px; }
+.bottom-icon svg { width: 21px; height: 21px; vertical-align: middle; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
 .calendar-icon { font-size: 22px; }
 .alert-icon svg { width: 21px; height: 21px; vertical-align: middle; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
-.add-nav { gap: 1px !important; margin-top: -19px; }
-.add-nav-circle { display: grid; width: 40px; height: 40px; place-items: center; margin-bottom: 1px; border: 3px solid white; border-radius: 50%; background: var(--navy); color: white; font-size: 26px; line-height: 1; box-shadow: 0 1px 4px rgb(10 20 49 / 15%); }
+.schedule-bottom-nav .add-nav-item { position: relative; z-index: 1; gap: 2px; margin-top: -20px; }
+.schedule-bottom-nav .add-button { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%; background: var(--ink); color: white; font-size: 30px; line-height: 1; }
 .schedule-toast-backdrop { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 24px; background: rgb(12 18 38 / 40%); }
 .schedule-message { width: min(100%, 340px); padding: 22px; border-radius: 20px; background: white; box-shadow: 0 20px 60px rgb(9 14 43 / 20%); }
 .schedule-message h2 { margin: 0 0 8px; font-size: 18px; }

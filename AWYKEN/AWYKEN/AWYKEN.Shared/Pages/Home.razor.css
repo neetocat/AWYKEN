@@ -60,16 +60,16 @@ button {
 }
 
 .brand-mark {
-    display: grid;
-    flex: 0 0 46px;
-    width: 46px;
-    height: 46px;
-    place-items: center;
-    border-radius: 15px;
+    display: flex;
+    flex: 0 0 35px;
+    width: 35px;
+    height: 35px;
+    align-items: center;
+    justify-content: center;
+    padding: 9px;
+    border-radius: 11px;
     background: var(--ink);
     color: white;
-    font-size: 25px;
-    font-weight: 800;
 }
 
 .greeting-copy {
