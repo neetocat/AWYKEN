@@ -13,6 +13,15 @@ builder.Services.AddSingleton<IFormFactor, FormFactor>();
 builder.Services.AddScoped<AWYKEN.Shared.Services.DashboardState>();
 builder.Services.AddScoped<AWYKEN.Shared.Services.LocalAccountSession>();
 builder.Services.AddScoped<AWYKEN.Shared.Services.CorScheduleImporter>();
+// Identify AWYKEN when calling public OpenStreetMap services, as their policies require.
+builder.Services.AddSingleton(_ =>
+{
+    var client = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("AWYKEN/1.0 (+https://github.com/neetocat/AWYKEN)");
+    return client;
+});
+builder.Services.AddSingleton<ICommuteMapService, OpenStreetMapCommuteService>();
+builder.Services.AddSingleton<ICurrentWeatherService, OpenMeteoWeatherService>();
 
 // Keep the Web host's local database in the user's app-data folder, outside Git.
 var databaseFolder = Path.Combine(

@@ -121,6 +121,16 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("HomeAddress")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("HomeLatitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("HomeLongitude")
+                        .HasColumnType("REAL");
+
                     b.Property<string>("PasswordHash")
                         .HasMaxLength(300)
                         .HasColumnType("TEXT");
@@ -128,6 +138,16 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.Property<string>("Program")
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("SchoolAddress")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("SchoolLatitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("SchoolLongitude")
+                        .HasColumnType("REAL");
 
                     b.Property<string>("Section")
                         .HasMaxLength(80)

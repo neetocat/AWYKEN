@@ -181,7 +181,32 @@ public sealed class SqliteAwykenDataService(
             : new StudentProfile(profile.FullName, profile.DisplayName, profile.StudentEmail,
                 profile.StudentNumber, profile.College, profile.Program, profile.YearLevel,
                 profile.Section, profile.AcademicTerm);
-        state.ReplaceFromDatabase(profile?.DisplayName, profile?.Email, rows.Select(ToScheduleItem), student);
+        var commute = profile is null
+            ? CommuteLocationSettings.Empty
+            : new CommuteLocationSettings(profile.HomeAddress, profile.HomeLatitude, profile.HomeLongitude,
+                profile.SchoolAddress, profile.SchoolLatitude, profile.SchoolLongitude);
+        state.ReplaceFromDatabase(profile?.DisplayName, profile?.Email, rows.Select(ToScheduleItem), student, commute);
+    }
+
+    public async Task SaveCommuteLocationsAsync(
+        CommuteLocationSettings locations, DateOnly refreshDate, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var profile = await db.Profiles.SingleAsync(item => item.Id == profileId, cancellationToken);
+
+        profile.HomeAddress = locations.HomeAddress;
+        profile.HomeLatitude = locations.HomeLatitude;
+        profile.HomeLongitude = locations.HomeLongitude;
+        profile.SchoolAddress = locations.SchoolAddress;
+        profile.SchoolLatitude = locations.SchoolLatitude;
+        profile.SchoolLongitude = locations.SchoolLongitude;
+
+        await db.SaveChangesAsync(cancellationToken);
+        // A changed endpoint invalidates the in-memory estimate until the next route lookup.
+        state.SetEstimatedTravelMinutes(null);
+        await RefreshAsync(refreshDate, cancellationToken);
     }
 
     public async Task SaveImportedProfileAsync(

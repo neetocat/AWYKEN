@@ -23,6 +23,15 @@ namespace AWYKEN
             builder.Services.AddScoped<AWYKEN.Shared.Services.DashboardState>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.LocalAccountSession>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.CorScheduleImporter>();
+            // Identify AWYKEN when calling public OpenStreetMap services, as their policies require.
+            builder.Services.AddSingleton(_ =>
+            {
+                var client = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+                client.DefaultRequestHeaders.UserAgent.ParseAdd("AWYKEN/1.0 (+https://github.com/neetocat/AWYKEN)");
+                return client;
+            });
+            builder.Services.AddSingleton<ICommuteMapService, OpenStreetMapCommuteService>();
+            builder.Services.AddSingleton<ICurrentWeatherService, OpenMeteoWeatherService>();
 
             // Store this installation's database in its private platform app-data folder.
             var databasePath = Path.Combine(FileSystem.AppDataDirectory, "awyken.db");

@@ -1,6 +1,8 @@
 @page "/"
 @inject AWYKEN.Shared.Services.DashboardState State
 @inject AWYKEN.Shared.Data.IAwykenDataService Data
+@inject AWYKEN.Shared.Services.ICurrentWeatherService WeatherService
+@inject AWYKEN.Shared.Services.ICommuteMapService CommuteMapService
 @inject NavigationManager Navigation
 
 @* AWYKEN dashboard page.
@@ -32,7 +34,6 @@
                     <h1>You're all set for a focused day.</h1>
                 </div>
                 <div class="weather">
-                    @* BACKEND TODO: replace Weather values with the result from your weather API/service. *@
                     @if (State.Weather.Temperature is int temperature)
                     {
                         <strong>@temperature°</strong>
@@ -45,12 +46,12 @@
                 </div>
             </section>
 
-            @if (State.Schedule.Count == 0)
+            @if (!State.NextClass.HasUpcomingClass)
             {
                 <section class="hero-card">
                     <p class="course-code">YOUR SCHEDULE</p>
-                    <h2>No classes today</h2>
-                    <p>Check another day in Schedule, or add a class to today.</p>
+                    <h2>@(State.Schedule.Count == 0 ? "No classes today" : "No more classes today")</h2>
+                    <p>Check Schedule for another day, or add a class to today.</p>
                     <button class="commute-button" @onclick='() => Navigation.NavigateTo("/add-class")'>Add a class</button>
                 </section>
             }
@@ -59,11 +60,9 @@
             <section class="hero-card">
                 <div class="hero-top-row">
                     <span class="next-badge">NEXT CLASS</span>
-                    @* BACKEND TODO: calculate StartsIn from the next class's actual start DateTime. *@
                     <span class="hero-muted">Starts in @State.NextClass.StartsIn</span>
                 </div>
 
-                @* BACKEND TODO: populate NextClass from the signed-in user's timetable. *@
                 <p class="course-code">@State.NextClass.CourseCode</p>
                 <h2>@State.NextClass.Title</h2>
 
@@ -77,12 +76,12 @@
                 <div class="preparation-row">
                     <div class="preparation-column">
                         <span class="preparation-label">PREPARE BY</span>
-                        <strong>@State.NextClass.PrepareBy <small>AM</small></strong>
+                        <strong>@State.NextClass.PrepareBy</strong>
                     </div>
                     <div class="preparation-divider"></div>
                     <div class="preparation-column">
                         <span class="preparation-label">LEAVE BY</span>
-                        <strong>@State.NextClass.LeaveBy <small>AM</small></strong>
+                        <strong>@State.NextClass.LeaveBy</strong>
                     </div>
                 </div>
 
@@ -184,9 +183,54 @@
     private string? MessageTitle { get; set; }
     private string? Message { get; set; }
 
-    // Load today's rows from SQLite into the shared state used across pages.
-    protected override Task OnInitializedAsync() =>
-        Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+    // Load the day's classes, then refresh weather and route timing from the saved home/campus coordinates.
+    protected override async Task OnInitializedAsync()
+    {
+        await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+
+        var locations = State.CommuteLocations;
+        Task<AWYKEN.Shared.Services.WeatherInfo>? weatherTask =
+            locations.HomeLatitude is double homeLatitude && locations.HomeLongitude is double homeLongitude
+                ? WeatherService.GetCurrentAsync(homeLatitude, homeLongitude)
+                : null;
+        Task<AWYKEN.Shared.Services.DrivingRoute>? routeTask =
+            State.EstimatedTravelMinutes is null
+                && locations.HomeLatitude is double savedHomeLatitude && locations.HomeLongitude is double savedHomeLongitude
+                && locations.SchoolLatitude is double schoolLatitude && locations.SchoolLongitude is double schoolLongitude
+                    ? CommuteMapService.GetDrivingRouteAsync(
+                        new AWYKEN.Shared.Services.MapCoordinate(savedHomeLatitude, savedHomeLongitude),
+                        new AWYKEN.Shared.Services.MapCoordinate(schoolLatitude, schoolLongitude))
+                    : null;
+
+        if (weatherTask is not null)
+        {
+            try
+            {
+                State.SetWeather(await weatherTask);
+            }
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+            {
+                State.SetWeather(new AWYKEN.Shared.Services.WeatherInfo(null, "Weather unavailable · Open-Meteo"));
+            }
+        }
+        else
+        {
+            State.SetWeather(new AWYKEN.Shared.Services.WeatherInfo(null, "Set home location"));
+        }
+
+        if (routeTask is not null)
+        {
+            try
+            {
+                var route = await routeTask;
+                State.SetEstimatedTravelMinutes(Math.Max(1, (int)Math.Ceiling(route.DurationSeconds / 60)));
+            }
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or InvalidOperationException or System.Text.Json.JsonException)
+            {
+                State.SetEstimatedTravelMinutes(null);
+            }
+        }
+    }
 
     private string NavClass(string tab) =>
         ActiveTab == tab ? "nav-item nav-active" : "nav-item";

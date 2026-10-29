@@ -58,7 +58,7 @@
 
             <section class="settings-section">
                 <h2>PREFERENCES</h2>
-                <button class="settings-row" @onclick="ShowLocationMessage"><span class="row-icon">@Icon("pin")</span><span class="row-copy"><strong>Home location</strong><small>Not set</small></span><span class="row-chevron">@Icon("chevron")</span></button>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/commute")'><span class="row-icon">@Icon("pin")</span><span class="row-copy"><strong>Home location</strong><small>@(string.IsNullOrWhiteSpace(State.CommuteLocations.HomeAddress) ? "Tap to set home and campus" : State.CommuteLocations.HomeAddress)</small></span><span class="row-chevron">@Icon("chevron")</span></button>
                 <button class="settings-row" @onclick="ShowTimeMessage"><span class="row-icon">@Icon("clock")</span><span class="row-copy"><strong>Time format</strong><small>12-hour</small></span><span class="row-chevron">@Icon("chevron")</span></button>
                 <button class="settings-row" @onclick="ShowAboutMessage"><span class="row-icon">@Icon("info")</span><span class="row-copy"><strong>About AWYKEN</strong><small>Version 1.0.0</small></span><span class="row-chevron">@Icon("chevron")</span></button>
             </section>
