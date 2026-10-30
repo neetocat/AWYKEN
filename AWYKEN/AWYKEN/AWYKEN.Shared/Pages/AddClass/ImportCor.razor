@@ -27,7 +27,7 @@
                 <div class="upload-icon">⇧</div>
                 <h2>Upload your registration form</h2>
                 <p>PDF, JPG, PNG, BMP or TIFF · Max 10 MB</p>
-                <label class="primary-action upload-action">⇧ &nbsp; Browse files<InputFile accept=".pdf,.jpg,.jpeg,.png,.bmp,.tif,.tiff" OnChange="SelectFile" /></label>
+                <InputFile OnChange="SelectFile" />
             </section>
 
             <aside class="tip-card"><strong>ⓘ</strong><div><b>For the best result</b><p>Use a clear, well-lit image with all four corners visible.</p></div></aside>
@@ -43,6 +43,7 @@
 
 @code {
     private string? status;
+    private readonly string[] AllowedExtensions = { ".pdf", ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff" };
 
     private async Task SelectFile(InputFileChangeEventArgs args)
     {
@@ -50,6 +51,21 @@
         if (file is null)
         {
             status = "Choose a COR PDF to continue.";
+            return;
+        }
+
+        // Validate file extension
+        var fileExtension = Path.GetExtension(file.Name).ToLower();
+        if (!AllowedExtensions.Contains(fileExtension))
+        {
+            status = $"Invalid file type. Please upload PDF, JPG, PNG, BMP, or TIFF.";
+            return;
+        }
+
+        // Validate file size (10 MB max)
+        if (file.Size > 10 * 1024 * 1024)
+        {
+            status = "File is too large. Maximum size is 10 MB.";
             return;
         }
 
