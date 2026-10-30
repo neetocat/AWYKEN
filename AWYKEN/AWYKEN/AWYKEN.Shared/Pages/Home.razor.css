@@ -405,7 +405,7 @@ button {
     flex: 0 0 auto;
     align-items: center;
     justify-content: space-around;
-    padding: 10px 6px 24px;
+    padding: 10px 6px 44px;
     border-top: 1px solid var(--line);
     background: white;
 }
