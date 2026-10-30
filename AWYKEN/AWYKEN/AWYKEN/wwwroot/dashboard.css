@@ -118,7 +118,7 @@ button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparen
 .join-button { padding:7px 10px; border:1px solid #d4d9e5; border-radius:10px; background:white; color:var(--ink); font-size:11px; font-weight:800; }
 .arrow-button { flex:0 0 30px; border:0; background:transparent; color:var(--ink); font-size:26px; }
 
-.bottom-nav { display:flex; flex:0 0 auto; align-items:center; justify-content:space-around; padding:10px 6px 44px; border-top:1px solid var(--line); background:white; }
+.bottom-nav { display:flex; flex:0 0 auto; align-items:center; justify-content:space-around; padding:10px 6px 60px; border-top:1px solid var(--line); background:white; }
 .nav-item, .add-nav-item { display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-width:0; padding:0; border:0; background:transparent; color:var(--muted); }
 .nav-icon { height:25px; font-size:22px; line-height:25px; }
 .nav-label { font-size:9px; }
