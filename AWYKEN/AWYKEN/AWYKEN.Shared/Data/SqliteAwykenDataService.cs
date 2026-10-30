@@ -307,7 +307,8 @@ public sealed class SqliteAwykenDataService(
         record.Cfn = item.Cfn;
         record.Section = item.Section;
         record.Units = item.Units;
-        record.Days = NormalizeDays(item.Days) ?? $"|{date.DayOfWeek.ToString()[..3]}|";
+        record.Days = NormalizeDays(item.Days)
+            ?? (item.ScheduledDate is null ? $"|{date.DayOfWeek.ToString()[..3]}|" : null);
         record.MeetingTimes = item.MeetingTimes;
 
         await db.SaveChangesAsync(cancellationToken);
@@ -402,13 +403,16 @@ public sealed class SqliteAwykenDataService(
             row.Instructor,
             initials,
             row.Mode,
-            row.ColorCode,
+            string.Equals(row.ColorCode, "#5268ca", StringComparison.OrdinalIgnoreCase)
+                ? ScheduleColorPalette.ForRecordId(row.Id)
+                : row.ColorCode,
             row.MeetingLink,
             row.Cfn,
             row.Section,
             row.Units,
             row.Days?.Replace("|", ", ").Trim(' ', ','),
-            row.MeetingTimes);
+            row.MeetingTimes,
+            row.Days is null ? DateOnly.FromDateTime(row.StartsAt) : null);
     }
 
     private static DateTime CombineDateAndTimeOrDefault(DateOnly date, string time, DateTime? fallback = null)
