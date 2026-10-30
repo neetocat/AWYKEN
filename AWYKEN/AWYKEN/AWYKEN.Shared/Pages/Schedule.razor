@@ -2,6 +2,7 @@
 @using AWYKEN.Shared.Components
 @using AWYKEN.Shared.Data
 @using AWYKEN.Shared.Models
+@using System.Text.RegularExpressions
 @inject AWYKEN.Shared.Services.DashboardState State
 @inject IAwykenDataService Data
 @inject NavigationManager Navigation
@@ -19,7 +20,7 @@
 
                 <div class="schedule-header-copy">
                     <h1>Schedule</h1>
-                    <p>@WeekStart.ToString("MMMM d")–@WeekStart.AddDays(6).Day</p>
+                    <p>@WeekDateRange</p>
                 </div>
 
                 <button class="schedule-add"
@@ -53,7 +54,7 @@
                     <button class="schedule-date @(active ? "active" : "")"
                             aria-pressed="@active"
                             @onclick="() => SelectDateAsync(day)">
-                        <span>@day.ToString("ddd").Substring(0, 1)</span>
+                        <span>@day.ToString("ddd")[..1]</span>
                         <strong>@day.Day</strong>
                     </button>
                 }
@@ -61,40 +62,64 @@
 
             @if (ViewMode == "Week")
             {
-                <p class="week-view-note">
-                    Your classes for the week of @WeekStart.ToString("MMMM d")
-                </p>
-            }
+                <section class="week-calendar" aria-label="Weekly class timetable">
+                    <div class="week-calendar-grid" style="--timeline-hours: @TimelineHours; --timeline-height: @(TimelineHours * CalendarHourHeight)px">
+                        <div class="week-time-axis" aria-hidden="true">
+                            @for (var hour = TimelineStartHour; hour <= TimelineEndHour; hour += 2)
+                            {
+                                <span class="week-time-label" style="top: @((hour - TimelineStartHour) * CalendarHourHeight)px">
+                                    @FormatTimelineHour(hour)
+                                </span>
+                            }
+                        </div>
 
-            <section class="schedule-events" aria-label="Classes">
-                @if (State.Schedule.Count == 0)
-                {
-                    <p>@(ViewMode == "Week" ? "No classes scheduled for this week." : "No classes scheduled for this day. Select another day or click + to add a class.")</p>
-                }
-                else
-                {
+                        @foreach (var day in WeekDays)
+                        {
+                            <div class="week-day-track" aria-label="@day.ToString("dddd, MMMM d")">
+                                @foreach (var block in WeekClassBlocksOn(day))
+                                {
+                                    <button type="button"
+                                            class="week-event"
+                                            style="--event-accent: @(string.IsNullOrWhiteSpace(block.Item.ColorCode) ? "#5268ca" : block.Item.ColorCode); top: @(GetEventTop(block))px; height: @(GetEventHeight(block))px"
+                                            aria-label="@($"{block.Item.CourseCode}, {block.Item.Title}, {block.DisplayTimes}, {day:dddd}")"
+                                            title="@($"{block.Item.CourseCode} · {block.Item.Title} · {block.DisplayTimes}")"
+                                            @onclick="() => OpenEditForm(block.Item)">
+                                        @block.Item.CourseCode
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                    @if (!HasWeekdayClasses)
+                    {
+                        <p class="schedule-empty week-empty">No classes scheduled for this week.</p>
+                    }
+                </section>
+            }
+            else if (State.Schedule.Count == 0)
+            {
+                <p class="schedule-empty">No classes scheduled for this day. Select another day or click + to add a class.</p>
+            }
+            else
+            {
+                <section class="schedule-events" aria-label="Classes">
                     @foreach (var item in State.Schedule.OrderBy(item => ParseTime(item.StartTime)))
                     {
                         <article class="schedule-event" @key="item.Id">
-
                             <div class="event-time-label">
                                 @item.Time @item.Period
                             </div>
 
-                            <div class="event-card"
-                                 style="--event-accent: @item.ColorCode">
-
+                            <div class="event-card" style="--event-accent: @(string.IsNullOrWhiteSpace(item.ColorCode) ? "#5268ca" : item.ColorCode)">
                                 <div class="event-main">
                                     <p class="event-course-code">@item.CourseCode</p>
-
-                                    <h2>@item.Title</h2>
+                                    <h2><button type="button" class="event-title-edit" @onclick="() => OpenEditForm(item)">@item.Title</button></h2>
 
                                     <div class="event-details">
                                         <span>
                                             <span class="detail-icon" aria-hidden="true">◷</span>
                                             @item.DisplayTimes
                                         </span>
-
                                         <span>
                                             <span class="detail-icon pin-icon" aria-hidden="true">⌖</span>
                                             @item.Location
@@ -108,25 +133,10 @@
                                     </div>
 
                                     <div class="event-instructor">
-                                        <span class="instructor-avatar">
-                                            @item.InstructorInitials
-                                        </span>
-                                        <span>@(ViewMode == "Week" && !string.IsNullOrWhiteSpace(item.Days)
-                                            ? $"{item.Instructor} · {item.Days}"
-                                            : item.Instructor)</span>
+                                        <span class="instructor-avatar">@item.InstructorInitials</span>
+                                        <span>@item.Instructor</span>
                                     </div>
 
-                                    <div class="class-actions">
-                                        <button type="button"
-                                                @onclick="() => OpenEditForm(item)">
-                                            Edit
-                                        </button>
-
-                                        <button type="button"
-                                                @onclick="() => DeleteClass(item.Id)">
-                                            Delete
-                                        </button>
-                                    </div>
                                 </div>
 
                                 <span class="event-mode @(item.Mode == "Online" ? "online" : "in-person")">
@@ -135,8 +145,8 @@
                             </div>
                         </article>
                     }
-                }
-            </section>
+                </section>
+            }
         </div>
     </main>
 
@@ -177,7 +187,9 @@
                FormTitle="@FormTitle"
                Error="@FormError"
                OnSave="SaveClass"
-               OnCancel="CloseForm" />
+               OnCancel="CloseForm"
+               CanDelete="@(EditingId is not null)"
+               OnDelete="DeleteEditingClass" />
 }
 
 @if (!string.IsNullOrWhiteSpace(Message))
@@ -196,23 +208,6 @@
     </div>
 }
 
-<style>
-    .class-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 12px;
-    }
-
-        .class-actions button {
-            padding: 9px 14px;
-            border: 0;
-            border-radius: 8px;
-            cursor: pointer;
-            background: #eeeeee;
-            color: #222;
-        }
-</style>
-
 @code {
     [Parameter]
     [SupplyParameterFromQuery(Name = "add")]
@@ -221,14 +216,28 @@
     private readonly DateOnly WeekStart =
         StartOfWeek(DateOnly.FromDateTime(DateTime.Today));
 
+    private const int CalendarHourHeight = 44;
     private DateOnly SelectedDate = InitialSelectedDate();
     private string ViewMode = "Day";
+    private string WeekDateRange
+    {
+        get
+        {
+            var weekEnd = WeekStart.AddDays(6);
+            return WeekStart.Month == weekEnd.Month && WeekStart.Year == weekEnd.Year
+                ? $"{WeekStart:MMMM d}–{weekEnd.Day}"
+                : $"{WeekStart:MMMM d}–{weekEnd:MMMM d}";
+        }
+    }
+
+    private bool HasWeekdayClasses => WeekDays.Any(day => ClassesOn(day).Any());
 
     private bool ShowForm;
     private string FormTitle = "Add Class";
     private string? EditingId;
     private string? FormError;
     private bool handledAddRequest;
+    private AWYKEN.Shared.Services.ScheduleItem? EditingItem;
 
     private string? MessageTitle;
     private string? Message;
@@ -236,7 +245,21 @@
     private ClassDraft Draft = new();
 
     private IEnumerable<DateOnly> WeekDays =>
-        Enumerable.Range(0, 7).Select(offset => WeekStart.AddDays(offset));
+        Enumerable.Range(0, 5).Select(offset => WeekStart.AddDays(offset));
+
+    private int TimelineStartHour => State.Schedule
+        .SelectMany(GetMeetingRanges)
+        .Select(range => range.Start.Hour)
+        .Append(7)
+        .Min();
+
+    private int TimelineEndHour => State.Schedule
+        .SelectMany(GetMeetingRanges)
+        .Select(range => range.End.Hour + (range.End.Minute > 0 ? 1 : 0))
+        .Append(17)
+        .Max();
+
+    private int TimelineHours => Math.Max(1, TimelineEndHour - TimelineStartHour);
 
     // Load the selected day's classes from the same SQLite-backed shared state.
     protected override Task OnInitializedAsync() => RefreshSelectedViewAsync();
@@ -292,10 +315,97 @@
             : "";
     }
 
+    private IEnumerable<AWYKEN.Shared.Services.ScheduleItem> ClassesOn(DateOnly day) =>
+        State.Schedule
+            .Where(item => item.ScheduledDate == day
+                || (item.ScheduledDate is null && IsScheduledOn(item, day)))
+            .OrderBy(item => ParseTime(item.StartTime));
+
+    private IEnumerable<WeekCalendarEvent> WeekClassBlocksOn(DateOnly day) =>
+        ClassesOn(day)
+            .GroupBy(item => (
+                CourseCode: item.CourseCode.Trim().ToUpperInvariant(),
+                Title: item.Title.Trim().ToUpperInvariant(),
+                Section: item.Section?.Trim().ToUpperInvariant() ?? ""))
+            .Select(group =>
+            {
+                var item = group.First();
+                var ranges = group.SelectMany(GetMeetingRanges)
+                    .Distinct()
+                    .OrderBy(range => range.Start)
+                    .ToList();
+                var start = ranges.Min(range => range.Start);
+                var end = ranges.Max(range => range.End);
+                var displayTimes = string.Join(", ", ranges.Select(range =>
+                    $"{range.Start.ToString("h:mm tt", System.Globalization.CultureInfo.InvariantCulture)}–{range.End.ToString("h:mm tt", System.Globalization.CultureInfo.InvariantCulture)}"));
+
+                return new WeekCalendarEvent(item, start, end, displayTimes);
+            })
+            .OrderBy(block => block.Start);
+
+    private static IEnumerable<(TimeOnly Start, TimeOnly End)> GetMeetingRanges(
+        AWYKEN.Shared.Services.ScheduleItem item)
+    {
+        var matches = Regex.Matches(item.DisplayTimes,
+            @"(?<start>\d{1,2}:\d{2}\s*(?:AM|PM))\s*(?:-|–|—|to)\s*(?<end>\d{1,2}:\d{2}\s*(?:AM|PM))",
+            RegexOptions.IgnoreCase);
+
+        foreach (Match match in matches)
+        {
+            if (TryGetTime(match.Groups["start"].Value, out var start)
+                && TryGetTime(match.Groups["end"].Value, out var end))
+                yield return (start, end);
+        }
+
+        if (matches.Count == 0)
+        {
+            var start = TryGetTime(item.StartTime, out var fallbackStart)
+                ? fallbackStart
+                : new TimeOnly(7, 0);
+            var end = TryGetTime(item.EndTime, out var fallbackEnd)
+                ? fallbackEnd
+                : start.AddMinutes(30);
+            yield return (start, end < start ? start.AddMinutes(30) : end);
+        }
+    }
+
+    private static bool IsScheduledOn(
+        AWYKEN.Shared.Services.ScheduleItem item, DateOnly day) =>
+        !string.IsNullOrWhiteSpace(item.Days)
+            && item.Days.Split([',', '|', ' '], StringSplitOptions.RemoveEmptyEntries)
+                .Any(name => name.StartsWith(day.ToString("ddd"), StringComparison.OrdinalIgnoreCase));
+
+    private static bool TryGetTime(string value, out TimeOnly time) =>
+        TimeOnly.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out time);
+
+    private int GetEventTop(WeekCalendarEvent block)
+    {
+        var minutesFromStart = block.Start.Hour * 60 + block.Start.Minute - TimelineStartHour * 60;
+        return Math.Max(0, (int)Math.Round(minutesFromStart * (double)CalendarHourHeight / 60));
+    }
+
+    private int GetEventHeight(WeekCalendarEvent block)
+    {
+        var durationMinutes = Math.Max(30, (int)(block.End - block.Start).TotalMinutes);
+        return Math.Max(30, (int)Math.Round(durationMinutes * (double)CalendarHourHeight / 60));
+    }
+
+    private sealed record WeekCalendarEvent(
+        AWYKEN.Shared.Services.ScheduleItem Item, TimeOnly Start, TimeOnly End, string DisplayTimes);
+
+    private static string FormatTimelineHour(int hour)
+    {
+        var normalizedHour = hour % 24;
+        var suffix = normalizedHour < 12 ? "AM" : "PM";
+        var displayHour = normalizedHour % 12;
+        return $"{(displayHour == 0 ? 12 : displayHour)} {suffix}";
+    }
+
     private void OpenAddForm()
     {
         Draft = new ClassDraft();
         EditingId = null;
+        EditingItem = null;
         FormTitle = "Add Class";
         FormError = null;
         ShowForm = true;
@@ -304,6 +414,7 @@
     private void OpenEditForm(AWYKEN.Shared.Services.ScheduleItem item)
     {
         EditingId = item.Id;
+        EditingItem = item;
         FormTitle = "Edit Class";
         FormError = null;
 
@@ -347,15 +458,22 @@
             Draft.Instructor.Trim(),
             initials,
             Draft.Mode,
-            "#5268ca",
-            null
+            EditingItem?.ColorCode ?? "#5268ca",
+            EditingItem?.Link,
+            EditingItem?.Cfn,
+            EditingItem?.Section,
+            EditingItem?.Units,
+            EditingItem?.Days,
+            EditingItem?.MeetingTimes,
+            EditingItem?.ScheduledDate
         );
 
         try
         {
             // Persist edits and additions; refresh updates the same shared state
             // that Home, Commute, and Notifications read.
-            await Data.SaveScheduleItemAsync(newItem, SelectedDate);
+            await Data.SaveScheduleItemAsync(newItem, EditingItem?.ScheduledDate ?? SelectedDate);
+            await RefreshSelectedViewAsync();
         }
         catch (Exception exception)
         {
@@ -372,11 +490,22 @@
         );
     }
 
+    private Task DeleteEditingClass()
+    {
+        if (EditingItem is null)
+            return Task.CompletedTask;
+
+        var id = EditingItem.Id;
+        CloseForm();
+        return DeleteClass(id);
+    }
+
     private async Task DeleteClass(string id)
     {
         try
         {
             await Data.DeleteScheduleItemAsync(id, SelectedDate);
+            await RefreshSelectedViewAsync();
             ShowMessage("Class deleted", "The class was removed from your schedule.");
         }
         catch (Exception exception)
