@@ -47,6 +47,10 @@
         <div class="class-form-actions">
             <button type="button" @onclick="OnSave">Save Class</button>
             <button type="button" @onclick="OnCancel">Cancel</button>
+            @if (CanDelete && OnDelete.HasDelegate)
+            {
+                <button type="button" class="class-form-delete" @onclick="OnDelete">Delete Class</button>
+            }
         </div>
     </section>
 </div>
@@ -120,10 +124,15 @@
                 color: white;
             }
 
-            .class-form-actions button:last-child {
+            .class-form-actions button:nth-child(2) {
                 background: #e8e8e8;
                 color: #222;
             }
+
+    .class-form-actions .class-form-delete {
+        background: #fff0f0;
+        color: #a00000;
+    }
 
     .class-form-error {
         padding: 10px;
@@ -148,4 +157,10 @@
 
     [Parameter]
     public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback OnDelete { get; set; }
+
+    [Parameter]
+    public bool CanDelete { get; set; }
 }
