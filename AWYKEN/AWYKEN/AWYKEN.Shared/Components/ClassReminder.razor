@@ -79,9 +79,10 @@
         }
     }
 
-    private void Dismiss()
+    private async Task Dismiss()
     {
         reminder = null;
+        await JS.InvokeVoidAsync("awykenNotifications.stopReminderSound");
     }
 
     public async ValueTask DisposeAsync()
