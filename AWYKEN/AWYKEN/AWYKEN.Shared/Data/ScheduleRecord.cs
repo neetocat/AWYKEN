@@ -23,4 +23,6 @@ public sealed class ScheduleRecord
     public decimal? Units { get; set; }
     public string? Days { get; set; }
     public string? MeetingTimes { get; set; }
+    public string? Notes { get; set; }
+    public string? AttendanceStatus { get; set; }
 }

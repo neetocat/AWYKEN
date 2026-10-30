@@ -165,13 +165,9 @@
             <span class="add-button">+</span><span class="nav-label">Add</span>
         </button>
 
-        <button @onclick='() => Navigation.NavigateTo("/notification")'>
-            <span class="bottom-icon alert-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                    <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
-                </svg>
-            </span>
-            <span>Alerts</span>
+        <button @onclick='() => Navigation.NavigateTo("/notes")'>
+            <span class="bottom-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7" /></svg></span>
+            <span>Notes</span>
         </button>
 
         <button @onclick='() => Navigation.NavigateTo("/settings")'>
@@ -187,6 +183,7 @@
                FormTitle="@FormTitle"
                Error="@FormError"
                OnSave="SaveClass"
+               OnSaveNotes="SaveNotes"
                OnCancel="CloseForm"
                CanDelete="@(EditingId is not null)"
                OnDelete="DeleteEditingClass" />
@@ -411,7 +408,7 @@
         ShowForm = true;
     }
 
-    private void OpenEditForm(AWYKEN.Shared.Services.ScheduleItem item)
+    private async Task OpenEditForm(AWYKEN.Shared.Services.ScheduleItem item)
     {
         EditingId = item.Id;
         EditingItem = item;
@@ -426,10 +423,41 @@
             EndTime = To24HourTime(item.EndTime),
             Location = item.Location,
             Instructor = item.Instructor,
-            Mode = item.Mode
+            Mode = item.Mode,
+            CreatedAtText = DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
+            Notes = ""
         };
 
+        // Notes are loaded for this selected class date, so recurring meetings keep separate notes.
+        var note = await Data.GetCourseNoteAsync(item.Id, SelectedDate);
+        if (note is not null)
+        {
+            Draft.Notes = note.Text;
+            Draft.AttendanceStatus = note.AttendanceStatus;
+            Draft.CreatedAtText = note.CreatedAtText;
+            Draft.ImageData = note.ImageData;
+            Draft.ImageContentType = note.ImageContentType;
+        }
+
         ShowForm = true;
+    }
+
+    private async Task SaveNotes()
+    {
+        if (EditingItem is null) return;
+        try
+        {
+            var classDate = EditingItem.ScheduledDate ?? SelectedDate;
+            await Data.SaveCourseNoteAsync(EditingItem.Id, classDate, Draft.Notes,
+                Draft.CreatedAtText, Draft.AttendanceStatus, Draft.ImageData, Draft.ImageContentType);
+            await RefreshSelectedViewAsync();
+            CloseForm();
+            ShowMessage("Notes saved", "Your notes and attendance were saved for this date.");
+        }
+        catch (Exception exception)
+        {
+            FormError = exception.Message;
+        }
     }
 
     private async Task SaveClass()

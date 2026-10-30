@@ -117,6 +117,12 @@
                     </button>
                 </div>
 
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/notification")'>
+                    <span class="row-icon">@Icon("bell")</span>
+                    <span class="row-copy"><strong>Alerts</strong><small>View class and commute reminders</small></span>
+                    <span class="row-chevron">@Icon("chevron")</span>
+                </button>
+
                 <div class="settings-row">
                     <span class="row-icon">@Icon("route")</span>
 
@@ -216,7 +222,7 @@
         <button @onclick='() => Navigation.NavigateTo("/")'><span class="nav-icon">@Icon("home", 22)</span><span class="nav-label">Home</span></button>
         <button @onclick='() => Navigation.NavigateTo("/schedule")'><span class="nav-icon">@Icon("calendar", 22)</span><span class="nav-label">Schedule</span></button>
         <button class="add-nav" aria-label="Add class" @onclick='() => Navigation.NavigateTo("/add-class")'><span class="add-button">+</span><span class="nav-label">Add</span></button>
-        <button @onclick='() => Navigation.NavigateTo("/notification")'><span class="nav-icon alert-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></span><span class="nav-label">Alerts</span></button>
+        <button @onclick='() => Navigation.NavigateTo("/notes")'><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7" /></svg></span><span class="nav-label">Notes</span></button>
         <button class="active" aria-current="page"><span class="nav-icon" aria-hidden="true">♙</span><span class="nav-label">Profile</span></button>
     </nav>
 

@@ -5,12 +5,24 @@
              aria-label="@FormTitle">
 
         <h2>@FormTitle</h2>
-        <p>Enter your class information below.</p>
+        @if (CanDelete)
+        {
+            <div class="class-form-tabs" role="tablist" aria-label="Class details">
+                <button type="button" role="tab" class="@(ActiveTab == "Edit" ? "selected" : "")"
+                        aria-selected="@(ActiveTab == "Edit")" @onclick='() => ActiveTab = "Edit"'>Edit</button>
+                <button type="button" role="tab" class="@(ActiveTab == "Notes" ? "selected" : "")"
+                        aria-selected="@(ActiveTab == "Notes")" @onclick='() => ActiveTab = "Notes"'>Notes</button>
+            </div>
+        }
 
         @if (!string.IsNullOrWhiteSpace(Error))
         {
             <p class="class-form-error">@Error</p>
         }
+
+        @if (!CanDelete || ActiveTab == "Edit")
+        {
+        <p>Enter your class information below.</p>
 
         <label for="courseCode">Course Code</label>
         <input id="courseCode" @bind="Draft.CourseCode"
@@ -43,9 +55,47 @@
             <option value="Face-to-face">Face-to-face</option>
             <option value="Online">Online</option>
         </select>
+        }
+        else
+        {
+            <div class="class-notes-panel">
+                <label for="noteImage">Attach image (optional)</label>
+                <Microsoft.AspNetCore.Components.Forms.InputFile id="noteImage" accept="image/*" OnChange="HandleImageSelected" />
+                @if (Draft.ImageData is not null && Draft.ImageContentType is not null)
+                {
+                    <img class="class-note-image" src="@ImagePreview" alt="Attached note" />
+                    <button type="button" class="class-note-remove-image" @onclick="RemoveImage">Remove image</button>
+                }
+                <label for="classNotes">Notes</label>
+                <textarea id="classNotes" @bind="Draft.Notes" rows="5"
+                          placeholder="Write notes for this class..."></textarea>
+
+                <label for="noteCreatedAt">Date and time label</label>
+                <input id="noteCreatedAt" @bind="Draft.CreatedAtText" maxlength="80" />
+
+                <section class="class-news" aria-label="Class news">
+                    <h3>News</h3>
+                </section>
+
+                <fieldset class="attendance-options">
+                    <legend>Attendance</legend>
+                    @foreach (var status in AttendanceStatuses)
+                    {
+                        <label class="attendance-choice">
+                            <input type="radio" name="attendanceStatus" value="@status"
+                                   checked="@(Draft.AttendanceStatus == status)"
+                                   @onchange="() => Draft.AttendanceStatus = status" />
+                            <span>@status</span>
+                        </label>
+                    }
+                </fieldset>
+            </div>
+        }
 
         <div class="class-form-actions">
-            <button type="button" @onclick="OnSave">Save Class</button>
+            <button type="button" @onclick="SaveActiveTab">
+                @(CanDelete && ActiveTab == "Notes" ? "Save Notes" : "Save Class")
+            </button>
             <button type="button" @onclick="OnCancel">Cancel</button>
             @if (CanDelete && OnDelete.HasDelegate)
             {
@@ -80,6 +130,33 @@
         box-shadow: 0 10px 35px rgba(0, 0, 0, 0.2);
     }
 
+    .class-form-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        padding: 4px;
+        margin: 18px 0 14px;
+        border-radius: 10px;
+        background: #eef0f6;
+    }
+
+    .class-form-tabs button {
+        border: 0;
+        border-radius: 7px;
+        padding: 9px;
+        color: #566078;
+        background: transparent;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .class-form-tabs button.selected {
+        color: #080d3f;
+        background: white;
+        box-shadow: 0 1px 4px rgba(12, 20, 50, .12);
+        font-weight: 700;
+    }
+
         .class-form h2 {
             margin-top: 0;
             margin-bottom: 6px;
@@ -94,7 +171,8 @@
         }
 
         .class-form input,
-        .class-form select {
+        .class-form select,
+        .class-form textarea {
             display: block;
             width: 100%;
             box-sizing: border-box;
@@ -111,6 +189,33 @@
         gap: 10px;
         margin-top: 20px;
     }
+
+    .class-form textarea { min-height: 112px; resize: vertical; }
+    .class-note-image { display: block; max-width: 100%; max-height: 180px; margin-top: 10px; border-radius: 10px; object-fit: contain; }
+    .class-note-remove-image { margin-top: 8px; border: 0; color: #a00000; background: transparent; cursor: pointer; }
+
+    .class-news {
+        min-height: 58px;
+        margin-top: 16px;
+        padding: 12px;
+        border: 1px solid #e0e4ed;
+        border-radius: 10px;
+    }
+
+    .class-news h3 { margin: 0; font-size: 14px; }
+
+    .attendance-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 16px 0 0;
+        padding: 0;
+        border: 0;
+    }
+
+    .attendance-options legend { margin-bottom: 8px; font-weight: 700; font-size: 14px; }
+    .attendance-choice { display: inline-flex !important; align-items: center; gap: 6px; margin: 0 !important; padding: 8px 10px; border: 1px solid #d9deea; border-radius: 9px; }
+    .class-form .attendance-choice input { width: auto; margin: 0; }
 
         .class-form-actions button {
             padding: 9px 14px;
@@ -143,6 +248,28 @@
 </style>
 
 @code {
+    private string ActiveTab = "Edit";
+    private string? ImagePreview => Draft.ImageData is not null && Draft.ImageContentType is not null
+        ? $"data:{Draft.ImageContentType};base64,{Convert.ToBase64String(Draft.ImageData)}" : null;
+    private static readonly string[] AttendanceStatuses = ["Present", "Absent", "Asynchronous"];
+    private Task SaveActiveTab() => CanDelete && ActiveTab == "Notes" ? OnSaveNotes.InvokeAsync() : OnSave.InvokeAsync();
+
+    private async Task HandleImageSelected(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) || file.Size > 5 * 1024 * 1024) return;
+        await using var stream = file.OpenReadStream(5 * 1024 * 1024);
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory);
+        Draft.ImageData = memory.ToArray();
+        Draft.ImageContentType = file.ContentType;
+    }
+
+    private void RemoveImage()
+    {
+        Draft.ImageData = null;
+        Draft.ImageContentType = null;
+    }
     [Parameter, EditorRequired]
     public ClassDraft Draft { get; set; } = new();
 
@@ -154,6 +281,9 @@
 
     [Parameter]
     public EventCallback OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnSaveNotes { get; set; }
 
     [Parameter]
     public EventCallback OnCancel { get; set; }

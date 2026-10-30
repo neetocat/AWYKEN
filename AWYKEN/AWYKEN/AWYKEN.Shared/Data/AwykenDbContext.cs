@@ -8,6 +8,7 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
 {
     public DbSet<UserProfileRecord> Profiles => Set<UserProfileRecord>();
     public DbSet<ScheduleRecord> Schedule => Set<ScheduleRecord>();
+    public DbSet<CourseNoteRecord> CourseNotes => Set<CourseNoteRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,11 +47,29 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(item => item.Section).HasMaxLength(80);
             entity.Property(item => item.Days).HasMaxLength(40);
             entity.Property(item => item.MeetingTimes).HasMaxLength(300);
+            entity.Property(item => item.Notes).HasMaxLength(4000);
+            entity.Property(item => item.AttendanceStatus).HasMaxLength(20);
             entity.HasIndex(item => item.StartsAt);
             entity.HasIndex(item => new { item.ProfileId, item.StartsAt });
             entity.HasOne<UserProfileRecord>()
                 .WithMany()
                 .HasForeignKey(item => item.ProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CourseNoteRecord>(entity =>
+        {
+            entity.ToTable("CourseNotes");
+            entity.Property(note => note.CreatedAtText).HasMaxLength(80).IsRequired();
+            entity.Property(note => note.Text).HasMaxLength(20000).IsRequired();
+            entity.Property(note => note.AttendanceStatus).HasMaxLength(20);
+            entity.Property(note => note.ImageContentType).HasMaxLength(100);
+            entity.Property(note => note.CourseCode).HasMaxLength(40).IsRequired();
+            entity.Property(note => note.CourseTitle).HasMaxLength(180).IsRequired();
+            entity.HasIndex(note => new { note.ProfileId, note.ScheduleRecordId, note.ClassDate }).IsUnique();
+            entity.HasOne<UserProfileRecord>().WithMany().HasForeignKey(note => note.ProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ScheduleRecord>().WithMany().HasForeignKey(note => note.ScheduleRecordId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

@@ -1,0 +1,19 @@
+.notes-app-shell { min-height: 100dvh; background: #f5f7fb; color: #0c1230; }
+.notes-scroll { min-height: 100dvh; overflow-y: auto; padding-bottom: 94px; }
+.notes-page { max-width: 720px; margin: 0 auto; padding: 18px 18px 30px; }
+.notes-header { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid #dce2ee; }
+.notes-header h1 { margin: 0; font-size: 20px; }
+.notes-header p { margin: 3px 0 0; color: #75809a; font-size: 13px; }
+.notes-empty { margin-top: 24px; padding: 24px; border: 1px solid #dce2ee; border-radius: 18px; background: white; }
+.notes-empty h2 { margin: 0 0 8px; font-size: 18px; }
+.notes-empty p { color: #69748d; }
+.notes-empty button { border: 0; border-radius: 10px; padding: 11px 16px; background: #080d3f; color: white; font-weight: 700; }
+.notes-course-group { margin-top: 22px; }
+.notes-course-group > h2 { margin: 0 0 10px; font-size: 15px; }
+.notes-course-group > h2 span { display: block; margin-top: 3px; color: #737e97; font-size: 13px; font-weight: 500; }
+.course-note-card { margin-bottom: 10px; padding: 15px; border: 1px solid #dce2ee; border-radius: 15px; background: white; }
+.course-note-meta { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; color: #69748d; font-size: 12px; }
+.course-note-attendance { padding: 4px 8px; border-radius: 999px; background: #e8f5ee; color: #19704b; font-weight: 700; }
+.course-note-text { margin: 12px 0 0; white-space: pre-wrap; line-height: 1.5; }
+.course-note-image { display: block; max-width: 100%; max-height: 320px; margin-top: 12px; border-radius: 10px; object-fit: contain; }
+.notes-app-shell .schedule-bottom-nav .current { color: #080d3f; }

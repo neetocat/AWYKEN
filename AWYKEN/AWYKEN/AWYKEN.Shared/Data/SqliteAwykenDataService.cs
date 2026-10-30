@@ -386,6 +386,81 @@ public sealed class SqliteAwykenDataService(
         await RefreshAsync(date, cancellationToken);
     }
 
+    public async Task SaveCourseNoteAsync(string scheduleId, DateOnly classDate, string text,
+        string createdAtText, string? attendanceStatus, byte[]? imageData, string? imageContentType,
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        if (!int.TryParse(scheduleId, out var parsedId))
+            throw new InvalidOperationException("Save the class before adding a note.");
+
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var schedule = await db.Schedule.SingleAsync(
+            row => row.Id == parsedId && row.ProfileId == profileId, cancellationToken);
+        var note = await db.CourseNotes.SingleOrDefaultAsync(row =>
+            row.ProfileId == profileId && row.ScheduleRecordId == parsedId
+            && row.ClassDate == classDate.ToDateTime(TimeOnly.MinValue), cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(attendanceStatus) && imageData is null)
+        {
+            if (note is not null)
+            {
+                db.CourseNotes.Remove(note);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            return;
+        }
+
+        if (note is null)
+        {
+            note = new CourseNoteRecord
+            {
+                ProfileId = profileId,
+                ScheduleRecordId = parsedId,
+                ClassDate = classDate.ToDateTime(TimeOnly.MinValue),
+                CreatedAtText = createdAtText,
+                CourseCode = schedule.CourseCode,
+                CourseTitle = schedule.Title
+            };
+            db.CourseNotes.Add(note);
+        }
+
+        note.Text = text;
+        note.CreatedAtText = createdAtText;
+        note.AttendanceStatus = attendanceStatus;
+        note.CourseCode = schedule.CourseCode;
+        note.CourseTitle = schedule.Title;
+        note.ImageData = imageData;
+        note.ImageContentType = imageContentType;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<CourseNoteRecord>> GetCourseNotesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        return await db.CourseNotes.AsNoTracking()
+            .Where(note => note.ProfileId == profileId)
+            .OrderByDescending(note => note.ClassDate)
+            .ThenByDescending(note => note.Id)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<CourseNoteRecord?> GetCourseNoteAsync(string scheduleId, DateOnly classDate,
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        if (!int.TryParse(scheduleId, out var parsedId)) return null;
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        return await db.CourseNotes.AsNoTracking().SingleOrDefaultAsync(note =>
+            note.ProfileId == profileId && note.ScheduleRecordId == parsedId
+            && note.ClassDate == classDate.ToDateTime(TimeOnly.MinValue), cancellationToken);
+    }
+
     private static ScheduleItem ToScheduleItem(ScheduleRecord row)
     {
         var initials = string.Join("", row.Instructor
@@ -412,7 +487,9 @@ public sealed class SqliteAwykenDataService(
             row.Units,
             row.Days?.Replace("|", ", ").Trim(' ', ','),
             row.MeetingTimes,
-            row.Days is null ? DateOnly.FromDateTime(row.StartsAt) : null);
+            row.Days is null ? DateOnly.FromDateTime(row.StartsAt) : null,
+            row.Notes,
+            row.AttendanceStatus);
     }
 
     private static DateTime CombineDateAndTimeOrDefault(DateOnly date, string time, DateTime? fallback = null)
