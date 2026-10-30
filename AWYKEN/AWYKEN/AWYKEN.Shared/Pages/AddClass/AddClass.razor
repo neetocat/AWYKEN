@@ -2,8 +2,10 @@
 @using System.Globalization
 @using AWYKEN.Shared.Data
 @using AWYKEN.Shared.Services
+@using Microsoft.JSInterop
 @inject NavigationManager Navigation
 @inject IAwykenDataService Data
+@inject IJSRuntime JS
 
 <PageTitle>Add class | AWYKEN</PageTitle>
 
@@ -69,14 +71,14 @@
                         <label class="add-class__input-label" for="start-time">Starts</label>
                         <div class="add-class__time-input">
                             <img class="add-class__time-icon" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="" />
-                            <input class="add-class__input-field add-class__input-field--time" id="start-time" name="start-time" type="time" @bind="StartTime" required />
+                            <input class="add-class__input-field add-class__input-field--time" id="start-time" name="start-time" type="text" inputmode="@(Use24HourTime ? "numeric" : "text")" autocomplete="off" maxlength="@(Use24HourTime ? 5 : 8)" pattern="@(Use24HourTime ? "[0-9]{2}:[0-9]{2}" : null)" placeholder="@TimeFormatHint" value="@StartTimeInput" @oninput="args => UpdateTimeInput(args, true)" required />
                         </div>
                     </div>
                     <div class="add-class__time-field">
                         <label class="add-class__input-label" for="end-time">Ends</label>
                         <div class="add-class__time-input">
                             <img class="add-class__time-icon" src="_content/AWYKEN.Shared/images/icon/awyken-clock-icon.png" alt="" />
-                            <input class="add-class__input-field add-class__input-field--time" id="end-time" name="end-time" type="time" @bind="EndTime" required />
+                            <input class="add-class__input-field add-class__input-field--time" id="end-time" name="end-time" type="text" inputmode="@(Use24HourTime ? "numeric" : "text")" autocomplete="off" maxlength="@(Use24HourTime ? 5 : 8)" pattern="@(Use24HourTime ? "[0-9]{2}:[0-9]{2}" : null)" placeholder="@TimeFormatHint" value="@EndTimeInput" @oninput="args => UpdateTimeInput(args, false)" required />
                         </div>
                     </div>
                 </div>
@@ -142,14 +144,67 @@
     private string Title = "";
     private string CourseCode = "";
     private string Instructor = "";
-    private TimeOnly? StartTime = new TimeOnly(9, 0);
-    private TimeOnly? EndTime = new TimeOnly(10, 30);
+    private string StartTimeInput = "9:00 AM";
+    private string EndTimeInput = "10:30 AM";
+    private bool Use24HourTime;
+    private bool TimeFormatLoaded;
+    private string TimeFormatHint => Use24HourTime ? "24-hour time (e.g. 13:30)" : "12-hour time (e.g. 1:30 PM)";
     private string Location = "";
     private string Mode = "Face-to-face";
     private bool ReminderEnabled = true;
     private bool IsSaving;
     private string? ErrorMessage;
     private string? SuccessMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || TimeFormatLoaded)
+            return;
+
+        try
+        {
+            var savedFormat = await JS.InvokeAsync<string?>("localStorage.getItem", "awyken-time-format");
+            Use24HourTime = savedFormat == "24";
+        }
+        catch (JSException)
+        {
+            Use24HourTime = false;
+        }
+        catch (InvalidOperationException)
+        {
+            Use24HourTime = false;
+        }
+
+        TimeFormatLoaded = true;
+        StartTimeInput = FormatTime(new TimeOnly(9, 0));
+        EndTimeInput = FormatTime(new TimeOnly(10, 30));
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private string FormatTime(TimeOnly time) =>
+        time.ToString(Use24HourTime ? "HH:mm" : "h:mm tt", CultureInfo.InvariantCulture);
+
+    private bool TryParseTime(string input, out TimeOnly time)
+    {
+        var format = Use24HourTime ? "HH:mm" : "h:mm tt";
+        return TimeOnly.TryParseExact(input.Trim(), format, CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out time);
+    }
+
+    private void UpdateTimeInput(ChangeEventArgs args, bool isStartTime)
+    {
+        var value = args.Value?.ToString() ?? string.Empty;
+        if (Use24HourTime)
+        {
+            var digits = new string(value.Where(char.IsAsciiDigit).Take(4).ToArray());
+            value = digits.Length > 2 ? $"{digits[..2]}:{digits[2..]}" : digits;
+        }
+
+        if (isStartTime)
+            StartTimeInput = value;
+        else
+            EndTimeInput = value;
+    }
 
     private void ToggleDay(DayOfWeek day)
     {
@@ -184,9 +239,16 @@
             return;
         }
 
-        if (StartTime is not TimeOnly start || EndTime is not TimeOnly end || end <= start)
+        if (!TryParseTime(StartTimeInput, out var start)
+            || !TryParseTime(EndTimeInput, out var end))
         {
-            ErrorMessage = "Enter a valid end time later than the start time.";
+            ErrorMessage = $"Enter times in the selected { (Use24HourTime ? "24-hour (HH:mm)" : "12-hour (h:mm AM/PM)") } format.";
+            return;
+        }
+
+        if (end <= start)
+        {
+            ErrorMessage = "Enter an end time later than the start time.";
             return;
         }
 

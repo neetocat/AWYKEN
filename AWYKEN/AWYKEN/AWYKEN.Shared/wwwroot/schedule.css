@@ -21,7 +21,7 @@
 .schedule-add { display: grid; width: 35px; height: 35px; place-items: center; padding: 0; border: 1px solid #dce2ed; border-radius: 10px; background: white; color: var(--schedule-ink); font-size: 23px; font-weight: 300; line-height: 1; }
 .schedule-add-icon {
     object-fit: contain;
-    width: 16px;
+    width: 12px;
     height: auto;
 }
 .schedule-view-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; height: 36px; margin-bottom: 13px; padding: 3px; border-radius: 11px; background: #e8ebf2; }
