@@ -8,7 +8,7 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
 {
     public DbSet<UserProfileRecord> Profiles => Set<UserProfileRecord>();
     public DbSet<ScheduleRecord> Schedule => Set<ScheduleRecord>();
-    public DbSet<CourseNoteRecord> CourseNotes => Set<CourseNoteRecord>();
+    public DbSet<CourseNoteRecord> Courses => Set<CourseNoteRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,9 +59,12 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
 
         modelBuilder.Entity<CourseNoteRecord>(entity =>
         {
-            entity.ToTable("CourseNotes");
+            // Each Courses row represents a single class occurrence on one date.
+            entity.ToTable("Courses");
             entity.Property(note => note.CreatedAtText).HasMaxLength(80).IsRequired();
+            entity.Property(note => note.ClassTimeText).HasMaxLength(80).IsRequired();
             entity.Property(note => note.Text).HasMaxLength(20000).IsRequired();
+            entity.Property(note => note.News).HasMaxLength(10000);
             entity.Property(note => note.AttendanceStatus).HasMaxLength(20);
             entity.Property(note => note.ImageContentType).HasMaxLength(100);
             entity.Property(note => note.CourseCode).HasMaxLength(40).IsRequired();

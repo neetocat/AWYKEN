@@ -15,5 +15,19 @@
 .course-note-meta { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; color: #69748d; font-size: 12px; }
 .course-note-attendance { padding: 4px 8px; border-radius: 999px; background: #e8f5ee; color: #19704b; font-weight: 700; }
 .course-note-text { margin: 12px 0 0; white-space: pre-wrap; line-height: 1.5; }
+.course-note-news { margin-top: 12px; padding: 10px 12px; border-left: 3px solid #5268ca; border-radius: 8px; background: #f4f6fb; }
+.course-note-news h3 { margin: 0 0 5px; font-size: 12px; }
+.course-note-news p { margin: 0; white-space: pre-wrap; font-size: 13px; }
 .course-note-image { display: block; max-width: 100%; max-height: 320px; margin-top: 12px; border-radius: 10px; object-fit: contain; }
+.note-edit-link { margin-top: 12px; padding: 6px 0; border: 0; background: transparent; color: #304db5; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.course-note-editor { display: grid; gap: 8px; margin-top: 14px; }
+.course-note-editor > label, .course-note-editor legend { color: #4e5b75; font-size: 12px; font-weight: 700; }
+.course-note-editor textarea, .course-note-editor input:not([type=radio]) { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #d5dbea; border-radius: 9px; background: white; color: #101936; font: inherit; }
+.course-note-editor textarea { resize: vertical; }
+.course-note-editor fieldset { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; border: 0; }
+.note-attendance-choice { display: inline-flex; align-items: center; gap: 5px; padding: 7px 9px; border: 1px solid #dce2ee; border-radius: 8px; color: #39445d; font-size: 12px; }
+.course-note-edit-actions { display: flex; gap: 8px; margin-top: 5px; }
+.course-note-edit-actions button { padding: 9px 12px; border: 0; border-radius: 9px; background: #080d3f; color: white; font-weight: 700; }
+.course-note-edit-actions button + button { background: #e9edf5; color: #26324c; }
+.note-edit-error { margin: 0; color: #a00000; font-size: 12px; }
 .notes-app-shell .schedule-bottom-nav .current { color: #080d3f; }

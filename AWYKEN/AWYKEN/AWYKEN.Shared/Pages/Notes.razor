@@ -34,21 +34,61 @@
                             <article class="course-note-card" @key="note.Id">
                                 <div class="course-note-meta">
                                     <time>@note.ClassDate.ToString("ddd, MMM d, yyyy")</time>
-                                    <span>@note.CreatedAtText</span>
+                                    <span>Schedule: @note.ClassTimeText</span>
                                     @if (!string.IsNullOrWhiteSpace(note.AttendanceStatus))
                                     {
                                         <span class="course-note-attendance">@note.AttendanceStatus</span>
                                     }
                                 </div>
-                                @if (!string.IsNullOrWhiteSpace(note.Text))
+                                @if (EditingNoteId == note.Id)
                                 {
-                                    <p class="course-note-text">@note.Text</p>
+                                    <div class="course-note-editor">
+                                        <label>Notes</label>
+                                        <textarea @bind="EditText" rows="5"></textarea>
+                                        <label>News</label>
+                                        <textarea @bind="EditNews" rows="3" placeholder="News for this class date"></textarea>
+                                        <fieldset>
+                                            <legend>Attendance</legend>
+                                            @foreach (var status in AttendanceStatuses)
+                                            {
+                                                <label class="note-attendance-choice">
+                                                    <input type="radio" name="noteAttendance" value="@status"
+                                                           checked="@(EditAttendance == status)"
+                                                           @onchange="() => EditAttendance = status" /> @status
+                                                </label>
+                                            }
+                                        </fieldset>
+                                        <label>Image</label>
+                                        <Microsoft.AspNetCore.Components.Forms.InputFile accept="image/*" OnChange="LoadEditImageAsync" />
+                                        @if (EditImageData is not null && EditImageContentType is not null)
+                                        {
+                                            <img class="course-note-image" src="@EditImagePreview" alt="Attached note" />
+                                            <button type="button" class="note-edit-link" @onclick="RemoveEditImage">Remove image</button>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(EditError)) { <p class="note-edit-error">@EditError</p> }
+                                        <div class="course-note-edit-actions">
+                                            <button type="button" @onclick="() => SaveEditAsync(note.Id)">Save changes</button>
+                                            <button type="button" @onclick="CancelEdit">Cancel</button>
+                                        </div>
+                                    </div>
                                 }
-                                @if (note.ImageData is not null && !string.IsNullOrWhiteSpace(note.ImageContentType))
+                                else
                                 {
-                                    <img class="course-note-image"
-                                         src="@($"data:{note.ImageContentType};base64,{Convert.ToBase64String(note.ImageData)}")"
-                                         alt="Image attached to course note" />
+                                    @if (!string.IsNullOrWhiteSpace(note.Text))
+                                    {
+                                        <p class="course-note-text">@note.Text</p>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(note.News))
+                                    {
+                                        <section class="course-note-news"><h3>News</h3><p>@note.News</p></section>
+                                    }
+                                    @if (note.ImageData is not null && !string.IsNullOrWhiteSpace(note.ImageContentType))
+                                    {
+                                        <img class="course-note-image"
+                                             src="@($"data:{note.ImageContentType};base64,{Convert.ToBase64String(note.ImageData)}")"
+                                             alt="Image attached to course note" />
+                                    }
+                                    <button type="button" class="note-edit-link" @onclick="() => OpenEdit(note)">Edit this day</button>
                                 }
                             </article>
                         }
@@ -69,6 +109,61 @@
 
 @code {
     private IReadOnlyList<CourseNoteRecord> CourseNotes = [];
+    private static readonly string[] AttendanceStatuses = ["Present", "Absent", "Asynchronous"];
+    private int? EditingNoteId;
+    private string EditText = "";
+    private string EditNews = "";
+    private string EditCreatedAt = "";
+    private string? EditAttendance;
+    private byte[]? EditImageData;
+    private string? EditImageContentType;
+    private string? EditError;
+    private string? EditImagePreview => EditImageData is not null && EditImageContentType is not null
+        ? $"data:{EditImageContentType};base64,{Convert.ToBase64String(EditImageData)}" : null;
 
     protected override async Task OnInitializedAsync() => CourseNotes = await Data.GetCourseNotesAsync();
+
+    private void OpenEdit(CourseNoteRecord note)
+    {
+        EditingNoteId = note.Id;
+        EditText = note.Text;
+        EditNews = note.News ?? "";
+        EditCreatedAt = note.CreatedAtText;
+        EditAttendance = note.AttendanceStatus;
+        EditImageData = note.ImageData;
+        EditImageContentType = note.ImageContentType;
+        EditError = null;
+    }
+
+    private async Task SaveEditAsync(int noteId)
+    {
+        try
+        {
+            await Data.UpdateCourseNoteAsync(noteId, EditText, EditNews, EditCreatedAt,
+                EditAttendance, EditImageData, EditImageContentType);
+            CourseNotes = await Data.GetCourseNotesAsync();
+            CancelEdit();
+        }
+        catch (Exception exception) { EditError = exception.Message; }
+    }
+
+    private void CancelEdit() => EditingNoteId = null;
+
+    private async Task LoadEditImageAsync(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) || file.Size > 5 * 1024 * 1024)
+        {
+            EditError = "Choose an image no larger than 5 MB.";
+            return;
+        }
+        await using var input = file.OpenReadStream(5 * 1024 * 1024);
+        using var output = new MemoryStream();
+        await input.CopyToAsync(output);
+        EditImageData = output.ToArray();
+        EditImageContentType = file.ContentType;
+        EditError = null;
+    }
+
+    private void RemoveEditImage() { EditImageData = null; EditImageContentType = null; }
 }

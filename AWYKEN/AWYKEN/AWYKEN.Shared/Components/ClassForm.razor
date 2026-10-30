@@ -59,6 +59,7 @@
         else
         {
             <div class="class-notes-panel">
+                <p class="class-notes-date">Notes for @OccurrenceDate.ToString("dddd, MMMM d, yyyy")</p>
                 <label for="noteImage">Attach image (optional)</label>
                 <Microsoft.AspNetCore.Components.Forms.InputFile id="noteImage" accept="image/*" OnChange="HandleImageSelected" />
                 @if (Draft.ImageData is not null && Draft.ImageContentType is not null)
@@ -70,11 +71,10 @@
                 <textarea id="classNotes" @bind="Draft.Notes" rows="5"
                           placeholder="Write notes for this class..."></textarea>
 
-                <label for="noteCreatedAt">Date and time label</label>
-                <input id="noteCreatedAt" @bind="Draft.CreatedAtText" maxlength="80" />
-
                 <section class="class-news" aria-label="Class news">
                     <h3>News</h3>
+                    <textarea id="classNews" @bind="Draft.News" rows="3"
+                              placeholder="Add news for this class date..."></textarea>
                 </section>
 
                 <fieldset class="attendance-options">
@@ -191,6 +191,7 @@
     }
 
     .class-form textarea { min-height: 112px; resize: vertical; }
+    .class-notes-date { margin: 0 0 10px; color: #68748d; font-size: 13px; font-weight: 700; }
     .class-note-image { display: block; max-width: 100%; max-height: 180px; margin-top: 10px; border-radius: 10px; object-fit: contain; }
     .class-note-remove-image { margin-top: 8px; border: 0; color: #a00000; background: transparent; cursor: pointer; }
 
@@ -202,7 +203,7 @@
         border-radius: 10px;
     }
 
-    .class-news h3 { margin: 0; font-size: 14px; }
+    .class-news h3 { margin: 0 0 8px; font-size: 14px; }
 
     .attendance-options {
         display: flex;
@@ -275,6 +276,9 @@
 
     [Parameter]
     public string FormTitle { get; set; } = "Add Class";
+
+    [Parameter]
+    public DateOnly OccurrenceDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
 
     [Parameter]
     public string? Error { get; set; }

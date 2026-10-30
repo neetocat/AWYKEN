@@ -30,6 +30,11 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.Property<DateTime>("ClassDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ClassTimeText")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("CourseCode")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -47,6 +52,10 @@ namespace AWYKEN.Shared.Data.Migrations
 
                     b.Property<string>("ImageContentType")
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("News")
+                        .HasMaxLength(10000)
                         .HasColumnType("TEXT");
 
                     b.Property<byte[]>("ImageData")
@@ -70,7 +79,7 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.HasIndex("ProfileId", "ScheduleRecordId", "ClassDate")
                         .IsUnique();
 
-                    b.ToTable("CourseNotes", (string)null);
+                    b.ToTable("Courses", (string)null);
                 });
 
             modelBuilder.Entity("AWYKEN.Shared.Data.ScheduleRecord", b =>

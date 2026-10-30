@@ -20,7 +20,7 @@
 
                 <div class="schedule-header-copy">
                     <h1>Schedule</h1>
-                    <p>@WeekDateRange</p>
+                    <p>@HeaderDateRange</p>
                 </div>
 
                 <button class="schedule-add"
@@ -44,8 +44,16 @@
                         @onclick='() => SetViewModeAsync("Week")'>
                     Week
                 </button>
+                <button class="@(ViewMode == "Month" ? "selected" : "")"
+                        role="tab"
+                        aria-selected="@(ViewMode == "Month")"
+                        @onclick='() => SetViewModeAsync("Month")'>
+                    Month
+                </button>
             </div>
 
+            @if (ViewMode != "Month")
+            {
             <div class="schedule-date-strip" aria-label="Choose a day">
                 @foreach (var day in WeekDays)
                 {
@@ -59,8 +67,46 @@
                     </button>
                 }
             </div>
+            }
 
-            @if (ViewMode == "Week")
+            @if (ViewMode == "Month")
+            {
+                <section class="month-calendar" aria-label="Monthly class calendar">
+                    <div class="month-calendar-heading">
+                        <button type="button" aria-label="Previous month" @onclick="() => ChangeMonthAsync(-1)">‹</button>
+                        <h2>@DisplayedMonth.ToString("MMMM yyyy")</h2>
+                        <button type="button" aria-label="Next month" @onclick="() => ChangeMonthAsync(1)">›</button>
+                    </div>
+                    <div class="month-weekdays" aria-hidden="true">
+                        @foreach (var weekday in MonthWeekdays) { <span>@weekday</span> }
+                    </div>
+                    <div class="month-grid">
+                        @foreach (var day in MonthDates)
+                        {
+                            var dayClasses = ClassesOn(day).ToList();
+                            <div
+                                    class="month-day @(day.Month == DisplayedMonth.Month ? "in-month" : "outside-month") @(day == SelectedDate ? "selected-day" : "") @(day == DateOnly.FromDateTime(DateTime.Today) ? "today" : "")"
+                                    @onclick="() => OpenMonthDayAsync(day)">
+                                <span class="month-day-number" aria-label="@day.ToString("dddd, MMMM d")">@day.Day</span>
+                                <span class="month-day-events">
+                                    @foreach (var item in dayClasses.Take(3))
+                                    {
+                                        <button type="button" class="month-class-chip"
+                                              style="--event-accent: @(string.IsNullOrWhiteSpace(item.ColorCode) ? "#5268ca" : item.ColorCode)"
+                                              title="@($"{item.CourseCode} · {item.Title} · {item.DisplayTimes}")"
+                                              @onclick="() => OpenMonthClassAsync(item, day)"
+                                              @onclick:stopPropagation="true">
+                                            @item.CourseCode
+                                        </button>
+                                    }
+                                    @if (dayClasses.Count > 3) { <span class="month-more">+@(dayClasses.Count - 3) more</span> }
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+            else if (ViewMode == "Week")
             {
                 <section class="week-calendar" aria-label="Weekly class timetable">
                     <div class="week-calendar-grid" style="--timeline-hours: @TimelineHours; --timeline-height: @(TimelineHours * CalendarHourHeight)px">
@@ -83,7 +129,7 @@
                                             style="--event-accent: @(string.IsNullOrWhiteSpace(block.Item.ColorCode) ? "#5268ca" : block.Item.ColorCode); top: @(GetEventTop(block))px; height: @(GetEventHeight(block))px"
                                             aria-label="@($"{block.Item.CourseCode}, {block.Item.Title}, {block.DisplayTimes}, {day:dddd}")"
                                             title="@($"{block.Item.CourseCode} · {block.Item.Title} · {block.DisplayTimes}")"
-                                            @onclick="() => OpenEditForm(block.Item)">
+                                            @onclick="() => OpenWeekClassAsync(block.Item, day)">
                                         @block.Item.CourseCode
                                     </button>
                                 }
@@ -113,7 +159,7 @@
                             <div class="event-card" style="--event-accent: @(string.IsNullOrWhiteSpace(item.ColorCode) ? "#5268ca" : item.ColorCode)">
                                 <div class="event-main">
                                     <p class="event-course-code">@item.CourseCode</p>
-                                    <h2><button type="button" class="event-title-edit" @onclick="() => OpenEditForm(item)">@item.Title</button></h2>
+                                    <h2><button type="button" class="event-title-edit" @onclick="() => OpenEditForm(item, SelectedDate)">@item.Title</button></h2>
 
                                     <div class="event-details">
                                         <span>
@@ -182,6 +228,7 @@
     <ClassForm Draft="Draft"
                FormTitle="@FormTitle"
                Error="@FormError"
+               OccurrenceDate="EditingOccurrenceDate"
                OnSave="SaveClass"
                OnSaveNotes="SaveNotes"
                OnCancel="CloseForm"
@@ -215,7 +262,15 @@
 
     private const int CalendarHourHeight = 44;
     private DateOnly SelectedDate = InitialSelectedDate();
+    private DateOnly EditingOccurrenceDate = InitialSelectedDate();
+    private DateOnly DisplayedMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private string ViewMode = "Day";
+    private string HeaderDateRange => ViewMode switch
+    {
+        "Month" => DisplayedMonth.ToString("MMMM yyyy"),
+        "Day" => SelectedDate.ToString("ddd, MMM d"),
+        _ => WeekDateRange
+    };
     private string WeekDateRange
     {
         get
@@ -244,6 +299,12 @@
     private IEnumerable<DateOnly> WeekDays =>
         Enumerable.Range(0, 5).Select(offset => WeekStart.AddDays(offset));
 
+    private static readonly string[] MonthWeekdays = ["M", "T", "W", "T", "F", "S", "S"];
+    private int MonthLeadingDays => ((int)DisplayedMonth.DayOfWeek + 6) % 7;
+    private int MonthCellCount => (int)Math.Ceiling((MonthLeadingDays + DateTime.DaysInMonth(DisplayedMonth.Year, DisplayedMonth.Month)) / 7d) * 7;
+    private IEnumerable<DateOnly> MonthDates => Enumerable.Range(0, MonthCellCount)
+        .Select(offset => DisplayedMonth.AddDays(offset - MonthLeadingDays));
+
     private int TimelineStartHour => State.Schedule
         .SelectMany(GetMeetingRanges)
         .Select(range => range.Start.Hour)
@@ -270,12 +331,44 @@
     private async Task SetViewModeAsync(string mode)
     {
         ViewMode = mode;
+        if (mode == "Month")
+            DisplayedMonth = new DateOnly(SelectedDate.Year, SelectedDate.Month, 1);
         await RefreshSelectedViewAsync();
     }
 
-    private Task RefreshSelectedViewAsync() => ViewMode == "Week"
-        ? Data.RefreshWeekAsync(WeekStart)
-        : Data.RefreshAsync(SelectedDate);
+    private Task RefreshSelectedViewAsync() => ViewMode switch
+    {
+        "Week" => Data.RefreshWeekAsync(WeekStart),
+        "Month" => Data.RefreshMonthAsync(DisplayedMonth),
+        _ => Data.RefreshAsync(SelectedDate)
+    };
+
+    private async Task ChangeMonthAsync(int amount)
+    {
+        DisplayedMonth = DisplayedMonth.AddMonths(amount);
+        SelectedDate = DisplayedMonth;
+        await Data.RefreshMonthAsync(DisplayedMonth);
+    }
+
+    private async Task OpenMonthDayAsync(DateOnly day)
+    {
+        SelectedDate = day;
+        DisplayedMonth = new DateOnly(day.Year, day.Month, 1);
+        ViewMode = "Day";
+        await Data.RefreshAsync(day);
+    }
+
+    private async Task OpenMonthClassAsync(AWYKEN.Shared.Services.ScheduleItem item, DateOnly day)
+    {
+        SelectedDate = day;
+        await OpenEditForm(item, day);
+    }
+
+    private async Task OpenWeekClassAsync(AWYKEN.Shared.Services.ScheduleItem item, DateOnly day)
+    {
+        SelectedDate = day;
+        await OpenEditForm(item, day);
+    }
 
     protected override void OnParametersSet()
     {
@@ -408,8 +501,10 @@
         ShowForm = true;
     }
 
-    private async Task OpenEditForm(AWYKEN.Shared.Services.ScheduleItem item)
+    private async Task OpenEditForm(AWYKEN.Shared.Services.ScheduleItem item, DateOnly occurrenceDate)
     {
+        // Capture the exact calendar occurrence so async loads/saves cannot fall back to the class's original date.
+        EditingOccurrenceDate = occurrenceDate;
         EditingId = item.Id;
         EditingItem = item;
         FormTitle = "Edit Class";
@@ -429,10 +524,11 @@
         };
 
         // Notes are loaded for this selected class date, so recurring meetings keep separate notes.
-        var note = await Data.GetCourseNoteAsync(item.Id, SelectedDate);
+        var note = await Data.GetCourseNoteAsync(item.Id, EditingOccurrenceDate);
         if (note is not null)
         {
             Draft.Notes = note.Text;
+            Draft.News = note.News ?? "";
             Draft.AttendanceStatus = note.AttendanceStatus;
             Draft.CreatedAtText = note.CreatedAtText;
             Draft.ImageData = note.ImageData;
@@ -447,9 +543,11 @@
         if (EditingItem is null) return;
         try
         {
-            var classDate = EditingItem.ScheduledDate ?? SelectedDate;
+            // A note belongs to the occurrence the user opened, even when its class row
+            // was originally imported as a one-time schedule record.
+            var classDate = EditingOccurrenceDate;
             await Data.SaveCourseNoteAsync(EditingItem.Id, classDate, Draft.Notes,
-                Draft.CreatedAtText, Draft.AttendanceStatus, Draft.ImageData, Draft.ImageContentType);
+                Draft.News, Draft.CreatedAtText, Draft.AttendanceStatus, Draft.ImageData, Draft.ImageContentType);
             await RefreshSelectedViewAsync();
             CloseForm();
             ShowMessage("Notes saved", "Your notes and attendance were saved for this date.");

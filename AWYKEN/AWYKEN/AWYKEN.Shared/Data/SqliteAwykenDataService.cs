@@ -204,6 +204,28 @@ public sealed class SqliteAwykenDataService(
         ApplyToSharedState(profile, rows);
     }
 
+    public async Task RefreshMonthAsync(DateOnly monthStart, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var profile = await db.Profiles.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == profileId, cancellationToken);
+
+        var start = monthStart.ToDateTime(TimeOnly.MinValue);
+        var end = monthStart.AddMonths(1).ToDateTime(TimeOnly.MinValue);
+        var allRows = await db.Schedule.AsNoTracking()
+            .Where(item => item.ProfileId == profileId)
+            .ToListAsync(cancellationToken);
+        // Load all recurring rows plus one-time rows falling inside this month.
+        var rows = allRows
+            .Where(item => item.Days is not null || (item.StartsAt >= start && item.StartsAt < end))
+            .OrderBy(item => item.StartsAt)
+            .ToList();
+
+        ApplyToSharedState(profile, rows);
+    }
+
     private void ApplyToSharedState(UserProfileRecord? profile, IEnumerable<ScheduleRecord> rows)
     {
         // Pages share this state, so every refresh keeps profile, classes, and alerts in sync.
@@ -386,7 +408,7 @@ public sealed class SqliteAwykenDataService(
         await RefreshAsync(date, cancellationToken);
     }
 
-    public async Task SaveCourseNoteAsync(string scheduleId, DateOnly classDate, string text,
+    public async Task SaveCourseNoteAsync(string scheduleId, DateOnly classDate, string text, string? news,
         string createdAtText, string? attendanceStatus, byte[]? imageData, string? imageContentType,
         CancellationToken cancellationToken = default)
     {
@@ -398,15 +420,16 @@ public sealed class SqliteAwykenDataService(
         var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
         var schedule = await db.Schedule.SingleAsync(
             row => row.Id == parsedId && row.ProfileId == profileId, cancellationToken);
-        var note = await db.CourseNotes.SingleOrDefaultAsync(row =>
+        var note = await db.Courses.SingleOrDefaultAsync(row =>
             row.ProfileId == profileId && row.ScheduleRecordId == parsedId
             && row.ClassDate == classDate.ToDateTime(TimeOnly.MinValue), cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(attendanceStatus) && imageData is null)
+        if (string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(news)
+            && string.IsNullOrWhiteSpace(attendanceStatus) && imageData is null)
         {
             if (note is not null)
             {
-                db.CourseNotes.Remove(note);
+                db.Courses.Remove(note);
                 await db.SaveChangesAsync(cancellationToken);
             }
             return;
@@ -419,15 +442,18 @@ public sealed class SqliteAwykenDataService(
                 ProfileId = profileId,
                 ScheduleRecordId = parsedId,
                 ClassDate = classDate.ToDateTime(TimeOnly.MinValue),
+                ClassTimeText = $"{schedule.StartsAt.ToString("h:mm tt", CultureInfo.InvariantCulture)} – {schedule.EndsAt.ToString("h:mm tt", CultureInfo.InvariantCulture)}",
                 CreatedAtText = createdAtText,
                 CourseCode = schedule.CourseCode,
                 CourseTitle = schedule.Title
             };
-            db.CourseNotes.Add(note);
+            db.Courses.Add(note);
         }
 
         note.Text = text;
+        note.News = news;
         note.CreatedAtText = createdAtText;
+        note.ClassTimeText = $"{schedule.StartsAt.ToString("h:mm tt", CultureInfo.InvariantCulture)} – {schedule.EndsAt.ToString("h:mm tt", CultureInfo.InvariantCulture)}";
         note.AttendanceStatus = attendanceStatus;
         note.CourseCode = schedule.CourseCode;
         note.CourseTitle = schedule.Title;
@@ -442,7 +468,7 @@ public sealed class SqliteAwykenDataService(
         await InitializeAsync(cancellationToken);
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
         var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
-        return await db.CourseNotes.AsNoTracking()
+        return await db.Courses.AsNoTracking()
             .Where(note => note.ProfileId == profileId)
             .OrderByDescending(note => note.ClassDate)
             .ThenByDescending(note => note.Id)
@@ -456,9 +482,30 @@ public sealed class SqliteAwykenDataService(
         if (!int.TryParse(scheduleId, out var parsedId)) return null;
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
         var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
-        return await db.CourseNotes.AsNoTracking().SingleOrDefaultAsync(note =>
+        return await db.Courses.AsNoTracking().SingleOrDefaultAsync(note =>
             note.ProfileId == profileId && note.ScheduleRecordId == parsedId
             && note.ClassDate == classDate.ToDateTime(TimeOnly.MinValue), cancellationToken);
+    }
+
+    public async Task UpdateCourseNoteAsync(int noteId, string text, string? news, string createdAtText,
+        string? attendanceStatus, byte[]? imageData, string? imageContentType,
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var note = await db.Courses.SingleOrDefaultAsync(
+            row => row.Id == noteId && row.ProfileId == profileId, cancellationToken)
+            ?? throw new InvalidOperationException("That course note could not be found.");
+
+        // Update this occurrence row only; its course, date, and scheduled time remain attached.
+        note.Text = text;
+        note.News = news;
+        note.CreatedAtText = createdAtText;
+        note.AttendanceStatus = attendanceStatus;
+        note.ImageData = imageData;
+        note.ImageContentType = imageContentType;
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private static ScheduleItem ToScheduleItem(ScheduleRecord row)
