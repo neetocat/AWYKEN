@@ -173,7 +173,8 @@ public sealed record ScheduleItem(
     string Id, string CourseCode, string Title, string StartTime, string EndTime,
     string Location, string Instructor, string InstructorInitials, string Mode,
     string ColorCode, string? Link, string? Cfn = null, string? Section = null,
-    decimal? Units = null, string? Days = null, string? MeetingTimes = null)
+    decimal? Units = null, string? Days = null, string? MeetingTimes = null,
+    DateOnly? ScheduledDate = null)
 {
     public string DisplayTimes => string.IsNullOrWhiteSpace(MeetingTimes)
         ? $"{StartTime}{(string.IsNullOrWhiteSpace(EndTime) ? "" : $" – {EndTime}")}"
@@ -187,6 +188,17 @@ public sealed record ScheduleItem(
 
     // Used only for consistent display ordering; persisted timestamps remain in the database.
     public DateTime SortTime => DateTime.TryParse(StartTime, out var time) ? time : DateTime.MaxValue;
+}
+
+public static class ScheduleColorPalette
+{
+    private static readonly string[] Colors =
+    [
+        "#5268ca", "#e58a37", "#8056a9", "#15905d", "#c66b00",
+        "#d65376", "#168a9b", "#6e8f32", "#9b5b3e", "#536d9b"
+    ];
+
+    public static string ForRecordId(int id) => Colors[Math.Abs(id - 1) % Colors.Length];
 }
 
 public sealed class AppNotification(
