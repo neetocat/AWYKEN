@@ -19,6 +19,11 @@
 .schedule-page > .schedule-header.app-page-header { width: calc(100% + 40px); margin: 0 -20px 16px; padding: 0 20px 14px; }
 .schedule-header-copy { flex: 1; min-width: 0; }
 .schedule-add { display: grid; width: 35px; height: 35px; place-items: center; padding: 0; border: 1px solid #dce2ed; border-radius: 10px; background: white; color: var(--schedule-ink); font-size: 23px; font-weight: 300; line-height: 1; }
+.schedule-add-icon {
+    object-fit: contain;
+    width: 16px;
+    height: auto;
+}
 .schedule-view-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; height: 36px; margin-bottom: 13px; padding: 3px; border-radius: 11px; background: #e8ebf2; }
 .schedule-view-toggle button { border: 0; border-radius: 9px; background: transparent; color: #596782; font-size: 10px; font-weight: 600; }
 .schedule-view-toggle button.selected { background: white; color: #101936; box-shadow: 0 1px 4px rgb(19 32 68 / 12%); }
