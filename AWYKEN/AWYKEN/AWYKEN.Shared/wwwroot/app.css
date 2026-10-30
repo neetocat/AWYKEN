@@ -100,9 +100,11 @@ h1:focus {
     display: flex;
     flex-direction: column;
     width: 100%;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
     overflow-x: hidden;
+    overflow-y: hidden;
     background: var(--background);
     color: var(--primary);
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -110,11 +112,22 @@ h1:focus {
 
 .add-class__header {
     display: flex;
-    flex: 0 0 62px;
+    flex: 0 0 auto;
+    align-items: stretch;
+    padding: max(24px, env(safe-area-inset-top)) 0 14px;
+    background: var(--background);
+}
+
+.add-class__header-inner {
+    display: flex;
+    flex: 0 1 760px;
     align-items: center;
     gap: 10px;
-    padding: 7px 14px;
-    background: var(--surface);
+    width: 100%;
+    max-width: 760px;
+    min-height: 54px;
+    margin: 0 auto;
+    padding: 7px 20px;
     border-bottom: 1px solid var(--border);
 }
 
@@ -128,17 +141,17 @@ h1:focus {
 .add-class__header-title {
     margin: 0;
     color: var(--primary);
-    font-size: 14px;
-    font-weight: 700;
-    line-height: 17px;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.25;
 }
 
 .add-class__subheader-text {
     margin: 0;
     color: var(--text-secondary);
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 400;
-    line-height: 10px;
+    line-height: 1.4;
 }
 
 .add-class__button {
@@ -148,9 +161,9 @@ h1:focus {
 
 .add-class__button--back {
     display: flex;
-    width: 28px;
-    height: 29px;
-    flex: 0 0 28px;
+    width: 35px;
+    height: 35px;
+    flex: 0 0 35px;
     justify-content: center;
     align-items: center;
     padding: 0;
@@ -170,36 +183,44 @@ h1:focus {
     border: 0;
     background: transparent;
     color: var(--primary);
-    font-size: 9px;
-    font-weight: 700;
+    font-size: 12px;
+    font-weight: 800;
 }
 
 .add-class__main {
     width: 100%;
+    max-width: 760px;
     flex: 1;
-    padding: 14px 14px 24px;
+    min-height: 0;
+    margin: 0 auto;
+    overflow-y: auto;
+    padding: 24px 20px 28px;
 }
 
 .add-class__form {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
+    width: 100%;
+    max-width: 720px;
     margin: 0;
+    margin-right: auto;
+    margin-left: auto;
 }
 
 .add-class__section {
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 9px;
 }
 
 .add-class__subtitle {
     margin: 0 0 3px;
     color: var(--primary-500);
-    font-size: 7px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 1px;
-    line-height: 10px;
+    line-height: 1.3;
     text-transform: uppercase;
 }
 
@@ -207,15 +228,15 @@ h1:focus {
     display: block;
     margin: 0;
     color: var(--primary-500);
-    font-size: 7px;
+    font-size: 10px;
     font-weight: 400;
-    line-height: 9px;
+    line-height: 1.3;
 }
 
 .add-class__input-field {
     display: block;
     width: 100%;
-    height: 34px;
+    height: 42px;
     min-width: 0;
     padding: 0 9px;
     border: 1px solid #d9dfeb;
@@ -224,7 +245,7 @@ h1:focus {
     background: var(--surface);
     color: var(--primary-700);
     font: inherit;
-    font-size: 8px;
+    font-size: 12px;
 }
 
 .add-class__input-field:focus {
@@ -261,7 +282,7 @@ svg.add-class__field-icon {
 }
 
 .add-class__section--schedule {
-    gap: 7px;
+    gap: 9px;
 }
 
 .add-class__class-days-wrapper {
@@ -272,7 +293,7 @@ svg.add-class__field-icon {
 
 .add-class__class-day-option {
     display: flex;
-    height: 43px;
+    height: 48px;
     justify-content: center;
     align-items: center;
     padding: 0;
@@ -281,7 +302,7 @@ svg.add-class__field-icon {
     background: var(--surface);
     color: var(--primary-500);
     font: inherit;
-    font-size: 8px;
+    font-size: 12px;
     cursor: pointer;
 }
 
@@ -309,7 +330,7 @@ svg.add-class__field-icon {
 .add-class__time-input {
     position: relative;
     display: flex;
-    height: 34px;
+    height: 42px;
     align-items: center;
 }
 
@@ -323,7 +344,7 @@ svg.add-class__field-icon {
 }
 
 .add-class__input-field--time {
-    height: 34px;
+    height: 42px;
     padding: 0 7px 0 30px;
     color-scheme: light;
 }
@@ -337,7 +358,7 @@ svg.add-class__field-icon {
 .add-class__class-type-option {
     display: flex;
     min-width: 0;
-    height: 41px;
+    height: 52px;
     align-items: center;
     gap: 9px;
     padding: 5px 9px;
@@ -371,24 +392,24 @@ svg.add-class__field-icon {
 
 .add-class__option-text {
     color: var(--primary);
-    font-size: 7px;
+    font-size: 10px;
     font-weight: 700;
-    line-height: 9px;
+    line-height: 1.3;
 }
 
 .add-class__option-description {
     color: var(--primary-500);
-    font-size: 6px;
-    line-height: 8px;
+    font-size: 9px;
+    line-height: 1.3;
 }
 
 .add-class__section--type {
-    gap: 7px;
+    gap: 9px;
 }
 
 .add-class__reminder {
     display: flex;
-    min-height: 46px;
+    min-height: 54px;
     align-items: center;
     gap: 9px;
     padding: 7px 9px;
@@ -399,9 +420,9 @@ svg.add-class__field-icon {
 
 .add-class__reminder-icon {
     display: flex;
-    width: 25px;
-    height: 25px;
-    flex: 0 0 25px;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
     justify-content: center;
     align-items: center;
     border-radius: 6px;
@@ -409,8 +430,8 @@ svg.add-class__field-icon {
 }
 
 .add-class__reminder-icon svg {
-    width: 15px;
-    height: 15px;
+    width: 19px;
+    height: 19px;
     fill: none;
     stroke: var(--primary);
     stroke-linecap: round;
@@ -427,22 +448,22 @@ svg.add-class__field-icon {
 
 .add-class__reminder-title {
     color: var(--primary);
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 600;
-    line-height: 10px;
+    line-height: 1.3;
 }
 
 .add-class__reminder-description {
     color: var(--text-secondary);
-    font-size: 6px;
-    line-height: 8px;
+    font-size: 9px;
+    line-height: 1.3;
 }
 
 .add-class__toggle {
     position: relative;
-    width: 26px;
-    height: 15px;
-    flex: 0 0 26px;
+    width: 34px;
+    height: 19px;
+    flex: 0 0 34px;
     padding: 0;
     border: 0;
     border-radius: 10px;
@@ -454,8 +475,8 @@ svg.add-class__field-icon {
     position: absolute;
     top: 2px;
     right: 2px;
-    width: 11px;
-    height: 11px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
     background: var(--surface);
     content: "";
@@ -474,7 +495,7 @@ svg.add-class__field-icon {
     margin: 0;
     padding: 9px 10px;
     border-radius: 8px;
-    font-size: 8px;
+    font-size: 11px;
     line-height: 1.4;
 }
 
@@ -491,7 +512,7 @@ svg.add-class__field-icon {
 .add-class__button--add-schedule {
     display: flex;
     width: 100%;
-    height: 33px;
+    height: 44px;
     justify-content: center;
     align-items: center;
     gap: 8px;
@@ -509,8 +530,8 @@ svg.add-class__field-icon {
 }
 
 .add-class__button-text {
-    font-size: 8px;
-    font-weight: 700;
+    font-size: 12px;
+    font-weight: 800;
 }
 
 .add-class button:focus-visible {
@@ -518,10 +539,32 @@ svg.add-class__field-icon {
     outline-offset: 2px;
 }
 
+@media (max-width: 599px) {
+    .add-class__header {
+        padding-top: max(15px, env(safe-area-inset-top));
+    }
+
+    .add-class__header-inner {
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+
+    .add-class__main {
+        padding: 18px 16px 28px;
+    }
+}
+
 @media (min-width: 600px) {
     .add-class {
-        max-width: 480px;
-        margin: 0 auto;
-        box-shadow: 0 0 24px rgb(0 4 53 / 8%);
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        box-shadow: none;
+    }
+
+    .add-class__header-inner,
+    .add-class__main {
+        padding-right: 28px;
+        padding-left: 28px;
     }
 }

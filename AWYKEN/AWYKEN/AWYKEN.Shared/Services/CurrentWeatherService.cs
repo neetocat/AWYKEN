@@ -13,7 +13,7 @@ public interface ICurrentWeatherService
 public sealed class OpenMeteoWeatherService(HttpClient httpClient) : ICurrentWeatherService
 {
     public async Task<WeatherInfo> GetCurrentAsync(
-        double latitude, double longitude, CancellationToken cancellationToken = default)
+        double latitude, double longitude, CancellationToken cancellationToken = default)   
     {
         // Open-Meteo accepts global coordinates and requires no key for non-commercial development use.
         var url = string.Create(CultureInfo.InvariantCulture,

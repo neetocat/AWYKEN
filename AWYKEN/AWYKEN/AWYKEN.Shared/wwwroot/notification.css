@@ -12,7 +12,7 @@
 
 .notification-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .notification-page { width: 100%; max-width: 760px; margin: 0 auto; padding: max(24px, env(safe-area-inset-top)) 20px 28px; }
-.notification-header { display: flex; align-items: center; gap: 11px; min-height: 54px; margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.notification-header { display: flex; align-items: center; gap: 12px; min-height: 54px; margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .notification-brand { display: flex; flex: 0 0 35px; align-items: flex-end; justify-content: center; gap: 3px; width: 35px; height: 35px; padding: 9px; border-radius: 11px; background: var(--navy); }
 .notification-brand span { width: 4px; border-radius: 3px; background: white; transform: skew(-12deg); }
 .notification-brand span:nth-child(1) { height: 9px; }
@@ -43,14 +43,6 @@
 .notification-primary-action { min-height: 29px; padding: 0 10px; border: 0; border-radius: 10px; background: var(--navy); color: white; }
 .notification-card:has(.notification-kind.online) .notification-primary-action { border: 1px solid #cfd7e7; background: white; color: var(--navy); }
 .notification-secondary-action { padding: 5px 0; border: 0; background: transparent; color: var(--navy); }
-.notification-bottom-nav { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-around; padding: 10px 6px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: white; }
-.notification-bottom-nav button { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 9px; }
-.notification-bottom-nav button.current { color: var(--navy); font-weight: 800; }
-.notification-nav-icon { display: grid; height: 25px; place-items: center; font-size: 22px; line-height: 25px; }
-.notification-nav-icon.calendar { font-size: 22px; }
-.notification-nav-icon svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
-.notification-bottom-nav .add-nav { gap: 1px; margin-top: -20px; }
-.notification-bottom-nav .add-nav-circle { display: grid; width: 40px; height: 40px; place-items: center; margin-bottom: 1px; border: 3px solid white; border-radius: 50%; background: var(--navy); color: white; font-size: 26px; line-height: 1; box-shadow: 0 1px 4px rgb(10 20 49 / 15%); }
 .notification-dialog-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 24px; background: rgb(12 18 38 / 40%); }
 .notification-dialog { width: min(100%, 360px); padding: 22px; border-radius: 20px; background: white; box-shadow: 0 20px 60px rgb(0 0 0 / 20%); }
 .notification-dialog h2 { margin: 0 0 8px; font-size: 18px; }
