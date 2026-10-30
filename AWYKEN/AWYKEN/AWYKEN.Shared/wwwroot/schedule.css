@@ -63,7 +63,7 @@
 .week-time-label { position: absolute; left: 0; padding-right: 4px; transform: translateY(-50%); background: var(--page); color: #8a93a8; font-size: 8px; line-height: 1; white-space: nowrap; }
 .week-event { position: absolute; z-index: 1; left: 3px; width: calc(100% - 6px); min-width: 0; padding: 8px 5px; overflow: hidden; border: 0; border-left: 3px solid var(--event-accent, #5268ca); border-radius: 7px; background: #e8ebf2; background: color-mix(in srgb, var(--event-accent, #5268ca) 16%, white); color: var(--event-accent, #5268ca); text-align: left; text-overflow: ellipsis; font-size: 8px; font-weight: 800; white-space: nowrap; cursor: pointer; }
 .week-event:focus-visible { z-index: 3; outline: 2px solid var(--navy); outline-offset: 1px; }
-.schedule-bottom-nav { position: relative; z-index: 2; display: flex; flex: 0 0 auto; align-items: center; justify-content: space-around; padding: 10px 6px max(8px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: white; }
+.schedule-bottom-nav { position: relative; z-index: 2; display: flex; flex: 0 0 auto; align-items: center; justify-content: space-around; padding: 10px 6px 24px; border-top: 1px solid var(--line); background: white; }
 .schedule-bottom-nav button { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 9px; }
 .schedule-bottom-nav button.current { color: var(--navy); font-weight: 800; }
 .bottom-icon { height: 25px; font-size: 22px; line-height: 25px; }
