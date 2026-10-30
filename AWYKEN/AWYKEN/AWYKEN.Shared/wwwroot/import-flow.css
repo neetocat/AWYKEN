@@ -24,11 +24,15 @@
     padding: 10px 15px 28px;
 }
 
+.profile-screen .flow-content {
+    padding: max(24px, env(safe-area-inset-top)) 20px 28px;
+}
+
 .flow-header,
 .settings-header {
     display: flex;
     align-items: center;
-    gap: 11px;
+    gap: 12px;
     min-height: 45px;
     padding-bottom: 10px;
     border-bottom: 1px solid #dfe3ed;
@@ -90,7 +94,7 @@
     gap: 3px;
     padding: 9px;
     border-radius: 11px;
-    background: #050a3d;
+    background: var(--ink);
     color: #fff;
 }
 
@@ -583,17 +587,20 @@
     flex: 0 0 auto;
     align-items: center;
     justify-content: space-around;
-    padding: 9px 6px max(8px, env(safe-area-inset-bottom));
+    padding: 10px 6px max(8px, env(safe-area-inset-bottom));
     border-top: 1px solid #dce2ec;
     background: #fff;
 }
 
     .bottom-nav button {
         display: flex;
+        flex: 1;
         align-items: center;
         flex-direction: column;
+        justify-content: center;
         gap: 3px;
-        min-width: 42px;
+        min-width: 0;
+        padding: 0;
         border: 0;
         background: transparent;
         color: #758096;
@@ -604,25 +611,54 @@
         }
 
 .nav-icon {
-    font-size: 18px;
-    line-height: 17px;
+    height: 25px;
+    font-size: 22px;
+    line-height: 25px;
+}
+
+.nav-icon svg {
+    width: 21px;
+    height: 21px;
+    vertical-align: middle;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
 }
 
 .nav-label {
-    font-size: 8px;
+    font-size: 9px;
 }
 
 .bottom-nav .add-nav {
-    display: grid;
-    place-items: center;
-    width: 27px;
-    height: 27px;
-    min-width: 27px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    height: auto;
     margin-top: -20px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #9299a8;
+    font-size: inherit;
+    line-height: normal;
+}
+
+.bottom-nav .add-button {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    place-items: center;
     border-radius: 50%;
-    background: #050a3d;
-    color: #fff;
-    font-size: 22px;
+    background: #0c1226;
+    color: white;
+    font-size: 30px;
     line-height: 1;
 }
 
@@ -714,14 +750,193 @@
         border-right: 1px solid #e1e5ee;
     }
 
+    .settings-screen {
+        max-width: none;
+        margin: 0;
+        border: 0;
+    }
+
     .settings-screen .flow-content {
         padding-left: 28px;
         padding-right: 28px;
+    }
+
+    .profile-screen {
+        min-height: 100vh;
+        height: auto;
+    }
+
+    .profile-screen .flow-content {
+        padding-top: 32px;
     }
 }
 
 @media (max-width: 380px) {
     .desktop-only {
         display: none;
+    }
+}
+
+/* Keep the navigation plus centered independently of platform font metrics. */
+.add-button {
+    position: relative;
+    font-size: 0;
+    line-height: 0;
+}
+
+.add-button::before,
+.add-button::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: 1px;
+    background: currentColor;
+    content: "";
+    transform: translate(-50%, -50%);
+}
+
+.add-button::before {
+    width: 14px;
+    height: 2px;
+}
+
+.add-button::after {
+    width: 2px;
+    height: 14px;
+}
+
+/* Hide the original text glyph so only the centered CSS plus is shown. */
+.bottom-nav .add-button,
+.schedule-bottom-nav .add-button,
+.add-nav .add-button {
+    font-size: 0;
+    line-height: 0;
+}
+
+/* Shared geometry for the title and logo rows across routed pages. */
+.app-page-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 54px;
+}
+
+.app-page-header:not(.app-page-header--inline) {
+    margin-bottom: 24px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line, #e1e5ee);
+}
+
+.app-page-header.topbar {
+    margin-bottom: 24px;
+}
+
+.app-page-header > .brand-mark,
+.app-page-header > .back-button,
+.app-page-header > .add-class__button--back,
+.app-page-header > .outline-icon-button:first-child {
+    display: flex;
+    width: 35px;
+    height: 35px;
+    flex: 0 0 35px;
+    align-items: center;
+    justify-content: center;
+}
+
+.app-page-header > .brand-mark {
+    padding: 9px;
+    overflow: hidden;
+    border-radius: 11px;
+    background: var(--navy, #050a3d);
+}
+
+.app-page-header > .brand-mark img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.app-page-header > :nth-child(2) {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-page-header h1,
+.app-page-header .greeting {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.topbar.app-page-header .greeting,
+.settings-header.app-page-header .settings-title h1 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.app-page-header .greeting-copy p,
+.app-page-header .schedule-header-copy p,
+.app-page-header .notification-heading p,
+.app-page-header .settings-title p,
+.app-page-header > :nth-child(2) > p {
+    margin: 3px 0 0;
+    font-size: 10px;
+    line-height: 1.3;
+}
+
+.app-page-header > button:last-child {
+    flex: 0 0 auto;
+}
+
+.flow-shell:not(.settings-screen) .flow-content {
+    padding-top: max(24px, env(safe-area-inset-top));
+}
+
+.settings-screen:not(.profile-screen) .flow-content {
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-right: 20px;
+    padding-left: 20px;
+}
+
+@media (max-width: 699px) {
+    .profile-screen {
+        min-height: 0;
+        overflow: hidden;
+    }
+}
+
+@media (min-width: 700px) {
+    .flow-shell:not(.settings-screen) .flow-content > .app-page-header {
+        margin-right: 13px;
+        margin-left: 13px;
+    }
+
+    .settings-screen .flow-content {
+        padding-right: 28px;
+        padding-left: 28px;
+    }
+}
+
+@media (min-width: 421px) and (max-width: 699px) {
+    .flow-shell:not(.settings-screen) .flow-content > .app-page-header {
+        margin-right: 5px;
+        margin-left: 5px;
+    }
+
+    .add-class__header-inner {
+        padding-right: 20px;
+        padding-left: 20px;
+    }
+}
+
+@media (max-width: 420px) {
+    .flow-content,
+    .settings-screen .flow-content {
+        padding-right: 16px;
+        padding-left: 16px;
     }
 }

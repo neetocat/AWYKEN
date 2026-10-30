@@ -9,7 +9,7 @@
 <div class="notification-app-shell">
     <main class="notification-scroll">
         <div class="notification-page">
-            <header class="notification-header">
+            <header class="notification-header app-page-header">
                 <div class="brand-mark" role="img" aria-label="AWYKEN logo">
                     <img src="_content/AWYKEN.Shared/images/icon/awyken-logo-transparent-cut.png" alt="AWYKEN logo" />
                 </div>
@@ -71,12 +71,12 @@
         </div>
     </main>
 
-    <nav class="notification-bottom-nav" aria-label="Main navigation">
-        <button @onclick='() => Navigation.NavigateTo("/")'><span class="notification-nav-icon" aria-hidden="true">⌂</span><span>Home</span></button>
-        <button @onclick='() => Navigation.NavigateTo("/schedule")'><span class="notification-nav-icon calendar" aria-hidden="true">▦</span><span>Schedule</span></button>
-        <button class="add-nav" aria-label="Add" @onclick='() => Navigation.NavigateTo("/add-class")'><span class="add-nav-circle">+</span><span>Add</span></button>
-        <button class="current" aria-current="page"><span class="notification-nav-icon bell" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></span><span>Alerts</span></button>
-        <button @onclick='() => Navigation.NavigateTo("/settings")'><span class="notification-nav-icon" aria-hidden="true">♙</span><span>Profile</span></button>
+    <nav class="schedule-bottom-nav" aria-label="Main navigation">
+        <button @onclick='() => Navigation.NavigateTo("/")'><span class="bottom-icon home-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" /></svg></span><span>Home</span></button>
+        <button @onclick='() => Navigation.NavigateTo("/schedule")'><span class="bottom-icon calendar-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg></span><span>Schedule</span></button>
+        <button class="add-nav-item" aria-label="Add class" @onclick='() => Navigation.NavigateTo("/add-class")'><span class="add-button">+</span><span class="nav-label">Add</span></button>
+        <button class="current" aria-current="page"><span class="bottom-icon alert-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></span><span>Alerts</span></button>
+        <button @onclick='() => Navigation.NavigateTo("/settings")'><span class="bottom-icon profile-icon" aria-hidden="true">♙</span><span>Profile</span></button>
     </nav>
 </div>
 
