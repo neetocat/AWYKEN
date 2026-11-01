@@ -1,0 +1,15 @@
+.student-records-page.flow-shell { min-height:0; height:100dvh; overflow:hidden; background:var(--page, #f5f7fa); color:var(--ink, #0c1226); }
+.student-records-page .flow-scroll { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+.student-records-page .flow-content { width:100%; max-width:760px; margin:0 auto; padding:max(24px, env(safe-area-inset-top)) 20px 28px; }
+.student-records-page .settings-header.app-page-header { width:calc(100% + 40px); margin:0 -20px 16px; padding:0 20px 14px; }
+.student-records-page .student-records-back { display:grid; flex:0 0 35px; width:35px; height:35px; place-items:center; border:1px solid #dce2ed; border-radius:10px; background:#fff; color:var(--navy, #050a3d); font-size:25px; line-height:1; cursor:pointer; }
+
+@media (min-width:700px) {
+    .student-records-page .flow-content { padding-right:28px; padding-left:28px; }
+    .student-records-page .settings-header.app-page-header { width:calc(100% + 56px); margin-right:-28px; margin-left:-28px; padding-right:28px; padding-left:28px; }
+}
+
+@media (max-width:360px) {
+    .student-records-page .flow-content { padding-right:16px; padding-left:16px; }
+    .student-records-page .settings-header.app-page-header { width:calc(100% + 32px); margin-right:-16px; margin-left:-16px; padding-right:16px; padding-left:16px; }
+}

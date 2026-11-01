@@ -20,6 +20,8 @@
                 <p>@ReadyCount ready · @NeedsReviewCount need review</p>
             </div>
 
+            <p class="schedule-replacement-note">Saving this COR replaces the saved schedule. Notes and incentive history attached to the old classes will also be removed.</p>
+
             @if (!string.IsNullOrWhiteSpace(SaveError))
             {
                 <p class="flow-status" role="alert">@SaveError</p>

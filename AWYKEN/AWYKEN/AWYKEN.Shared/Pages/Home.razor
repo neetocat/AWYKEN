@@ -157,8 +157,8 @@
         <button class="add-nav-item" @onclick='() => Navigation.NavigateTo("/add-class")'>
             <span class="add-button">+</span><span class="nav-label">Add</span>
         </button>
-        <button class='@NavClass("Alerts")' @onclick="OpenNotifications">
-            <span class="nav-icon alert-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg></span><span class="nav-label">Alerts</span>
+        <button class='@NavClass("Notes")' @onclick="OpenNotes">
+            <span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7" /></svg></span><span class="nav-label">Notes</span>
         </button>
         <button class='@NavClass("Profile")' @onclick='() => Navigation.NavigateTo("/settings")'>
             <span class="nav-icon" aria-hidden="true">♙</span><span class="nav-label">Profile</span>
@@ -244,14 +244,15 @@
             ShowMessage("Home", "You are on Home.");
         else if (tab == "Schedule")
             OpenSchedule();
-        else if (tab == "Alerts")
-            OpenNotifications();
+        else if (tab == "Notes")
+            OpenNotes();
         else if (tab == "Profile")
             Navigation.NavigateTo("/settings");
     }
 
     private void OpenSchedule() => Navigation.NavigateTo("/schedule");
     private void OpenNotifications() => Navigation.NavigateTo("/notification");
+    private void OpenNotes() => Navigation.NavigateTo("/notes");
 
     private void ShowMessage(string title, string message)
     {

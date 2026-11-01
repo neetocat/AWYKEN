@@ -10,6 +10,7 @@ public sealed class UserProfileRecord
     public string? DisplayName { get; set; }
     public string? Email { get; set; }
     public string? PasswordHash { get; set; }
+    public string? TeacherPinHash { get; set; }
     public string? FullName { get; set; }
     public string? StudentEmail { get; set; }
     public string? StudentNumber { get; set; }

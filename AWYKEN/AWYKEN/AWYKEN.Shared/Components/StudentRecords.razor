@@ -1,0 +1,196 @@
+@using AWYKEN.Shared.Data
+@using AWYKEN.Shared.Services
+@inject IAwykenDataService Data
+
+<section class="settings-section student-records">
+    <div class="student-records__heading">
+        <span><h2>STUDENT RECORDS</h2><p>Subjects and teacher-awarded incentive points</p></span>
+        <span class="student-records__badge">@Subjects.Count</span>
+    </div>
+
+    @if (Subjects.Count == 0)
+    {
+        <div class="student-records__empty">Import your COR to view its subjects here.</div>
+    }
+    else
+    {
+        <div class="schedule-list">
+            @foreach (var subject in Subjects)
+            {
+                var selected = SelectedSubject?.Id == subject.Id;
+                <div class="student-record-card @(selected ? "student-record-card--selected" : "")">
+                    <button type="button" class="event-card student-record-event"
+                            style="--event-accent:@(string.IsNullOrWhiteSpace(subject.ColorCode) ? "#5268ca" : subject.ColorCode)"
+                            aria-expanded="@selected" @onclick="() => SelectSubjectAsync(subject)">
+                        <span class="event-main">
+                            <span class="event-course-code">@subject.CourseCode</span>
+                            <span class="event-subject-title">@subject.Title</span>
+                            <span class="event-details">
+                                <span><span class="detail-icon" aria-hidden="true">◷</span>@subject.DisplayTimes</span>
+                                <span><span class="detail-icon pin-icon" aria-hidden="true">⌖</span>@subject.Location</span>
+                            </span>
+                            <span class="event-cor-meta">
+                                @if (subject.Units is decimal units) { <span>@units units</span> }
+                                @if (!string.IsNullOrWhiteSpace(subject.Days)) { <span>@subject.Days</span> }
+                            </span>
+                        </span>
+                    </button>
+
+                    @if (selected)
+                    {
+                        <div class="student-record-panel">
+                            @if (!HasTeacherPin)
+                            {
+                                <form class="student-record-form" @onsubmit="CreateTeacherPinAsync" @onsubmit:preventDefault="true">
+                                    <p class="student-record-notice">Create a four-digit teacher password. You’ll only need to do this once.</p>
+                                    <label class="student-record-label" for="new-teacher-pin">Create password</label>
+                                    <input id="new-teacher-pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="4" pattern="[0-9]{4}" placeholder="4-digit code" @bind="TeacherPinInput" />
+                                    <label class="student-record-label" for="confirm-teacher-pin">Confirm password</label>
+                                    <input id="confirm-teacher-pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="4" pattern="[0-9]{4}" placeholder="Enter it again" @bind="TeacherPinConfirmation" />
+                                    <button type="submit" class="cor-empty__action" disabled="@IsSaving">@(IsSaving ? "Saving…" : "Save teacher password")</button>
+                                    @if (!string.IsNullOrWhiteSpace(TeacherMessage)) { <p class="student-record-notice" role="alert">@TeacherMessage</p> }
+                                </form>
+                            }
+                            else if (!TeacherUnlocked)
+                            {
+                                <form class="student-record-form" @onsubmit="UnlockTeacherAsync" @onsubmit:preventDefault="true">
+                                    <label class="student-record-label" for="teacher-pin">Teacher password</label>
+                                    <div class="student-record-inline-form">
+                                        <input id="teacher-pin" inputmode="numeric" autocomplete="off" maxlength="4"
+                                               type="password" pattern="[0-9]{4}" placeholder="4-digit code" @bind="TeacherPinInput" />
+                                        <button type="submit" class="cor-empty__action">Unlock</button>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(TeacherMessage)) { <p class="student-record-notice" role="alert">@TeacherMessage</p> }
+                                </form>
+                            }
+                            else
+                            {
+                                <form class="student-record-form" @onsubmit="AddIncentiveAsync" @onsubmit:preventDefault="true">
+                                    <label class="student-record-label" for="incentive-points">Plus points</label>
+                                    <div class="student-record-inline-form">
+                                        <input id="incentive-points" type="number" min="1" max="1000" @bind="PointsInput" />
+                                        <button type="submit" class="cor-empty__action" disabled="@IsSaving">@(IsSaving ? "Saving…" : "Add points")</button>
+                                    </div>
+                                    <label class="student-record-label" for="incentive-reason">Reason</label>
+                                    <input id="incentive-reason" type="text" maxlength="300" placeholder="Participation, quiz, or other incentive" @bind="ReasonInput" />
+                                    @if (!string.IsNullOrWhiteSpace(TeacherMessage)) { <p class="student-record-notice">@TeacherMessage</p> }
+                                </form>
+                            }
+
+                            @if (TeacherUnlocked && Incentives.Count > 0)
+                            {
+                                <div class="student-record-history">
+                                    <strong>Incentive history</strong>
+                                    @foreach (var incentive in Incentives)
+                                    {
+                                        <div class="student-record-history__item"><span>@incentive.Reason <small>@incentive.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</small></span><b>+@incentive.Points</b></div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private List<ScheduleItem> Subjects { get; set; } = [];
+    private ScheduleItem? SelectedSubject { get; set; }
+    private IReadOnlyList<StudentIncentiveRecord> Incentives { get; set; } = [];
+    private string TeacherPinInput { get; set; } = "";
+    private string TeacherPinConfirmation { get; set; } = "";
+    private string TeacherMessage { get; set; } = "";
+    private string ReasonInput { get; set; } = "";
+    private string AuthorizedTeacherPin { get; set; } = "";
+    private int PointsInput { get; set; } = 1;
+    private bool TeacherUnlocked { get; set; }
+    private bool IsSaving { get; set; }
+    private bool HasTeacherPin { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Subjects = (await Data.GetAllScheduleItemsAsync()).ToList();
+        HasTeacherPin = await Data.HasTeacherPinAsync();
+    }
+
+    private async Task SelectSubjectAsync(ScheduleItem subject)
+    {
+        if (SelectedSubject?.Id == subject.Id)
+        {
+            SelectedSubject = null;
+            ClearTeacherAccess();
+            return;
+        }
+        SelectedSubject = subject;
+        ClearTeacherAccess();
+        TeacherMessage = "";
+        ReasonInput = "";
+        Incentives = await Data.GetStudentIncentivesAsync(ParseId(subject.Id));
+    }
+
+    private async Task CreateTeacherPinAsync()
+    {
+        if (IsSaving) return;
+        IsSaving = true;
+        TeacherMessage = "";
+        try
+        {
+            var error = await Data.CreateTeacherPinAsync(TeacherPinInput, TeacherPinConfirmation);
+            if (error is not null)
+            {
+                TeacherMessage = error;
+                return;
+            }
+            HasTeacherPin = true;
+            AuthorizedTeacherPin = TeacherPinInput;
+            TeacherUnlocked = true;
+            TeacherMessage = "Teacher password saved. You can now add incentive points.";
+            TeacherPinInput = "";
+            TeacherPinConfirmation = "";
+        }
+        finally { IsSaving = false; }
+    }
+
+    private async Task UnlockTeacherAsync()
+    {
+        TeacherUnlocked = await Data.ValidateTeacherPinAsync(TeacherPinInput);
+        TeacherMessage = TeacherUnlocked ? "Teacher access granted." : "That four-digit password is incorrect.";
+        AuthorizedTeacherPin = TeacherUnlocked ? TeacherPinInput : "";
+        TeacherPinInput = "";
+    }
+
+    private async Task AddIncentiveAsync()
+    {
+        if (SelectedSubject is null || !TeacherUnlocked || IsSaving) return;
+        IsSaving = true;
+        TeacherMessage = "";
+        try
+        {
+            await Data.AddStudentIncentiveAsync(ParseId(SelectedSubject.Id), AuthorizedTeacherPin, PointsInput, ReasonInput);
+            Incentives = await Data.GetStudentIncentivesAsync(ParseId(SelectedSubject.Id));
+            TeacherMessage = "Incentive points added.";
+            ReasonInput = "";
+            PointsInput = 1;
+            ClearTeacherAccess();
+        }
+        catch (Exception exception)
+        {
+            TeacherMessage = exception is UnauthorizedAccessException
+                ? "That four-digit password is incorrect."
+                : exception.Message;
+        }
+        finally { IsSaving = false; }
+    }
+
+    private void ClearTeacherAccess()
+    {
+        TeacherUnlocked = false;
+        TeacherPinInput = "";
+        TeacherPinConfirmation = "";
+        AuthorizedTeacherPin = "";
+    }
+
+    private static int ParseId(string id) => int.TryParse(id, out var parsed) ? parsed : 0;
+}

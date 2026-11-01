@@ -14,6 +14,46 @@ public sealed class SqliteAwykenDataService(
     private bool _initialized;
 
     public bool IsAuthenticated => accountSession.IsAuthenticated;
+    public async Task<bool> HasTeacherPinAsync(CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        return await db.Profiles.AsNoTracking().Where(profile => profile.Id == profileId)
+            .Select(profile => profile.TeacherPinHash != null).SingleAsync(cancellationToken);
+    }
+
+    public async Task<string?> CreateTeacherPinAsync(string pin, string confirmation,
+        CancellationToken cancellationToken = default)
+    {
+        if (pin.Length != 4 || !pin.All(char.IsAsciiDigit))
+            return "Create a four-digit numeric password.";
+        if (!string.Equals(pin, confirmation, StringComparison.Ordinal))
+            return "The passwords do not match.";
+
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var profile = await db.Profiles.SingleAsync(item => item.Id == profileId, cancellationToken);
+        if (!string.IsNullOrEmpty(profile.TeacherPinHash))
+            return "A teacher password has already been created for this profile.";
+
+        profile.TeacherPinHash = await Task.Run(() => LocalPasswordHasher.Hash(pin), cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
+    public async Task<bool> ValidateTeacherPinAsync(string pin, CancellationToken cancellationToken = default)
+    {
+        if (pin.Length != 4 || !pin.All(char.IsAsciiDigit))
+            return false;
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var hash = await db.Profiles.AsNoTracking().Where(profile => profile.Id == profileId)
+            .Select(profile => profile.TeacherPinHash).SingleAsync(cancellationToken);
+        return await Task.Run(() => LocalPasswordHasher.Verify(pin, hash), cancellationToken);
+    }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -204,6 +244,28 @@ public sealed class SqliteAwykenDataService(
         ApplyToSharedState(profile, rows);
     }
 
+    public async Task RefreshMonthAsync(DateOnly monthStart, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var profile = await db.Profiles.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == profileId, cancellationToken);
+
+        var start = monthStart.ToDateTime(TimeOnly.MinValue);
+        var end = monthStart.AddMonths(1).ToDateTime(TimeOnly.MinValue);
+        var allRows = await db.Schedule.AsNoTracking()
+            .Where(item => item.ProfileId == profileId)
+            .ToListAsync(cancellationToken);
+        // Load all recurring rows plus one-time rows falling inside this month.
+        var rows = allRows
+            .Where(item => item.Days is not null || (item.StartsAt >= start && item.StartsAt < end))
+            .OrderBy(item => item.StartsAt)
+            .ToList();
+
+        ApplyToSharedState(profile, rows);
+    }
+
     private void ApplyToSharedState(UserProfileRecord? profile, IEnumerable<ScheduleRecord> rows)
     {
         // Pages share this state, so every refresh keeps profile, classes, and alerts in sync.
@@ -322,16 +384,20 @@ public sealed class SqliteAwykenDataService(
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
         var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
         var imported = items.ToList();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        // Importing a COR replaces the complete saved timetable for this profile.
+        // Schedule foreign keys cascade to the related course notes and incentives.
+        var currentSchedule = await db.Schedule
+            .Where(row => row.ProfileId == profileId)
+            .ToListAsync(cancellationToken);
+        db.Schedule.RemoveRange(currentSchedule);
 
         foreach (var item in imported)
         {
-            var existing = await db.Schedule.FirstOrDefaultAsync(row =>
-                row.ProfileId == profileId && row.CourseCode == item.CourseCode
-                && row.Title == item.Title && row.Section == item.Section,
-                cancellationToken);
             var start = CombineDateAndTimeOrDefault(referenceDate, item.StartTime);
             var end = CombineDateAndTimeOrDefault(referenceDate, item.EndTime, start);
-            var record = existing ?? new ScheduleRecord
+            var record = new ScheduleRecord
             {
                 ProfileId = profileId,
                 StartsAt = start,
@@ -358,11 +424,11 @@ public sealed class SqliteAwykenDataService(
             record.Days = NormalizeDays(item.Days);
             record.MeetingTimes = item.MeetingTimes;
             record.MeetingLink = item.Link;
-            if (existing is null)
-                db.Schedule.Add(record);
+            db.Schedule.Add(record);
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         await RefreshAsync(referenceDate, cancellationToken);
     }
 
@@ -384,6 +450,157 @@ public sealed class SqliteAwykenDataService(
         }
 
         await RefreshAsync(date, cancellationToken);
+    }
+
+    public async Task SaveCourseNoteAsync(string scheduleId, DateOnly classDate, string text, string? news,
+        string createdAtText, string? attendanceStatus, byte[]? imageData, string? imageContentType,
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        if (!int.TryParse(scheduleId, out var parsedId))
+            throw new InvalidOperationException("Save the class before adding a note.");
+
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var schedule = await db.Schedule.SingleAsync(
+            row => row.Id == parsedId && row.ProfileId == profileId, cancellationToken);
+        var note = await db.Courses.SingleOrDefaultAsync(row =>
+            row.ProfileId == profileId && row.ScheduleRecordId == parsedId
+            && row.ClassDate == classDate.ToDateTime(TimeOnly.MinValue), cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(news)
+            && string.IsNullOrWhiteSpace(attendanceStatus) && imageData is null)
+        {
+            if (note is not null)
+            {
+                db.Courses.Remove(note);
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            return;
+        }
+
+        if (note is null)
+        {
+            note = new CourseNoteRecord
+            {
+                ProfileId = profileId,
+                ScheduleRecordId = parsedId,
+                ClassDate = classDate.ToDateTime(TimeOnly.MinValue),
+                ClassTimeText = $"{schedule.StartsAt.ToString("h:mm tt", CultureInfo.InvariantCulture)} – {schedule.EndsAt.ToString("h:mm tt", CultureInfo.InvariantCulture)}",
+                CreatedAtText = createdAtText,
+                CourseCode = schedule.CourseCode,
+                CourseTitle = schedule.Title
+            };
+            db.Courses.Add(note);
+        }
+
+        note.Text = text;
+        note.News = news;
+        note.CreatedAtText = createdAtText;
+        note.ClassTimeText = $"{schedule.StartsAt.ToString("h:mm tt", CultureInfo.InvariantCulture)} – {schedule.EndsAt.ToString("h:mm tt", CultureInfo.InvariantCulture)}";
+        note.AttendanceStatus = attendanceStatus;
+        note.CourseCode = schedule.CourseCode;
+        note.CourseTitle = schedule.Title;
+        note.ImageData = imageData;
+        note.ImageContentType = imageContentType;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<CourseNoteRecord>> GetCourseNotesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        return await db.Courses.AsNoTracking()
+            .Where(note => note.ProfileId == profileId)
+            .OrderByDescending(note => note.ClassDate)
+            .ThenByDescending(note => note.Id)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ScheduleItem>> GetAllScheduleItemsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var rows = await db.Schedule.AsNoTracking().Where(row => row.ProfileId == profileId)
+            .OrderBy(row => row.StartsAt).ToListAsync(cancellationToken);
+        return rows.Select(ToScheduleItem).ToList();
+    }
+
+    public async Task<CourseNoteRecord?> GetCourseNoteAsync(string scheduleId, DateOnly classDate,
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        if (!int.TryParse(scheduleId, out var parsedId)) return null;
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        return await db.Courses.AsNoTracking().SingleOrDefaultAsync(note =>
+            note.ProfileId == profileId && note.ScheduleRecordId == parsedId
+            && note.ClassDate == classDate.ToDateTime(TimeOnly.MinValue), cancellationToken);
+    }
+
+    public async Task UpdateCourseNoteAsync(int noteId, string text, string? news, string createdAtText,
+        string? attendanceStatus, byte[]? imageData, string? imageContentType,
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var note = await db.Courses.SingleOrDefaultAsync(
+            row => row.Id == noteId && row.ProfileId == profileId, cancellationToken)
+            ?? throw new InvalidOperationException("That course note could not be found.");
+
+        // Update this occurrence row only; its course, date, and scheduled time remain attached.
+        note.Text = text;
+        note.News = news;
+        note.CreatedAtText = createdAtText;
+        note.AttendanceStatus = attendanceStatus;
+        note.ImageData = imageData;
+        note.ImageContentType = imageContentType;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<StudentIncentiveRecord>> GetStudentIncentivesAsync(
+        int scheduleRecordId, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        return await db.StudentIncentives.AsNoTracking()
+            .Where(item => item.ProfileId == profileId && item.ScheduleRecordId == scheduleRecordId)
+            .OrderByDescending(item => item.CreatedAt).ToListAsync(cancellationToken);
+    }
+
+    public async Task AddStudentIncentiveAsync(int scheduleRecordId, string teacherPin, int points,
+        string reason, CancellationToken cancellationToken = default)
+    {
+        if (!await ValidateTeacherPinAsync(teacherPin, cancellationToken))
+            throw new UnauthorizedAccessException("The teacher password is incorrect.");
+        if (points < 1 || points > 1000)
+            throw new ArgumentOutOfRangeException(nameof(points), "Points must be between 1 and 1000.");
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 300)
+            throw new ArgumentException("Enter a reason of up to 300 characters.", nameof(reason));
+
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var schedule = await db.Schedule.AsNoTracking().SingleOrDefaultAsync(
+            row => row.Id == scheduleRecordId && row.ProfileId == profileId, cancellationToken)
+            ?? throw new InvalidOperationException("That subject is no longer on this COR.");
+        db.StudentIncentives.Add(new StudentIncentiveRecord
+        {
+            ProfileId = profileId,
+            ScheduleRecordId = schedule.Id,
+            CourseCode = schedule.CourseCode,
+            CourseTitle = schedule.Title,
+            Points = points,
+            Reason = reason.Trim(),
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private static ScheduleItem ToScheduleItem(ScheduleRecord row)
@@ -412,7 +629,9 @@ public sealed class SqliteAwykenDataService(
             row.Units,
             row.Days?.Replace("|", ", ").Trim(' ', ','),
             row.MeetingTimes,
-            row.Days is null ? DateOnly.FromDateTime(row.StartsAt) : null);
+            row.Days is null ? DateOnly.FromDateTime(row.StartsAt) : null,
+            row.Notes,
+            row.AttendanceStatus);
     }
 
     private static DateTime CombineDateAndTimeOrDefault(DateOnly date, string time, DateTime? fallback = null)

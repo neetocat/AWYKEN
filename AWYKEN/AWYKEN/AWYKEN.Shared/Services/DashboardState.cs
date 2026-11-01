@@ -174,7 +174,7 @@ public sealed record ScheduleItem(
     string Location, string Instructor, string InstructorInitials, string Mode,
     string ColorCode, string? Link, string? Cfn = null, string? Section = null,
     decimal? Units = null, string? Days = null, string? MeetingTimes = null,
-    DateOnly? ScheduledDate = null)
+    DateOnly? ScheduledDate = null, string? Notes = null, string? AttendanceStatus = null)
 {
     public string DisplayTimes => string.IsNullOrWhiteSpace(MeetingTimes)
         ? $"{StartTime}{(string.IsNullOrWhiteSpace(EndTime) ? "" : $" – {EndTime}")}"

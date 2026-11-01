@@ -8,6 +8,8 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
 {
     public DbSet<UserProfileRecord> Profiles => Set<UserProfileRecord>();
     public DbSet<ScheduleRecord> Schedule => Set<ScheduleRecord>();
+    public DbSet<CourseNoteRecord> Courses => Set<CourseNoteRecord>();
+    public DbSet<StudentIncentiveRecord> StudentIncentives => Set<StudentIncentiveRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -19,6 +21,7 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(profile => profile.DisplayName).HasMaxLength(100);
             entity.Property(profile => profile.Email).HasMaxLength(200).UseCollation("NOCASE");
             entity.Property(profile => profile.PasswordHash).HasMaxLength(300);
+            entity.Property(profile => profile.TeacherPinHash).HasMaxLength(300);
             entity.Property(profile => profile.FullName).HasMaxLength(150);
             entity.Property(profile => profile.StudentEmail).HasMaxLength(200);
             entity.Property(profile => profile.StudentNumber).HasMaxLength(30);
@@ -46,11 +49,45 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(item => item.Section).HasMaxLength(80);
             entity.Property(item => item.Days).HasMaxLength(40);
             entity.Property(item => item.MeetingTimes).HasMaxLength(300);
+            entity.Property(item => item.Notes).HasMaxLength(4000);
+            entity.Property(item => item.AttendanceStatus).HasMaxLength(20);
             entity.HasIndex(item => item.StartsAt);
             entity.HasIndex(item => new { item.ProfileId, item.StartsAt });
             entity.HasOne<UserProfileRecord>()
                 .WithMany()
                 .HasForeignKey(item => item.ProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CourseNoteRecord>(entity =>
+        {
+            // Each Courses row represents a single class occurrence on one date.
+            entity.ToTable("Courses");
+            entity.Property(note => note.CreatedAtText).HasMaxLength(80).IsRequired();
+            entity.Property(note => note.ClassTimeText).HasMaxLength(80).IsRequired();
+            entity.Property(note => note.Text).HasMaxLength(20000).IsRequired();
+            entity.Property(note => note.News).HasMaxLength(10000);
+            entity.Property(note => note.AttendanceStatus).HasMaxLength(20);
+            entity.Property(note => note.ImageContentType).HasMaxLength(100);
+            entity.Property(note => note.CourseCode).HasMaxLength(40).IsRequired();
+            entity.Property(note => note.CourseTitle).HasMaxLength(180).IsRequired();
+            entity.HasIndex(note => new { note.ProfileId, note.ScheduleRecordId, note.ClassDate }).IsUnique();
+            entity.HasOne<UserProfileRecord>().WithMany().HasForeignKey(note => note.ProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ScheduleRecord>().WithMany().HasForeignKey(note => note.ScheduleRecordId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StudentIncentiveRecord>(entity =>
+        {
+            entity.ToTable("StudentIncentives");
+            entity.Property(item => item.CourseCode).HasMaxLength(40).IsRequired();
+            entity.Property(item => item.CourseTitle).HasMaxLength(180).IsRequired();
+            entity.Property(item => item.Reason).HasMaxLength(300).IsRequired();
+            entity.HasIndex(item => new { item.ProfileId, item.ScheduleRecordId, item.CreatedAt });
+            entity.HasOne<UserProfileRecord>().WithMany().HasForeignKey(item => item.ProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ScheduleRecord>().WithMany().HasForeignKey(item => item.ScheduleRecordId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
