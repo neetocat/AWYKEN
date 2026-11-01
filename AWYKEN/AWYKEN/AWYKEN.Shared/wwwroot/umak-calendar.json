@@ -1,0 +1,197 @@
+{
+  "note": "Sample school year (AY 2026-2027) used only when the live calendar feed and the saved offline copy are both unavailable. Dates are inclusive. Semester dates are placeholders, not official UMak dates.",
+  "events": [
+    {
+      "title": "Enrollment period",
+      "start": "2026-08-03",
+      "end": "2026-08-14",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+    },
+    {
+      "title": "Start of Classes - 1st Semester",
+      "start": "2026-08-17",
+      "end": "2026-08-17",
+      "isAllDay": true,
+      "type": "SemesterStart",
+      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+    },
+    {
+      "title": "Ninoy Aquino Day",
+      "start": "2026-08-21",
+      "end": "2026-08-21",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "National Heroes Day",
+      "start": "2026-08-31",
+      "end": "2026-08-31",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "Midterm Examinations - 1st Semester",
+      "start": "2026-10-12",
+      "end": "2026-10-16",
+      "isAllDay": true,
+      "type": "Exam",
+      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+    },
+    {
+      "title": "All Saints' Day",
+      "start": "2026-11-01",
+      "end": "2026-11-01",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "All Souls' Day",
+      "start": "2026-11-02",
+      "end": "2026-11-02",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "Bonifacio Day",
+      "start": "2026-11-30",
+      "end": "2026-11-30",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "Immaculate Conception",
+      "start": "2026-12-08",
+      "end": "2026-12-08",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "Final Examinations - 1st Semester",
+      "start": "2026-12-14",
+      "end": "2026-12-18",
+      "isAllDay": true,
+      "type": "Exam",
+      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+    },
+    {
+      "title": "End of 1st Semester",
+      "start": "2026-12-19",
+      "end": "2026-12-19",
+      "isAllDay": true,
+      "type": "SemesterEnd",
+      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+    },
+    {
+      "title": "No classes - Christmas break",
+      "start": "2026-12-21",
+      "end": "2027-01-03",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+    },
+    {
+      "title": "Christmas Day",
+      "start": "2026-12-25",
+      "end": "2026-12-25",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "Rizal Day",
+      "start": "2026-12-30",
+      "end": "2026-12-30",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "New Year's Day",
+      "start": "2027-01-01",
+      "end": "2027-01-01",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "Start of Classes - 2nd Semester",
+      "start": "2027-01-11",
+      "end": "2027-01-11",
+      "isAllDay": true,
+      "type": "SemesterStart",
+      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+    },
+    {
+      "title": "Midterm Examinations - 2nd Semester",
+      "start": "2027-03-08",
+      "end": "2027-03-12",
+      "isAllDay": true,
+      "type": "Exam",
+      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+    },
+    {
+      "title": "Holy Week - No classes",
+      "start": "2027-03-25",
+      "end": "2027-03-27",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Maundy Thursday to Black Saturday."
+    },
+    {
+      "title": "Araw ng Kagitingan",
+      "start": "2027-04-09",
+      "end": "2027-04-09",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "Labor Day",
+      "start": "2027-05-01",
+      "end": "2027-05-01",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "Final Examinations - 2nd Semester",
+      "start": "2027-05-10",
+      "end": "2027-05-14",
+      "isAllDay": true,
+      "type": "Exam",
+      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+    },
+    {
+      "title": "End of 2nd Semester",
+      "start": "2027-05-22",
+      "end": "2027-05-22",
+      "isAllDay": true,
+      "type": "SemesterEnd",
+      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+    },
+    {
+      "title": "Independence Day",
+      "start": "2027-06-12",
+      "end": "2027-06-12",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Philippine national holiday."
+    },
+    {
+      "title": "Graduation ceremony",
+      "start": "2027-06-25",
+      "end": "2027-06-25",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+    }
+  ]
+}

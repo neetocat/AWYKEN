@@ -22,6 +22,7 @@ builder.Services.AddSingleton(_ =>
 });
 builder.Services.AddSingleton<ICommuteMapService, OpenStreetMapCommuteService>();
 builder.Services.AddSingleton<ICurrentWeatherService, OpenMeteoWeatherService>();
+builder.Services.AddSingleton<IUmakCalendarService, UmakCalendarService>();
 
 // Keep the Web host's local database in the user's app-data folder, outside Git.
 var databaseFolder = Path.Combine(
