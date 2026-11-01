@@ -24,7 +24,7 @@ public interface IUmakCalendarService
     /// <summary>Events for the current school year (Asia/Manila date).</summary>
     Task<IReadOnlyList<UmakEvent>> GetEventsAsync(CancellationToken ct = default);
 
-    /// <summary>Events for the school year that starts in August of <paramref name="schoolYearStart"/>.</summary>
+    /// <summary>Events for the school year that starts in July of <paramref name="schoolYearStart"/>.</summary>
     Task<IReadOnlyList<UmakEvent>> GetEventsAsync(int schoolYearStart, CancellationToken ct = default);
 
     /// <summary>School years (start years) that have events, always including the current one. Newest first.</summary>
@@ -33,12 +33,16 @@ public interface IUmakCalendarService
     /// <summary>Makes the next Get call re-check the live feed instead of reusing the in-memory copy.</summary>
     void Refresh();
 
-    /// <summary>A school year runs 1 August to 31 July, e.g. 2026 gives 2026-08-01 to 2027-07-31.</summary>
+    /// <summary>
+    /// A UMak school year runs 1 July to 30 June, e.g. 2026 gives 2026-07-01 to 2027-06-30. The official
+    /// calendar starts in July (freshmen registration, first day of classes) and the next year's
+    /// registration begins in June.
+    /// </summary>
     static (DateOnly Start, DateOnly End) GetSchoolYearRange(int startYear) =>
-        (new DateOnly(startYear, 8, 1), new DateOnly(startYear + 1, 7, 31));
+        (new DateOnly(startYear, 7, 1), new DateOnly(startYear + 1, 6, 30));
 
     /// <summary>The school year (its start year) that contains <paramref name="date"/>.</summary>
-    static int GetSchoolYear(DateOnly date) => date.Month >= 8 ? date.Year : date.Year - 1;
+    static int GetSchoolYear(DateOnly date) => date.Month >= 7 ? date.Year : date.Year - 1;
 
     /// <summary>"AY 2026-2027"</summary>
     static string FormatSchoolYear(int startYear) => $"AY {startYear}-{startYear + 1}";

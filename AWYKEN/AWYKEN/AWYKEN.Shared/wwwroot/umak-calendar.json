@@ -1,21 +1,191 @@
 {
-  "note": "Sample school year (AY 2026-2027) used only when the live calendar feed and the saved offline copy are both unavailable. Dates are inclusive. Semester dates are placeholders, not official UMak dates.",
+  "note": "Official UMak University Calendar, Academic Year 2026-2027, approved as per BOR Resolution No. 2026-010 dated July 2, 2026. Dates are inclusive. Entries marked * in the official calendar are tentative. Source: umak.edu.ph/help/calendar.",
   "events": [
     {
-      "title": "Enrollment period",
+      "title": "Deadline for Filing of Application for Psychometrician Licensure Examination",
+      "start": "2026-07-06",
+      "end": "2026-07-06",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Freshmen Registration Period - First Semester AY 2026-2027",
+      "start": "2026-07-06",
+      "end": "2026-07-10",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Linkages and Placement Workshop (First Semester)",
+      "start": "2026-07-09",
+      "end": "2026-07-09",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Registration Period - First Semester AY 2026-2027",
+      "start": "2026-07-13",
+      "end": "2026-07-17",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "Old and continuing students, graduate programs."
+    },
+    {
+      "title": "Deadline for Filing of Application for Nurse Licensure Examination",
+      "start": "2026-07-15",
+      "end": "2026-07-15",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Freshmen and Transferees' Orientation",
+      "start": "2026-07-15",
+      "end": "2026-07-15",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Internship Orientation, First Semester",
+      "start": "2026-07-16",
+      "end": "2026-07-16",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Encoding of Summer Term 2026 Final Grades",
+      "start": "2026-07-20",
+      "end": "2026-07-21",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Registration Period - First Semester",
+      "start": "2026-07-22",
+      "end": "2026-07-23",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "Summer Term 2026 enrollees, irregular students, ITEST, transferees and graduate programs."
+    },
+    {
+      "title": "Releasing of Summer Term 2026 Report of Grades",
+      "start": "2026-07-22",
+      "end": "2026-07-22",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Deadline for Filing of Application for Professional Teachers Examination",
+      "start": "2026-07-23",
+      "end": "2026-07-23",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Incoming Grade 11 Students' Orientation",
+      "start": "2026-07-23",
+      "end": "2026-07-23",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Last Day of Admission and Enrollment for Graduate Programs, First Semester",
+      "start": "2026-07-24",
+      "end": "2026-07-24",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Change of Matriculation Period (CMAT)",
+      "start": "2026-07-27",
+      "end": "2026-07-29",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "First Day of Classes for the First Semester",
+      "start": "2026-07-27",
+      "end": "2026-07-27",
+      "isAllDay": true,
+      "type": "SemesterStart"
+    },
+    {
+      "title": "HSU Start of Classes / Orientation",
+      "start": "2026-07-27",
+      "end": "2026-07-27",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Internship Fair",
+      "start": "2026-07-27",
+      "end": "2026-07-27",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "IPE / Allied Health Sciences Interprofessional Education Cluster (AHSIPEC) Research Conference",
+      "start": "2026-07-30",
+      "end": "2026-07-31",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "HSU Start of Term 1 Instruction",
       "start": "2026-08-03",
+      "end": "2026-08-03",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Graduation Ceremonies - College",
+      "start": "2026-08-05",
+      "end": "2026-08-05",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Deadline for Filing of Application for Registered Electrical Engineers and Registered Master Electrician Licensure Examination",
+      "start": "2026-08-06",
+      "end": "2026-08-06",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Filing of Application for Graduation for First Semester",
+      "start": "2026-08-10",
       "end": "2026-08-14",
       "isAllDay": true,
       "type": "Event",
-      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+      "description": "At the Deans' Offices."
     },
     {
-      "title": "Start of Classes - 1st Semester",
-      "start": "2026-08-17",
-      "end": "2026-08-17",
+      "title": "Deadline for Filing of Application for Civil Engineers Licensure Examination",
+      "start": "2026-08-12",
+      "end": "2026-08-12",
       "isAllDay": true,
-      "type": "SemesterStart",
-      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+      "type": "Event"
+    },
+    {
+      "title": "Submission of Lists of Applicants for Graduation, First Semester",
+      "start": "2026-08-17",
+      "end": "2026-08-20",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "To the Office of the University Registrar."
+    },
+    {
+      "title": "Psychometrician Licensure Examination",
+      "start": "2026-08-19",
+      "end": "2026-08-20",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "University Council Meeting",
+      "start": "2026-08-19",
+      "end": "2026-08-19",
+      "isAllDay": true,
+      "type": "Event"
     },
     {
       "title": "Ninoy Aquino Day",
@@ -23,7 +193,14 @@
       "end": "2026-08-21",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Philippine national holiday."
+      "description": "Special Non-Working Holiday"
+    },
+    {
+      "title": "Nurse Licensure Examination",
+      "start": "2026-08-29",
+      "end": "2026-08-30",
+      "isAllDay": true,
+      "type": "Event"
     },
     {
       "title": "National Heroes Day",
@@ -31,15 +208,177 @@
       "end": "2026-08-31",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Philippine national holiday."
+      "description": "Regular Holiday"
     },
     {
-      "title": "Midterm Examinations - 1st Semester",
+      "title": "Career Forum, First Semester",
+      "start": "2026-09-02",
+      "end": "2026-09-02",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Electrical Engineering Licensure Examination",
+      "start": "2026-09-05",
+      "end": "2026-09-06",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Registered Master Electrician Licensure Examination",
+      "start": "2026-09-07",
+      "end": "2026-09-07",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Deadline for Filing of Application for Certified Public Accountant Licensure Examination",
+      "start": "2026-09-09",
+      "end": "2026-09-09",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Professional Teachers Examination",
+      "start": "2026-09-20",
+      "end": "2026-09-20",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Midterm Examination Period",
+      "start": "2026-09-21",
+      "end": "2026-09-26",
+      "isAllDay": true,
+      "type": "Exam"
+    },
+    {
+      "title": "Civil Engineers Licensure Examination",
+      "start": "2026-09-26",
+      "end": "2026-09-27",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Deadline for Filing of Application for Pharmacist Licensure Examination",
+      "start": "2026-09-29",
+      "end": "2026-09-29",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "College of Liberal Arts and Social Sciences Month",
+      "start": "2026-10-01",
+      "end": "2026-10-30",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Last Day of Dropping of Course(s)",
+      "start": "2026-10-02",
+      "end": "2026-10-02",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Mega Job Fair, First Semester",
+      "start": "2026-10-02",
+      "end": "2026-10-02",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Psychology Week and Mental Health Week",
+      "start": "2026-10-05",
+      "end": "2026-10-10",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Start of Faculty Evaluation Period by Students, First Semester",
+      "start": "2026-10-05",
+      "end": "2026-10-30",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "Runs to October 30."
+    },
+    {
+      "title": "Survey of Courses to be Offered for the Second Semester",
+      "start": "2026-10-05",
+      "end": "2026-10-09",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "World Teacher's Day Celebration",
+      "start": "2026-10-05",
+      "end": "2026-10-05",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "HSU End of Instructional Block",
+      "start": "2026-10-06",
+      "end": "2026-10-06",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "HSU Term 1 Examination Period",
+      "start": "2026-10-07",
+      "end": "2026-10-09",
+      "isAllDay": true,
+      "type": "Exam"
+    },
+    {
+      "title": "HSU End-of-Term Processing / Remediation Start",
       "start": "2026-10-12",
+      "end": "2026-10-12",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Pharmacist Licensure Examination",
+      "start": "2026-10-15",
       "end": "2026-10-16",
       "isAllDay": true,
-      "type": "Exam",
-      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+      "type": "Event"
+    },
+    {
+      "title": "HSU End of Term 1",
+      "start": "2026-10-16",
+      "end": "2026-10-16",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "HSU Start of Term 2 Instruction",
+      "start": "2026-10-19",
+      "end": "2026-10-19",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "University Research Congress",
+      "start": "2026-10-19",
+      "end": "2026-10-23",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Licensure Examination for Certified Public Accountant",
+      "start": "2026-10-24",
+      "end": "2026-10-26",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "All Saints' Day Eve",
+      "start": "2026-10-31",
+      "end": "2026-10-31",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Special Non-Working Holiday"
     },
     {
       "title": "All Saints' Day",
@@ -47,7 +386,7 @@
       "end": "2026-11-01",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Philippine national holiday."
+      "description": "Regular Holiday"
     },
     {
       "title": "All Souls' Day",
@@ -55,7 +394,42 @@
       "end": "2026-11-02",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Philippine national holiday."
+      "description": "Special Non-Working Holiday"
+    },
+    {
+      "title": "Deadline for Filing of Application for Radiologic Technology Licensure Examination",
+      "start": "2026-11-10",
+      "end": "2026-11-10",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Industry Partners Recognition Day 2026",
+      "start": "2026-11-13",
+      "end": "2026-11-13",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Last Day of Application for Leave of Absence (LOA), First Semester",
+      "start": "2026-11-13",
+      "end": "2026-11-13",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Final Examination Period",
+      "start": "2026-11-23",
+      "end": "2026-11-28",
+      "isAllDay": true,
+      "type": "Exam"
+    },
+    {
+      "title": "Last Day of the First Semester AY 2026-2027",
+      "start": "2026-11-29",
+      "end": "2026-11-29",
+      "isAllDay": true,
+      "type": "SemesterEnd"
     },
     {
       "title": "Bonifacio Day",
@@ -63,39 +437,94 @@
       "end": "2026-11-30",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Philippine national holiday."
+      "description": "Regular Holiday"
     },
     {
-      "title": "Immaculate Conception",
+      "title": "Start of Semestral Break and Holiday Break",
+      "start": "2026-11-30",
+      "end": "2026-11-30",
+      "isAllDay": true,
+      "type": "Holiday",
+      "description": "Second semester classes begin January 4, 2027."
+    },
+    {
+      "title": "Admission for Graduate Programs",
+      "start": "2026-12-01",
+      "end": "2027-01-08",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "Runs to January 8, 2027."
+    },
+    {
+      "title": "Encoding of Final Grades",
+      "start": "2026-12-03",
+      "end": "2026-12-06",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Releasing of Report of Grades",
+      "start": "2026-12-07",
+      "end": "2026-12-11",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Feast of the Immaculate Conception of Mary",
       "start": "2026-12-08",
       "end": "2026-12-08",
       "isAllDay": true,
-      "type": "Holiday",
-      "description": "Philippine national holiday."
+      "type": "Holiday"
     },
     {
-      "title": "Final Examinations - 1st Semester",
+      "title": "Radiologic Technology Licensure Examination",
+      "start": "2026-12-10",
+      "end": "2026-12-11",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "ITEST Registration Period, Second Semester",
       "start": "2026-12-14",
       "end": "2026-12-18",
       "isAllDay": true,
-      "type": "Exam",
-      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+      "type": "Event"
     },
     {
-      "title": "End of 1st Semester",
-      "start": "2026-12-19",
-      "end": "2026-12-19",
+      "title": "Registration Period, Second Semester",
+      "start": "2026-12-14",
+      "end": "2026-12-18",
       "isAllDay": true,
-      "type": "SemesterEnd",
-      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+      "type": "Event"
     },
     {
-      "title": "No classes - Christmas break",
-      "start": "2026-12-21",
-      "end": "2027-01-03",
+      "title": "Linkages and Placement (Second Semester 2026-2027)",
+      "start": "2026-12-15",
+      "end": "2026-12-15",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Internship Orientation, Second Semester",
+      "start": "2026-12-16",
+      "end": "2026-12-16",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Submission of Final Grades to the Dean's Offices",
+      "start": "2026-12-23",
+      "end": "2026-12-23",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Christmas Eve",
+      "start": "2026-12-24",
+      "end": "2026-12-24",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+      "description": "Special Non-Working Holiday"
     },
     {
       "title": "Christmas Day",
@@ -103,7 +532,7 @@
       "end": "2026-12-25",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Philippine national holiday."
+      "description": "Regular Holiday"
     },
     {
       "title": "Rizal Day",
@@ -111,7 +540,14 @@
       "end": "2026-12-30",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Philippine national holiday."
+      "description": "Regular Holiday"
+    },
+    {
+      "title": "Last Day of the Year",
+      "start": "2026-12-31",
+      "end": "2026-12-31",
+      "isAllDay": true,
+      "type": "Event"
     },
     {
       "title": "New Year's Day",
@@ -119,31 +555,202 @@
       "end": "2027-01-01",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Philippine national holiday."
+      "description": "Regular Holiday"
     },
     {
-      "title": "Start of Classes - 2nd Semester",
-      "start": "2027-01-11",
-      "end": "2027-01-11",
+      "title": "Change of Matriculation Period (CMAT) - Regular Program",
+      "start": "2027-01-04",
+      "end": "2027-01-06",
       "isAllDay": true,
-      "type": "SemesterStart",
-      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+      "type": "Event"
     },
     {
-      "title": "Midterm Examinations - 2nd Semester",
-      "start": "2027-03-08",
-      "end": "2027-03-12",
+      "title": "First Day of Classes for the Second Semester",
+      "start": "2027-01-04",
+      "end": "2027-01-04",
       "isAllDay": true,
-      "type": "Exam",
-      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+      "type": "SemesterStart"
     },
     {
-      "title": "Holy Week - No classes",
-      "start": "2027-03-25",
-      "end": "2027-03-27",
+      "title": "Internship Fair for Second Semester",
+      "start": "2027-01-04",
+      "end": "2027-01-04",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Resume of Term 2 Classes for HSU",
+      "start": "2027-01-04",
+      "end": "2027-01-04",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Start of Online Application for Incoming Grade 11 Students (AY 2027-2028)",
+      "start": "2027-01-04",
+      "end": "2027-01-04",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "University Council Meeting",
+      "start": "2027-01-08",
+      "end": "2027-01-08",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Filing of Application for Graduation for Second Semester",
+      "start": "2027-01-18",
+      "end": "2027-01-22",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "At the Deans' Offices."
+    },
+    {
+      "title": "Submission of Lists of Applicants for Graduation, Second Semester",
+      "start": "2027-01-25",
+      "end": "2027-01-29",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "To the Office of the University Registrar."
+    },
+    {
+      "title": "College of Engineering and Technology Month",
+      "start": "2027-02-01",
+      "end": "2027-02-28",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "HSU End of Instructional Block",
+      "start": "2027-02-02",
+      "end": "2027-02-02",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "HSU Term 2 Examination Period",
+      "start": "2027-02-03",
+      "end": "2027-02-05",
+      "isAllDay": true,
+      "type": "Exam"
+    },
+    {
+      "title": "Chinese New Year",
+      "start": "2027-02-06",
+      "end": "2027-02-06",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "HSU End-of-Term Processing / Start of Remediation",
+      "start": "2027-02-08",
+      "end": "2027-02-08",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "HSU End of Term 2",
+      "start": "2027-02-12",
+      "end": "2027-02-12",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "HSU Start of Term 3 Instruction",
+      "start": "2027-02-15",
+      "end": "2027-02-15",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Start of Online Application for Admission to College",
+      "start": "2027-02-15",
+      "end": "2027-02-15",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "EDSA People Power Revolution Anniversary",
+      "start": "2027-02-25",
+      "end": "2027-02-25",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "55th Foundation Celebration",
+      "start": "2027-03-01",
+      "end": "2027-03-01",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "Foundation celebration activities in the official calendar: College of Computing and Information Sciences Week, College of Human Kinetics Week, HSU Week, Social Work Month, City Government Women's Month, ROTC Annual Parade and Review and Presentation of Sponsors, NSTP Day/Culminating Activities, College of Governance and Public Policy Week, Institute of Social Development and Nation Building, College of Business Administration Week."
+    },
+    {
+      "title": "Midterm Examination Period",
+      "start": "2027-03-01",
+      "end": "2027-03-06",
+      "isAllDay": true,
+      "type": "Exam"
+    },
+    {
+      "title": "Eid-ul-Fitr",
+      "start": "2027-03-09",
+      "end": "2027-03-09",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "Marked * in the official calendar; the date may change."
+    },
+    {
+      "title": "Online Application for Transferees and Second Coursers",
+      "start": "2027-03-15",
+      "end": "2027-03-15",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Survey of Courses to be Offered for the First Semester",
+      "start": "2027-03-15",
+      "end": "2027-03-19",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Last Day of Dropping of Course(s)",
+      "start": "2027-03-19",
+      "end": "2027-03-19",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Submission of Midterm Grades to the Deans' Offices",
+      "start": "2027-03-19",
+      "end": "2027-03-19",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Paschal Break",
+      "start": "2027-03-22",
+      "end": "2027-03-28",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Maundy Thursday to Black Saturday."
+      "description": "Includes Maundy Thursday (Mar 25), Good Friday (Mar 26), Black Saturday (Mar 27) and Easter Sunday (Mar 28)."
+    },
+    {
+      "title": "University Career Forum",
+      "start": "2027-03-31",
+      "end": "2027-03-31",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Start of Faculty Evaluation Period by Students, Second Semester",
+      "start": "2027-04-06",
+      "end": "2027-04-30",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "Runs to April 30."
     },
     {
       "title": "Araw ng Kagitingan",
@@ -151,7 +758,42 @@
       "end": "2027-04-09",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Philippine national holiday."
+      "description": "Regular Holiday"
+    },
+    {
+      "title": "College Entrance Examination",
+      "start": "2027-04-17",
+      "end": "2027-04-18",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "College Entrance Examination",
+      "start": "2027-04-24",
+      "end": "2027-04-25",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "HSU PBL Week",
+      "start": "2027-04-26",
+      "end": "2027-04-30",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Last Day for the Application for Leave of Absence (LOA)",
+      "start": "2027-04-30",
+      "end": "2027-04-30",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "University Mega Job Fair",
+      "start": "2027-04-30",
+      "end": "2027-04-30",
+      "isAllDay": true,
+      "type": "Event"
     },
     {
       "title": "Labor Day",
@@ -159,23 +801,113 @@
       "end": "2027-05-01",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Philippine national holiday."
+      "description": "Regular Holiday"
     },
     {
-      "title": "Final Examinations - 2nd Semester",
+      "title": "Final Examination Period for Graduating Students",
+      "start": "2027-05-03",
+      "end": "2027-05-08",
+      "isAllDay": true,
+      "type": "Exam"
+    },
+    {
+      "title": "HSU Term 3 Examination Period",
+      "start": "2027-05-05",
+      "end": "2027-05-07",
+      "isAllDay": true,
+      "type": "Exam"
+    },
+    {
+      "title": "HSU End of Term 3",
+      "start": "2027-05-07",
+      "end": "2027-05-07",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Final Examination Period for Non-Graduating Students",
       "start": "2027-05-10",
+      "end": "2027-05-15",
+      "isAllDay": true,
+      "type": "Exam"
+    },
+    {
+      "title": "HSU End-of-Term Processing / Completion",
+      "start": "2027-05-10",
+      "end": "2027-05-10",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Releasing of Report of Grades (Graduating - College)",
+      "start": "2027-05-13",
       "end": "2027-05-14",
       "isAllDay": true,
-      "type": "Exam",
-      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+      "type": "Event"
     },
     {
-      "title": "End of 2nd Semester",
-      "start": "2027-05-22",
-      "end": "2027-05-22",
+      "title": "HSU Report Card Distribution",
+      "start": "2027-05-14",
+      "end": "2027-05-14",
       "isAllDay": true,
-      "type": "SemesterEnd",
-      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+      "type": "Event"
+    },
+    {
+      "title": "Last Day of the Second Semester AY 2026-2027",
+      "start": "2027-05-16",
+      "end": "2027-05-16",
+      "isAllDay": true,
+      "type": "SemesterEnd"
+    },
+    {
+      "title": "Eid al-Adha",
+      "start": "2027-05-17",
+      "end": "2027-05-17",
+      "isAllDay": true,
+      "type": "Event",
+      "description": "Marked * in the official calendar; the date may change."
+    },
+    {
+      "title": "Encoding of Final Grades for Non-Graduating Students",
+      "start": "2027-05-19",
+      "end": "2027-05-21",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Releasing of Report of Grades for Non-Graduating Students",
+      "start": "2027-05-22",
+      "end": "2027-05-23",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Registration for Summer Term 2027",
+      "start": "2027-05-24",
+      "end": "2027-05-26",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "First Day of Classes - Summer Term 2027",
+      "start": "2027-05-31",
+      "end": "2027-05-31",
+      "isAllDay": true,
+      "type": "SemesterStart"
+    },
+    {
+      "title": "Admission for Graduate Programs",
+      "start": "2027-06-01",
+      "end": "2027-06-30",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "University Council Meeting",
+      "start": "2027-06-09",
+      "end": "2027-06-09",
+      "isAllDay": true,
+      "type": "Event"
     },
     {
       "title": "Independence Day",
@@ -183,15 +915,99 @@
       "end": "2027-06-12",
       "isAllDay": true,
       "type": "Holiday",
-      "description": "Philippine national holiday."
+      "description": "Regular Holiday"
     },
     {
-      "title": "Graduation ceremony",
-      "start": "2027-06-25",
-      "end": "2027-06-25",
+      "title": "Grade 12 Ecumenical Services",
+      "start": "2027-06-16",
+      "end": "2027-06-16",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "HSU Graduation Ceremonies",
+      "start": "2027-06-18",
+      "end": "2027-06-18",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Registration Period - First Semester AY 2027-2028",
+      "start": "2027-06-21",
+      "end": "2027-06-24",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Registration Period - First Semester AY 2027-2028",
+      "start": "2027-06-28",
+      "end": "2027-06-29",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Last Day of Classes - Summer Term 2027",
+      "start": "2027-07-09",
+      "end": "2027-07-09",
+      "isAllDay": true,
+      "type": "SemesterEnd"
+    },
+    {
+      "title": "Linkages and Placement Workshop for First Semester AY 2027-2028",
+      "start": "2027-07-10",
+      "end": "2027-07-10",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Encoding of Summer Term 2027 Final Grades",
+      "start": "2027-07-12",
+      "end": "2027-07-13",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Releasing of Summer Term 2027 Report of Grades",
+      "start": "2027-07-14",
+      "end": "2027-07-14",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Registration Period - First Semester AY 2027-2028",
+      "start": "2027-07-15",
+      "end": "2027-07-16",
       "isAllDay": true,
       "type": "Event",
-      "description": "Sample date for testing. Replace with the official UMak academic calendar."
+      "description": "Also for Summer Term 2027 enrollees, irregular students and ITEST."
+    },
+    {
+      "title": "Internship Orientation, First Semester AY 2027-2028",
+      "start": "2027-07-17",
+      "end": "2027-07-17",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "First Day of Classes for the First Semester AY 2027-2028",
+      "start": "2027-07-19",
+      "end": "2027-07-19",
+      "isAllDay": true,
+      "type": "SemesterStart"
+    },
+    {
+      "title": "Internship Fair for First Semester AY 2027-2028",
+      "start": "2027-07-19",
+      "end": "2027-07-19",
+      "isAllDay": true,
+      "type": "Event"
+    },
+    {
+      "title": "Graduation Ceremonies - College",
+      "start": "2027-07-21",
+      "end": "2027-07-21",
+      "isAllDay": true,
+      "type": "Event"
     }
   ]
 }
