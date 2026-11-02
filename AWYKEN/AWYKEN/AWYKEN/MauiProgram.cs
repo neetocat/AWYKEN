@@ -1,7 +1,7 @@
 using AWYKEN.Services;
+using AWYKEN.Shared.Configuration;
 using AWYKEN.Shared.Data;
 using AWYKEN.Shared.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace AWYKEN
@@ -33,11 +33,15 @@ namespace AWYKEN
             builder.Services.AddSingleton<ICommuteMapService, OpenStreetMapCommuteService>();
             builder.Services.AddSingleton<ICurrentWeatherService, OpenMeteoWeatherService>();
 
-            // Store this installation's database in its private platform app-data folder.
-            var databasePath = Path.Combine(FileSystem.AppDataDirectory, "awyken.db");
-            builder.Services.AddDbContextFactory<AwykenDbContext>(options =>
-                options.UseSqlite($"Data Source={databasePath}"));
-            builder.Services.AddScoped<IAwykenDataService, SqliteAwykenDataService>();
+            // Azure SQL Database replaces the old on-device SQLite file. The Azure keys live
+            // in a .env file that Git ignores, found in this order: the repository root (or
+            // any parent of the build output), this app's private app-data folder, then a
+            // .env packaged as a raw asset for device testing.
+            var databaseSettings = AwykenDatabaseSettings.Load(
+                hostConfiguration: null,
+                extraValues: LoadPackagedDotEnv(),
+                additionalRoots: FileSystem.AppDataDirectory);
+            builder.Services.AddAwykenData(databaseSettings);
 
             builder.Services.AddMauiBlazorWebView();
 
@@ -47,6 +51,27 @@ namespace AWYKEN
 #endif
 
             return builder.Build();
+        }
+
+        /// <summary>
+        /// Reads a <c>.env</c> shipped as a MAUI raw asset (<c>Resources/Raw/.env</c>) so a
+        /// developer can run on an emulator or phone without shell access to the repository.
+        /// A <c>.env</c> in the app-data folder takes precedence over the packaged copy.
+        /// </summary>
+        private static IReadOnlyDictionary<string, string> LoadPackagedDotEnv()
+        {
+            try
+            {
+                using var stream = FileSystem.OpenAppPackageFileAsync(DotEnv.FileName).GetAwaiter().GetResult();
+                using var reader = new StreamReader(stream);
+                return DotEnv.Parse(reader.ReadToEnd());
+            }
+            catch (Exception exception) when (exception is FileNotFoundException
+                or DirectoryNotFoundException or IOException or NotSupportedException or ArgumentException)
+            {
+                // No packaged .env is the normal case; the repository or app-data file wins.
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
         }
     }
 }

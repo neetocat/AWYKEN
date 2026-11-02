@@ -319,7 +319,7 @@
 
     private int TimelineHours => Math.Max(1, TimelineEndHour - TimelineStartHour);
 
-    // Load the selected day's classes from the same SQLite-backed shared state.
+    // Load the selected day's classes from the same cloud-backed shared state.
     protected override Task OnInitializedAsync() => RefreshSelectedViewAsync();
 
     private async Task SelectDateAsync(DateOnly date)

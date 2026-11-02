@@ -4,7 +4,7 @@ namespace AWYKEN.Shared.Data;
 
 /// <summary>
 /// Shared database operations used by all pages, keeping their profile and
-/// schedule values in sync with the same SQLite source of truth.
+/// schedule values in sync with the same Azure SQL Database source of truth.
 /// </summary>
 public interface IAwykenDataService
 {

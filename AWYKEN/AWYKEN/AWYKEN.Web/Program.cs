@@ -1,8 +1,8 @@
+using AWYKEN.Shared.Configuration;
 using AWYKEN.Shared.Services;
 using AWYKEN.Shared.Data;
 using AWYKEN.Web.Components;
 using AWYKEN.Web.Services;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,17 +23,19 @@ builder.Services.AddSingleton(_ =>
 builder.Services.AddSingleton<ICommuteMapService, OpenStreetMapCommuteService>();
 builder.Services.AddSingleton<ICurrentWeatherService, OpenMeteoWeatherService>();
 
-// Keep the Web host's local database in the user's app-data folder, outside Git.
-var databaseFolder = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AWYKEN");
-Directory.CreateDirectory(databaseFolder);
-var databasePath = Path.Combine(databaseFolder, "awyken.db");
-
-builder.Services.AddDbContextFactory<AwykenDbContext>(options =>
-    options.UseSqlite($"Data Source={databasePath}"));
-builder.Services.AddScoped<IAwykenDataService, SqliteAwykenDataService>();
+// Azure SQL Database replaces the old local file database. Keys come from appsettings,
+// user secrets, environment variables, or the repository's .env file (ignored by Git).
+var databaseSettings = AwykenDatabaseSettings.Load(key => builder.Configuration[key]);
+builder.Services.AddAwykenData(databaseSettings);
 
 var app = builder.Build();
+
+// Printed once at startup so a misconfigured .env is obvious in the console.
+app.Logger.LogInformation(
+    "AWYKEN database: {Database} on {Server} (settings from {Source}).",
+    databaseSettings.InitialCatalog,
+    databaseSettings.DataSource,
+    databaseSettings.DotEnvFile ?? "environment variables / appsettings");
 
 if (!app.Environment.IsDevelopment())
 {

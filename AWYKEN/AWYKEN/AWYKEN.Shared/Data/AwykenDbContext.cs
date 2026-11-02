@@ -2,7 +2,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AWYKEN.Shared.Data;
 
-/// <summary>Defines the SQLite tables used by the shared AWYKEN pages.</summary>
+/// <summary>
+/// Defines the Azure SQL Database tables used by the shared AWYKEN pages.
+/// Rows are scoped by <see cref="UserProfileRecord.Id"/> so one account only ever
+/// reads and writes its own profile, classes, and course notes.
+/// </summary>
 public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
     : DbContext(options)
 {
@@ -18,7 +22,9 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
         {
             entity.ToTable("Profiles");
             entity.Property(profile => profile.DisplayName).HasMaxLength(100);
-            entity.Property(profile => profile.Email).HasMaxLength(200).UseCollation("NOCASE");
+            // Emails are normalized to lower case in code, and Azure SQL keeps its
+            // default case-insensitive collation, so no per-column collation is needed.
+            entity.Property(profile => profile.Email).HasMaxLength(200);
             entity.Property(profile => profile.PasswordHash).HasMaxLength(300);
             entity.Property(profile => profile.FullName).HasMaxLength(150);
             entity.Property(profile => profile.StudentEmail).HasMaxLength(200);
@@ -30,7 +36,9 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(profile => profile.AcademicTerm).HasMaxLength(80);
             entity.Property(profile => profile.HomeAddress).HasMaxLength(300);
             entity.Property(profile => profile.SchoolAddress).HasMaxLength(300);
-            entity.HasIndex(profile => profile.Email).IsUnique().HasFilter("\"Email\" IS NOT NULL");
+            // One row per email, while the anonymous Guest profile keeps a null email.
+            // The filter uses SQL Server bracket syntax rather than SQLite double quotes.
+            entity.HasIndex(profile => profile.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
         });
 
         modelBuilder.Entity<ScheduleRecord>(entity =>
@@ -49,6 +57,8 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(item => item.MeetingTimes).HasMaxLength(300);
             entity.Property(item => item.Notes).HasMaxLength(4000);
             entity.Property(item => item.AttendanceStatus).HasMaxLength(20);
+            // Units are credit units such as 3.00; a fixed decimal avoids float rounding.
+            entity.Property(item => item.Units).HasPrecision(5, 2);
             entity.HasIndex(item => item.StartsAt);
             entity.HasIndex(item => new { item.ProfileId, item.StartsAt });
             entity.HasOne<UserProfileRecord>()
@@ -63,8 +73,9 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.ToTable("Courses");
             entity.Property(note => note.CreatedAtText).HasMaxLength(80).IsRequired();
             entity.Property(note => note.ClassTimeText).HasMaxLength(80).IsRequired();
-            entity.Property(note => note.Text).HasMaxLength(20000).IsRequired();
-            entity.Property(note => note.News).HasMaxLength(10000);
+            // Long free text maps to nvarchar(max): SQL Server caps nvarchar(n) at 4000.
+            entity.Property(note => note.Text).HasColumnType("nvarchar(max)").IsRequired();
+            entity.Property(note => note.News).HasColumnType("nvarchar(max)");
             entity.Property(note => note.AttendanceStatus).HasMaxLength(20);
             entity.Property(note => note.ImageContentType).HasMaxLength(100);
             entity.Property(note => note.CourseCode).HasMaxLength(40).IsRequired();

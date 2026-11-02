@@ -16,8 +16,11 @@
 
     <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
-    <!-- Shared Web and MAUI code uses the same EF Core SQLite data model. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
+    <!-- Web and MAUI both talk to the same cloud Azure SQL Database through EF Core. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
+    <!-- Microsoft.Data.SqlClient brings 9.0.11 of this package, which has a published
+         advisory (NU1902/NU1903). Pin the patched servicing version instead. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <!-- Official PdfPig package; its C# API uses the UglyToad.PdfPig namespace. -->
     <PackageReference Include="PdfPig" Version="0.1.16" />
     <PackageReference Include="Tesseract" Version="5.2.0" />

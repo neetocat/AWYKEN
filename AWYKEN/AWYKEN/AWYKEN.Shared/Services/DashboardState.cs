@@ -2,7 +2,7 @@ namespace AWYKEN.Shared.Services;
 
 /// <summary>
 /// The display state shared by the Dashboard, Schedule, Commute, and Alerts pages.
-/// Pages refresh this state from SQLite so they show the same profile and classes.
+/// Pages refresh this state from Azure SQL so they show the same profile and classes.
 /// </summary>
 public sealed class DashboardState
 {
@@ -12,7 +12,7 @@ public sealed class DashboardState
     // Student details (student number, program, year level...) read from the COR.
     public StudentProfile Student { get; private set; } = StudentProfile.Empty;
 
-    // Home and campus endpoints are loaded from the current profile's SQLite row.
+    // Home and campus endpoints are loaded from the current profile's database row.
     public CommuteLocationSettings CommuteLocations { get; private set; } = CommuteLocationSettings.Empty;
 
     // Weather is refreshed from the saved home coordinates when Home opens.
@@ -40,7 +40,7 @@ public sealed class DashboardState
 
     public void SetEstimatedTravelMinutes(int? minutes) => EstimatedTravelMinutes = minutes;
 
-    /// <summary>Replace the shared profile and schedule after reading SQLite.</summary>
+    /// <summary>Replace the shared profile and schedule after reading the database.</summary>
     public void ReplaceFromDatabase(
         string? displayName, string? email, IEnumerable<ScheduleItem> schedule,
         StudentProfile? student = null, CommuteLocationSettings? commuteLocations = null)

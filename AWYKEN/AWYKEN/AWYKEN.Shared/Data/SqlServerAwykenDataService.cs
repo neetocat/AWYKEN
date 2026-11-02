@@ -1,14 +1,22 @@
+using System.Data.Common;
 using System.Globalization;
+using AWYKEN.Shared.Configuration;
 using AWYKEN.Shared.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace AWYKEN.Shared.Data;
 
-/// <summary>Reads and writes the local SQLite database for all shared pages.</summary>
-public sealed class SqliteAwykenDataService(
+/// <summary>
+/// Reads and writes the shared Azure SQL Database for all shared pages. Every query is
+/// scoped to the signed-in profile (or the anonymous Guest profile) so the cloud rows
+/// behave like the previous per-installation local database.
+/// </summary>
+public sealed class SqlServerAwykenDataService(
     IDbContextFactory<AwykenDbContext> contextFactory,
     DashboardState state,
-    LocalAccountSession accountSession) : IAwykenDataService
+    LocalAccountSession accountSession,
+    AwykenDatabaseSettings settings) : IAwykenDataService
 {
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
     private bool _initialized;
@@ -30,15 +38,25 @@ public sealed class SqliteAwykenDataService(
 
             // Apply schema migrations first. A missing profile gets a null name,
             // which DashboardState presents as Guest; no schedule rows are seeded.
-            await db.Database.MigrateAsync(cancellationToken);
-            // Repair databases whose migration history says the student-profile
-            // migration ran even though the column was not written to the file.
-            await EnsureAcademicTermColumnAsync(db, cancellationToken);
+            if (settings.ApplyMigrationsOnStartup)
+                await MigrateAsync(db, cancellationToken);
+
             // Keep an anonymous Guest profile for visitors even after accounts are added.
             if (!await db.Profiles.AnyAsync(profile => profile.Email == null, cancellationToken))
             {
                 db.Profiles.Add(new UserProfileRecord { DisplayName = null, Email = null });
-                await db.SaveChangesAsync(cancellationToken);
+                try
+                {
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+                catch (DbUpdateException)
+                {
+                    // A second client may have inserted the Guest row at the same moment;
+                    // that is harmless as long as one anonymous row exists now.
+                    db.ChangeTracker.Clear();
+                    if (!await db.Profiles.AnyAsync(profile => profile.Email == null, cancellationToken))
+                        throw;
+                }
             }
 
             _initialized = true;
@@ -49,33 +67,33 @@ public sealed class SqliteAwykenDataService(
         }
     }
 
-    private static async Task EnsureAcademicTermColumnAsync(
-        AwykenDbContext db, CancellationToken cancellationToken)
+    /// <summary>
+    /// Applies pending migrations through EF Core and turns transport failures into a
+    /// message that names the server, the database, and the usual Azure causes.
+    /// </summary>
+    private async Task MigrateAsync(AwykenDbContext db, CancellationToken cancellationToken)
     {
-        await using var command = db.Database.GetDbConnection().CreateCommand();
-        command.CommandText = "PRAGMA table_info(Profiles);";
-        await db.Database.OpenConnectionAsync(cancellationToken);
-
-        var hasAcademicTerm = false;
-        await using (var reader = await command.ExecuteReaderAsync(cancellationToken))
+        try
         {
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                if (string.Equals(reader.GetString(1), "AcademicTerm", StringComparison.OrdinalIgnoreCase))
-                {
-                    hasAcademicTerm = true;
-                    break;
-                }
-            }
+            await db.Database.MigrateAsync(cancellationToken);
         }
-
-        if (!hasAcademicTerm)
+        catch (RetryLimitExceededException exception)
         {
-            await db.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE \"Profiles\" ADD COLUMN \"AcademicTerm\" TEXT NULL;",
-                cancellationToken);
+            // The execution strategy already retried; report the newest underlying failure.
+            var cause = exception.InnerException ?? exception;
+            throw new InvalidOperationException(BuildUnreachableMessage(cause), cause);
+        }
+        catch (DbException exception)
+        {
+            throw new InvalidOperationException(BuildUnreachableMessage(exception), exception);
         }
     }
+
+    private string BuildUnreachableMessage(Exception cause) =>
+        $"AWYKEN could not reach the Azure SQL database '{settings.InitialCatalog}' on " +
+        $"'{settings.DataSource}'. Check the AZURE_SQL_* values in .env (or the environment), " +
+        "the Azure SQL firewall rule for this network, and that the database still exists. " +
+        $"Underlying error: {cause.Message}";
 
     public async Task<string?> SignUpAsync(
         string displayName, string email, string password, CancellationToken cancellationToken = default)
@@ -101,8 +119,18 @@ public sealed class SqliteAwykenDataService(
             Email = normalizedEmail,
             PasswordHash = await Task.Run(() => LocalPasswordHasher.Hash(password), cancellationToken)
         };
-        db.Profiles.Add(profile);
-        await db.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            db.Profiles.Add(profile);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // The unique index on Email catches a sign-up that raced another device.
+            return "An account with that email already exists. Log in instead.";
+        }
+
         accountSession.SignIn(profile.Id);
         await RefreshAsync(DateOnly.FromDateTime(DateTime.Today), cancellationToken);
         return null;
@@ -149,7 +177,9 @@ public sealed class SqliteAwykenDataService(
         if (accountSession.ProfileId is int signedInProfileId)
             return signedInProfileId;
 
+        // The lowest id keeps the Guest row stable even if an old database holds more than one.
         return await db.Profiles.Where(profile => profile.Email == null)
+            .OrderBy(profile => profile.Id)
             .Select(profile => profile.Id)
             .FirstAsync(cancellationToken);
     }
@@ -300,7 +330,7 @@ public sealed class SqliteAwykenDataService(
         {
             record = await db.Schedule.SingleOrDefaultAsync(
                 row => row.Id == id && row.ProfileId == profileId, cancellationToken)
-                ?? throw new InvalidOperationException("That class no longer exists in the local database.");
+                ?? throw new InvalidOperationException("That class no longer exists in the database.");
         }
         else
         {

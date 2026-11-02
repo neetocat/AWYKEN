@@ -14,3 +14,17 @@
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local secrets: .env holds the Azure SQL keys and must never be committed.
+# Commit .env.example instead, which documents every supported key.
+.env
+.env.*
+!.env.example
+
+# A .env copied into the MAUI raw assets (option for device testing) is secret too.
+**/Resources/Raw/.env
+
+# Local database files left over from the previous SQLite setup.
+*.db
+*.db-shm
+*.db-wal
