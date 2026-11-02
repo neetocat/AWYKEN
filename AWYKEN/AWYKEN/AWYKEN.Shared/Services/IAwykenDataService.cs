@@ -12,6 +12,7 @@ public interface IAwykenDataService
     Task InitializeAsync(CancellationToken cancellationToken = default);
     Task<string?> SignUpAsync(string displayName, string email, string password, CancellationToken cancellationToken = default);
     Task<string?> SignInAsync(string email, string password, CancellationToken cancellationToken = default);
+    Task<bool> AccountExistsAsync(string email, CancellationToken cancellationToken = default);
     Task SignOutAsync(DateOnly refreshDate, CancellationToken cancellationToken = default);
     Task RefreshAsync(DateOnly date, CancellationToken cancellationToken = default);
     Task RefreshWeekAsync(DateOnly weekStart, CancellationToken cancellationToken = default);

@@ -1,0 +1,9 @@
+<section class="profile-group">
+    <h2>@Title</h2>
+    <div class="profile-group-card">@ChildContent</div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

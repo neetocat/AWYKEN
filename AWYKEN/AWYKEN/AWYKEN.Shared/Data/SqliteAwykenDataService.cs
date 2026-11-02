@@ -170,6 +170,15 @@ public sealed class SqliteAwykenDataService(
         await RefreshAsync(refreshDate, cancellationToken);
     }
 
+    public async Task<bool> AccountExistsAsync(string email, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        var normalizedEmail = NormalizeEmail(email);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await db.Profiles.AsNoTracking()
+            .AnyAsync(profile => profile.Email == normalizedEmail, cancellationToken);
+    }
+
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 
     private static bool IsValidEmail(string email)
@@ -273,7 +282,8 @@ public sealed class SqliteAwykenDataService(
             ? StudentProfile.Empty
             : new StudentProfile(profile.FullName, profile.DisplayName, profile.StudentEmail,
                 profile.StudentNumber, profile.College, profile.Program, profile.YearLevel,
-                profile.Section, profile.AcademicTerm);
+                profile.Section, profile.AcademicTerm, profile.StudentAddress, profile.Guardian,
+                profile.Gender, profile.DateOfBirth);
         var commute = profile is null
             ? CommuteLocationSettings.Empty
             : new CommuteLocationSettings(profile.HomeAddress, profile.HomeLatitude, profile.HomeLongitude,
@@ -319,6 +329,10 @@ public sealed class SqliteAwykenDataService(
         profile.YearLevel = student.YearLevel ?? profile.YearLevel;
         profile.Section = student.Section ?? profile.Section;
         profile.AcademicTerm = student.AcademicTerm ?? profile.AcademicTerm;
+        profile.StudentAddress = student.Address ?? profile.StudentAddress;
+        profile.Guardian = student.Guardian ?? profile.Guardian;
+        profile.Gender = student.Gender ?? profile.Gender;
+        profile.DateOfBirth = student.DateOfBirth ?? profile.DateOfBirth;
         if (string.IsNullOrWhiteSpace(profile.DisplayName))
             profile.DisplayName = student.FirstName ?? student.FullName;
 

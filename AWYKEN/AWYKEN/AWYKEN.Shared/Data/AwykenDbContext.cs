@@ -30,6 +30,10 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(profile => profile.YearLevel).HasMaxLength(40);
             entity.Property(profile => profile.Section).HasMaxLength(80);
             entity.Property(profile => profile.AcademicTerm).HasMaxLength(80);
+            entity.Property(profile => profile.StudentAddress).HasMaxLength(300);
+            entity.Property(profile => profile.Guardian).HasMaxLength(150);
+            entity.Property(profile => profile.Gender).HasMaxLength(40);
+            entity.Property(profile => profile.DateOfBirth).HasMaxLength(40);
             entity.Property(profile => profile.HomeAddress).HasMaxLength(300);
             entity.Property(profile => profile.SchoolAddress).HasMaxLength(300);
             entity.HasIndex(profile => profile.Email).IsUnique().HasFilter("\"Email\" IS NOT NULL");

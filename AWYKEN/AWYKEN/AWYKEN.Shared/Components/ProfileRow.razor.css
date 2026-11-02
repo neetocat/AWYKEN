@@ -1,0 +1,16 @@
+.profile-row { display: flex; min-height: 78px; align-items: center; gap: 18px; padding: 12px 20px; border-bottom: 1px solid #dce3ef; }
+.profile-row:last-child { border-bottom: 0; }
+.profile-row-icon { display: grid; width: 50px; height: 50px; flex: 0 0 50px; place-items: center; border-radius: 16px; background: #f4f6fa; color: #080d43; }
+.profile-row-icon svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.profile-row-copy { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.profile-row-label { color: #68738e; font-size: 15px; line-height: 1.25; }
+.profile-row-copy strong { overflow-wrap: anywhere; color: #191b2d; font-size: 17px; font-weight: 700; line-height: 1.25; }
+.profile-row-copy strong.is-placeholder { color: #68738e; font-weight: 500; }
+.profile-row-chevron { width: 22px; height: 22px; margin-left: auto; flex: 0 0 22px; fill: none; stroke: #68738e; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 520px) {
+    .profile-row { min-height: 64px; gap: 12px; padding: 9px 13px; }
+    .profile-row-icon { width: 40px; height: 40px; flex-basis: 40px; border-radius: 13px; }
+    .profile-row-icon svg { width: 20px; height: 20px; }
+    .profile-row-label { font-size: 11px; }
+    .profile-row-copy strong { font-size: 13px; }
+}

@@ -227,12 +227,24 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DateOfBirth")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Email")
                         .HasMaxLength(200)
                         .HasColumnType("TEXT")
                         .UseCollation("NOCASE");
 
                     b.Property<string>("FullName")
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(40)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Guardian")
                         .HasMaxLength(150)
                         .HasColumnType("TEXT");
 
@@ -270,6 +282,10 @@ namespace AWYKEN.Shared.Data.Migrations
 
                     b.Property<string>("StudentEmail")
                         .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StudentAddress")
+                        .HasMaxLength(300)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("StudentNumber")

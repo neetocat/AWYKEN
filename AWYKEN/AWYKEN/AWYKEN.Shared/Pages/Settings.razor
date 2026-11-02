@@ -58,7 +58,7 @@
                 {
                     <button class="row-action"
                             aria-label="Log in or sign up"
-                            @onclick="OpenAccountCard"
+                            @onclick="OpenLoginCard"
                             @onclick:stopPropagation="true">
                         ♢
                     </button>
@@ -702,8 +702,16 @@
     private void OpenAccountCard()
     {
         if (Data.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/profile");
             return;
+        }
 
+        OpenLoginCard();
+    }
+
+    private void OpenLoginCard()
+    {
         ShowAccountCard = true;
         AccountError = null;
     }
