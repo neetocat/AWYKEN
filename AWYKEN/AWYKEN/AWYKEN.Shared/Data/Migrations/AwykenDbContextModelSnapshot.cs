@@ -261,7 +261,7 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.HasOne("AWYKEN.Shared.Data.UserProfileRecord", null)
                         .WithMany()
                         .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("AWYKEN.Shared.Data.ScheduleRecord", null)

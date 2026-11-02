@@ -27,10 +27,15 @@ The EF model is unchanged, so the same three tables and the same rows move:
 | `Schedule` | `ScheduleRecord` | One class: start/end, course code, title, room or link, instructor, mode, colour, units, `Days` (`\|Mon\|Wed\|` for recurring classes, `NULL` for a one-time class), attendance status. |
 | `Courses` | `CourseNoteRecord` | One note for **one class on one date**, including news, attendance, and an optional image (`varbinary(max)`), unique per `(ProfileId, ScheduleRecordId, ClassDate)`. |
 
-Every row is scoped by `ProfileId`; `Schedule` and `Courses` cascade-delete with their
-profile. The SQL Server migration adds the same indexes the SQLite schema had, including
-the filtered unique index `IX_Profiles_Email` (`WHERE [Email] IS NOT NULL`) so the Guest
-row can coexist with real accounts.
+Every row is scoped by `ProfileId`. Deletes cascade down a single chain: `Profiles` →
+`Schedule` → `Courses`. `Courses.ProfileId` is deliberately `NO ACTION` because SQL Server
+rejects a table that can be reached by two cascade paths (error 1785), even though SQLite
+allowed it. Deleting a class still deletes its notes, and deleting a profile still removes
+everything through the `Schedule` rows.
+
+The SQL Server migration adds the same indexes the SQLite schema had, including the
+filtered unique index `IX_Profiles_Email` (`WHERE [Email] IS NOT NULL`) so the Guest row
+can coexist with real accounts.
 
 Migrations are applied automatically on first use (`AWYKEN_APPLY_MIGRATIONS_ON_START=True`,
 the default). The old `PRAGMA table_info` repair code is gone because the SQL Server
@@ -187,6 +192,22 @@ dotnet ef database update -p AWYKEN.Shared -s AWYKEN.Web
 > reused by SQL Server, so the cloud database starts from `InitialAzureSql`. Nothing from
 > the device-local `awyken.db` is uploaded automatically.
 
+### If a first migration attempt failed
+
+A migration runs in one transaction, so a failure should leave nothing behind. If a
+previous run did leave tables (for example after an error 1785 while `Courses` was being
+created), clear them and let the app recreate the schema:
+
+```sql
+DROP TABLE IF EXISTS [Courses];
+DROP TABLE IF EXISTS [Schedule];
+DROP TABLE IF EXISTS [Profiles];
+DROP TABLE IF EXISTS [__EFMigrationsHistory];
+```
+
+Check what is left with `SELECT name FROM sys.tables ORDER BY name;` and
+`SELECT * FROM [__EFMigrationsHistory];` in the Azure portal Query editor or SSMS.
+
 ---
 
 ## 5. Running
@@ -236,6 +257,8 @@ one of these:
 | `A network-related or instance-specific error` | Wrong `AZURE_SQL_SERVER`, or port 1433 blocked by the network. |
 | `The certificate chain was issued by an authority that is not trusted` | Local SQL Server only: set `AZURE_SQL_TRUST_SERVER_CERTIFICATE=True`. Never for Azure SQL. |
 | `AWYKEN could not resolve the Azure SQL Database connection` | `.env` missing/empty; the message lists the keys it needs. |
+| `Introducing FOREIGN KEY constraint ... may cause cycles or multiple cascade paths` (error 1785) | A table was reachable by two `ON DELETE CASCADE` paths. Fixed in the model: `Courses.ProfileId` is `NO ACTION`. Drop any half-created tables (see "If a first migration attempt failed") and restart. |
+| `There is already an object named 'Profiles' in the database` | A previous failed attempt left tables behind. Run the drop script in section 4. |
 | Startup is blocked by an exception on a page | Cloud database unreachable. The wrapped error names the server and database. |
 
 ---
@@ -248,3 +271,122 @@ demo, not for a public release. The usual next step is to keep Azure SQL private
 `AWYKEN.Web` expose the same `IAwykenDataService` operations as HTTP endpoints, then point
 the MAUI app at that API. The data layer was kept behind `IAwykenDataService` precisely so
 that swap only touches the service implementation and the two host registrations.
+
+---
+
+## 8. Teammates joining the project
+
+Only **one** person needs an Azure account. Everyone else connects to that server with
+credentials the owner gives them out of band.
+
+### What the owner shares
+
+Send **server name, database name, login, password** through a password manager share link
+or a private message — never in the Git repository, a PR description, a public channel, or
+a screenshot. `.env` is in `.gitignore`, and `.env.example` (the committed template) only
+contains placeholders.
+
+### 1. Allow each teammate's network
+
+Azure SQL blocks unknown IP addresses (error 40615). Each teammate runs
+
+```bash
+curl ifconfig.me        # or open https://ifconfig.me in a browser
+```
+
+and sends the owner the address, who adds it:
+
+```bash
+az sql server firewall-rule create -g AWYKEN -s awyken-sql \
+  -n teammate-<name> --start-ip-address <their IP> --end-ip-address <their IP>
+```
+
+Home and mobile IPs change, so expect to re-add a rule now and then. A phone on mobile data
+has a different address from the same phone on Wi-Fi.
+
+### 2. Give each teammate their own login
+
+Prefer one login per person: it is auditable, and one person can be removed without
+changing everybody's password. Run on the **master** database:
+
+```sql
+CREATE LOGIN awyken_<name> WITH PASSWORD = '<strong password>';
+```
+
+then on the **awyken** database:
+
+```sql
+CREATE USER awyken_<name> FOR LOGIN awyken_<name>;
+ALTER ROLE db_owner ADD MEMBER awyken_<name>;   -- dev database only: migrations need DDL rights
+```
+
+Least privilege alternative for a shared or demo database: the owner applies migrations
+once, teammates get `ALTER ROLE db_datareader ADD MEMBER ...` and
+`ALTER ROLE db_datawriter ADD MEMBER ...`, and each teammate sets
+`AWYKEN_APPLY_MIGRATIONS_ON_START=False` in their `.env`.
+
+### 3. Teammate setup
+
+```powershell
+git fetch origin
+git switch <branch>
+Copy-Item .env.example .env
+```
+
+Fill `.env` in the **repository root** with the shared values:
+
+```ini
+AZURE_SQL_SERVER=awyken-sql.database.windows.net
+AZURE_SQL_DATABASE=awyken
+AZURE_SQL_USER=awyken_<name>
+AZURE_SQL_PASSWORD=<their own password>
+```
+
+Then:
+
+```powershell
+dotnet run --project AWYKEN\AWYKEN\AWYKEN.Web
+```
+
+The console prints `AWYKEN database: awyken on awyken-sql.database.windows.net`, and the
+first page load applies any pending migration.
+
+### 4. Warn them: the database is shared
+
+* **Sign up for an account inside the app** (Settings → Create account). The anonymous
+  **Guest** profile is a single row, so two people in Guest mode see and edit the *same*
+  schedule. A real account gets its own `ProfileId`, and every query is scoped to it.
+* Data is no longer per device: a class added on one laptop appears on everyone's app.
+  Keep experiments out of the data you will demo, or use a second database
+  (`awyken-dev`) on the same server for messing around.
+* Migrations are safe to race: EF takes an `sp_getapplock` lock (visible in the log), so
+  two people starting the app at the same time will not corrupt the schema.
+
+### 5. Optional: no Azure account at all
+
+The code only needs a SQL Server. A teammate can run one locally in Docker and point
+`.env` at it — no Azure, no firewall rules:
+
+```powershell
+docker run -d --name awyken-sql -e "ACCEPT_EULA=Y" `
+  -e "MSSQL_SA_PASSWORD=YourStrong!Passw0rd" -p 1433:1433 `
+  mcr.microsoft.com/mssql/server:2022-latest
+```
+
+```ini
+AZURE_SQL_SERVER=localhost,1433
+AZURE_SQL_DATABASE=awyken
+AZURE_SQL_USER=sa
+AZURE_SQL_PASSWORD=YourStrong!Passw0rd
+AZURE_SQL_TRUST_SERVER_CERTIFICATE=True
+```
+
+`MigrateAsync` creates the `awyken` database if it does not exist. This is also the
+cheapest way to try schema changes without touching the shared cloud database.
+
+### 6. Housekeeping
+
+* After the project: `DROP LOGIN` for each teammate, rotate the admin password, and do not
+  publish the `.env` contents or the live server name in a portfolio write-up.
+* If a laptop with `.env` is lost, rotate that person's SQL login — everyone else keeps
+  working.

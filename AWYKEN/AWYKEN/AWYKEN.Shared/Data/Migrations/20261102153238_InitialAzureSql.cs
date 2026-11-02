@@ -101,8 +101,7 @@ namespace AWYKEN.Shared.Data.Migrations
                         name: "FK_Courses_Profiles_ProfileId",
                         column: x => x.ProfileId,
                         principalTable: "Profiles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Courses_Schedule_ScheduleRecordId",
                         column: x => x.ScheduleRecordId,

@@ -81,8 +81,11 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(note => note.CourseCode).HasMaxLength(40).IsRequired();
             entity.Property(note => note.CourseTitle).HasMaxLength(180).IsRequired();
             entity.HasIndex(note => new { note.ProfileId, note.ScheduleRecordId, note.ClassDate }).IsUnique();
+            // SQL Server allows only one cascade path to a table, so this foreign key is
+            // NO ACTION while the schedule foreign key cascades. Deleting a class still
+            // deletes its notes, and deleting a profile reaches them through Schedule rows.
             entity.HasOne<UserProfileRecord>().WithMany().HasForeignKey(note => note.ProfileId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.NoAction);
             entity.HasOne<ScheduleRecord>().WithMany().HasForeignKey(note => note.ScheduleRecordId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AWYKEN.Shared.Data.Migrations
 {
     [DbContext(typeof(AwykenDbContext))]
-    [Migration("20261102131949_InitialAzureSql")]
+    [Migration("20261102153238_InitialAzureSql")]
     partial class InitialAzureSql
     {
         /// <inheritdoc />
@@ -264,7 +264,7 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.HasOne("AWYKEN.Shared.Data.UserProfileRecord", null)
                         .WithMany()
                         .HasForeignKey("ProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("AWYKEN.Shared.Data.ScheduleRecord", null)
