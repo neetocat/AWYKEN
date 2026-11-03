@@ -1,0 +1,129 @@
+@page "/import-account"
+@using AWYKEN.Shared.Data
+@using AWYKEN.Shared.Services
+@inject DashboardState State
+@inject IAwykenDataService Data
+@inject NavigationManager Navigation
+
+<PageTitle>Confirm your account - AWYKEN</PageTitle>
+
+<div class="flow-shell import-account-screen">
+    <main class="flow-scroll">
+        <div class="flow-content">
+            <header class="flow-header app-page-header">
+                <button class="back-button" @onclick='() => Navigation.NavigateTo("/import-cor")' aria-label="Back">‹</button>
+                <div><h1>Confirm your account</h1><p>Step 2 of 3</p></div>
+            </header>
+
+            @if (Loading)
+            {
+                <p class="flow-status" role="status">Checking your UMak email…</p>
+            }
+            else if (Student is null || string.IsNullOrWhiteSpace(Student.Email))
+            {
+                <section class="account-check-card">
+                    <h2>Student email not found</h2>
+                    <p>We couldn't read a UMak email from this COR. Please upload a clearer copy that includes the student information section.</p>
+                    <button class="primary-action" @onclick='() => Navigation.NavigateTo("/import-cor")'>Upload COR again</button>
+                </section>
+            }
+            else
+            {
+                <section class="account-check-card">
+                    <span class="account-check-icon" aria-hidden="true">✉</span>
+                    <h2>@(AccountExists ? "Welcome back" : "Create your AWYKEN account")</h2>
+                    <p>@(AccountExists
+                        ? "An account already uses this UMak email. Log in to continue and save this COR to your profile."
+                        : "No account uses this UMak email yet. Create one to save your student details and continue to your classes.")</p>
+                    <label class="import-account-field">
+                        UMak email
+                        <input type="email" value="@Student.Email" readonly />
+                    </label>
+                    @if (!AccountExists)
+                    {
+                        <label class="import-account-field">
+                            Full name
+                            <input value="@Student.FullName" readonly />
+                        </label>
+                    }
+                    <label class="import-account-field">
+                        Password
+                        <input type="password" @bind="Password" autocomplete="@(AccountExists ? "current-password" : "new-password")" />
+                    </label>
+                    @if (!AccountExists)
+                    {
+                        <label class="import-account-field">
+                            Confirm password
+                            <input type="password" @bind="ConfirmPassword" autocomplete="new-password" />
+                        </label>
+                        <small class="import-account-hint">Use at least 8 characters. This password is not part of your COR.</small>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Error))
+                    {
+                        <p class="import-account-error" role="alert">@Error</p>
+                    }
+                    <button class="primary-action" disabled="@Working" @onclick="Continue">
+                        @(Working ? "Please wait…" : AccountExists ? "Log in and continue" : "Sign up and continue")
+                    </button>
+                </section>
+            }
+        </div>
+    </main>
+</div>
+
+@code {
+    private StudentProfile? Student => State.ImportProfilePreview;
+    private bool Loading = true;
+    private bool AccountExists;
+    private bool Working;
+    private string Password = "";
+    private string ConfirmPassword = "";
+    private string? Error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Student is null || string.IsNullOrWhiteSpace(Student.Email))
+        {
+            Loading = false;
+            return;
+        }
+        AccountExists = await Data.AccountExistsAsync(Student.Email);
+        Loading = false;
+    }
+
+    private async Task Continue()
+    {
+        if (Student is null || string.IsNullOrWhiteSpace(Student.Email)) return;
+        Error = null;
+        if (string.IsNullOrWhiteSpace(Password))
+        {
+            Error = "Enter your password to continue.";
+            return;
+        }
+        if (!AccountExists && Password != ConfirmPassword)
+        {
+            Error = "The passwords do not match.";
+            return;
+        }
+
+        Working = true;
+        try
+        {
+            Error = AccountExists
+                ? await Data.SignInAsync(Student.Email, Password)
+                : await Data.SignUpAsync(Student.FullName ?? Student.FirstName ?? "Student", Student.Email, Password);
+            if (Error is not null) return;
+
+            await Data.SaveImportedProfileAsync(Student, DateOnly.FromDateTime(DateTime.Today));
+            Navigation.NavigateTo("/verify-schedule");
+        }
+        catch (Exception)
+        {
+            Error = "We couldn't confirm your account. Please try again.";
+        }
+        finally
+        {
+            Working = false;
+        }
+    }
+}

@@ -22,6 +22,46 @@ public sealed class SqlServerAwykenDataService(
     private bool _initialized;
 
     public bool IsAuthenticated => accountSession.IsAuthenticated;
+    public async Task<bool> HasTeacherPinAsync(CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        return await db.Profiles.AsNoTracking().Where(profile => profile.Id == profileId)
+            .Select(profile => profile.TeacherPinHash != null).SingleAsync(cancellationToken);
+    }
+
+    public async Task<string?> CreateTeacherPinAsync(string pin, string confirmation,
+        CancellationToken cancellationToken = default)
+    {
+        if (pin.Length != 4 || !pin.All(char.IsAsciiDigit))
+            return "Create a four-digit numeric password.";
+        if (!string.Equals(pin, confirmation, StringComparison.Ordinal))
+            return "The passwords do not match.";
+
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var profile = await db.Profiles.SingleAsync(item => item.Id == profileId, cancellationToken);
+        if (!string.IsNullOrEmpty(profile.TeacherPinHash))
+            return "A teacher password has already been created for this profile.";
+
+        profile.TeacherPinHash = await Task.Run(() => LocalPasswordHasher.Hash(pin), cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
+    public async Task<bool> ValidateTeacherPinAsync(string pin, CancellationToken cancellationToken = default)
+    {
+        if (pin.Length != 4 || !pin.All(char.IsAsciiDigit))
+            return false;
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var hash = await db.Profiles.AsNoTracking().Where(profile => profile.Id == profileId)
+            .Select(profile => profile.TeacherPinHash).SingleAsync(cancellationToken);
+        return await Task.Run(() => LocalPasswordHasher.Verify(pin, hash), cancellationToken);
+    }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
@@ -158,6 +198,15 @@ public sealed class SqlServerAwykenDataService(
         await RefreshAsync(refreshDate, cancellationToken);
     }
 
+    public async Task<bool> AccountExistsAsync(string email, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        var normalizedEmail = NormalizeEmail(email);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await db.Profiles.AsNoTracking()
+            .AnyAsync(profile => profile.Email == normalizedEmail, cancellationToken);
+    }
+
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 
     private static bool IsValidEmail(string email)
@@ -263,7 +312,8 @@ public sealed class SqlServerAwykenDataService(
             ? StudentProfile.Empty
             : new StudentProfile(profile.FullName, profile.DisplayName, profile.StudentEmail,
                 profile.StudentNumber, profile.College, profile.Program, profile.YearLevel,
-                profile.Section, profile.AcademicTerm);
+                profile.Section, profile.AcademicTerm, profile.StudentAddress, profile.Guardian,
+                profile.Gender, profile.DateOfBirth);
         var commute = profile is null
             ? CommuteLocationSettings.Empty
             : new CommuteLocationSettings(profile.HomeAddress, profile.HomeLatitude, profile.HomeLongitude,
@@ -309,6 +359,10 @@ public sealed class SqlServerAwykenDataService(
         profile.YearLevel = student.YearLevel ?? profile.YearLevel;
         profile.Section = student.Section ?? profile.Section;
         profile.AcademicTerm = student.AcademicTerm ?? profile.AcademicTerm;
+        profile.StudentAddress = student.Address ?? profile.StudentAddress;
+        profile.Guardian = student.Guardian ?? profile.Guardian;
+        profile.Gender = student.Gender ?? profile.Gender;
+        profile.DateOfBirth = student.DateOfBirth ?? profile.DateOfBirth;
         if (string.IsNullOrWhiteSpace(profile.DisplayName))
             profile.DisplayName = student.FirstName ?? student.FullName;
 
@@ -375,15 +429,20 @@ public sealed class SqlServerAwykenDataService(
         var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
         var imported = items.ToList();
 
+        // Importing a COR replaces the complete saved timetable for this profile.
+        // The deletes and inserts are queued together and applied by one SaveChangesAsync
+        // call, which EF sends inside a single transaction. An explicit BeginTransaction
+        // would be rejected by the retrying execution strategy configured in AddAwykenData.
+        var currentSchedule = await db.Schedule
+            .Where(row => row.ProfileId == profileId)
+            .ToListAsync(cancellationToken);
+        db.Schedule.RemoveRange(currentSchedule);
+
         foreach (var item in imported)
         {
-            var existing = await db.Schedule.FirstOrDefaultAsync(row =>
-                row.ProfileId == profileId && row.CourseCode == item.CourseCode
-                && row.Title == item.Title && row.Section == item.Section,
-                cancellationToken);
             var start = CombineDateAndTimeOrDefault(referenceDate, item.StartTime);
             var end = CombineDateAndTimeOrDefault(referenceDate, item.EndTime, start);
-            var record = existing ?? new ScheduleRecord
+            var record = new ScheduleRecord
             {
                 ProfileId = profileId,
                 StartsAt = start,
@@ -410,8 +469,7 @@ public sealed class SqlServerAwykenDataService(
             record.Days = NormalizeDays(item.Days);
             record.MeetingTimes = item.MeetingTimes;
             record.MeetingLink = item.Link;
-            if (existing is null)
-                db.Schedule.Add(record);
+            db.Schedule.Add(record);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -505,6 +563,17 @@ public sealed class SqlServerAwykenDataService(
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ScheduleItem>> GetAllScheduleItemsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var rows = await db.Schedule.AsNoTracking().Where(row => row.ProfileId == profileId)
+            .OrderBy(row => row.StartsAt).ToListAsync(cancellationToken);
+        return rows.Select(ToScheduleItem).ToList();
+    }
+
     public async Task<CourseNoteRecord?> GetCourseNoteAsync(string scheduleId, DateOnly classDate,
         CancellationToken cancellationToken = default)
     {
@@ -535,6 +604,46 @@ public sealed class SqlServerAwykenDataService(
         note.AttendanceStatus = attendanceStatus;
         note.ImageData = imageData;
         note.ImageContentType = imageContentType;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<StudentIncentiveRecord>> GetStudentIncentivesAsync(
+        int scheduleRecordId, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        return await db.StudentIncentives.AsNoTracking()
+            .Where(item => item.ProfileId == profileId && item.ScheduleRecordId == scheduleRecordId)
+            .OrderByDescending(item => item.CreatedAt).ToListAsync(cancellationToken);
+    }
+
+    public async Task AddStudentIncentiveAsync(int scheduleRecordId, string teacherPin, int points,
+        string reason, CancellationToken cancellationToken = default)
+    {
+        if (!await ValidateTeacherPinAsync(teacherPin, cancellationToken))
+            throw new UnauthorizedAccessException("The teacher password is incorrect.");
+        if (points < 1 || points > 1000)
+            throw new ArgumentOutOfRangeException(nameof(points), "Points must be between 1 and 1000.");
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 300)
+            throw new ArgumentException("Enter a reason of up to 300 characters.", nameof(reason));
+
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var schedule = await db.Schedule.AsNoTracking().SingleOrDefaultAsync(
+            row => row.Id == scheduleRecordId && row.ProfileId == profileId, cancellationToken)
+            ?? throw new InvalidOperationException("That subject is no longer on this COR.");
+        db.StudentIncentives.Add(new StudentIncentiveRecord
+        {
+            ProfileId = profileId,
+            ScheduleRecordId = schedule.Id,
+            CourseCode = schedule.CourseCode,
+            CourseTitle = schedule.Title,
+            Points = points,
+            Reason = reason.Trim(),
+            CreatedAt = DateTime.UtcNow
+        });
         await db.SaveChangesAsync(cancellationToken);
     }
 

@@ -13,6 +13,7 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
     public DbSet<UserProfileRecord> Profiles => Set<UserProfileRecord>();
     public DbSet<ScheduleRecord> Schedule => Set<ScheduleRecord>();
     public DbSet<CourseNoteRecord> Courses => Set<CourseNoteRecord>();
+    public DbSet<StudentIncentiveRecord> StudentIncentives => Set<StudentIncentiveRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,6 +27,7 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             // default case-insensitive collation, so no per-column collation is needed.
             entity.Property(profile => profile.Email).HasMaxLength(200);
             entity.Property(profile => profile.PasswordHash).HasMaxLength(300);
+            entity.Property(profile => profile.TeacherPinHash).HasMaxLength(300);
             entity.Property(profile => profile.FullName).HasMaxLength(150);
             entity.Property(profile => profile.StudentEmail).HasMaxLength(200);
             entity.Property(profile => profile.StudentNumber).HasMaxLength(30);
@@ -34,6 +36,10 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(profile => profile.YearLevel).HasMaxLength(40);
             entity.Property(profile => profile.Section).HasMaxLength(80);
             entity.Property(profile => profile.AcademicTerm).HasMaxLength(80);
+            entity.Property(profile => profile.StudentAddress).HasMaxLength(300);
+            entity.Property(profile => profile.Guardian).HasMaxLength(150);
+            entity.Property(profile => profile.Gender).HasMaxLength(40);
+            entity.Property(profile => profile.DateOfBirth).HasMaxLength(40);
             entity.Property(profile => profile.HomeAddress).HasMaxLength(300);
             entity.Property(profile => profile.SchoolAddress).HasMaxLength(300);
             // One row per email, while the anonymous Guest profile keeps a null email.
@@ -87,6 +93,21 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.HasOne<UserProfileRecord>().WithMany().HasForeignKey(note => note.ProfileId)
                 .OnDelete(DeleteBehavior.NoAction);
             entity.HasOne<ScheduleRecord>().WithMany().HasForeignKey(note => note.ScheduleRecordId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StudentIncentiveRecord>(entity =>
+        {
+            entity.ToTable("StudentIncentives");
+            entity.Property(item => item.CourseCode).HasMaxLength(40).IsRequired();
+            entity.Property(item => item.CourseTitle).HasMaxLength(180).IsRequired();
+            entity.Property(item => item.Reason).HasMaxLength(300).IsRequired();
+            entity.HasIndex(item => new { item.ProfileId, item.ScheduleRecordId, item.CreatedAt });
+            // Same SQL Server restriction as Courses: only one cascade path may reach this
+            // table, so the profile key is NO ACTION and the schedule key cascades.
+            entity.HasOne<UserProfileRecord>().WithMany().HasForeignKey(item => item.ProfileId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<ScheduleRecord>().WithMany().HasForeignKey(item => item.ScheduleRecordId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

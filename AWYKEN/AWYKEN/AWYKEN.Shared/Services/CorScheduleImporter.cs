@@ -46,6 +46,23 @@ public sealed class CorScheduleImporter
                 foreach (var page in pages)
                 {
                     profile ??= CorProfileParser.Parse(page.Text);
+                    if (profile is not { Email: not null })
+                    {
+                        foreach (var image in page.GetImages())
+                        {
+                            try
+                            {
+                                var imageBytes = image.TryGetPng(out var png) ? png : image.RawBytes.ToArray();
+                                if (imageBytes.Length == 0) continue;
+                                profile = ReadImageProfile(imageBytes);
+                                if (profile is { Email: not null }) break;
+                            }
+                            catch (Exception exception) when (exception is not OperationCanceledException)
+                            {
+                                // Keep profile OCR independent from schedule row parsing.
+                            }
+                        }
+                    }
                     var pageClasses = ParseTableRows(GetPdfWords(page), page.Width);
                     if (pageClasses.Count == 0)
                         pageClasses = ParseClasses(page.Text);
@@ -76,6 +93,7 @@ public sealed class CorScheduleImporter
             }
             else
             {
+                profile = ReadImageProfile(bytes);
                 classes = ReadImageClasses(bytes);
             }
 
@@ -108,6 +126,32 @@ public sealed class CorScheduleImporter
         engine.SetVariable("user_defined_dpi", 300);
         using var image = Pix.LoadFromMemory(bytes);
         return ReadImageClasses(engine, image);
+    }
+
+    private static StudentProfile? ReadImageProfile(byte[] bytes)
+    {
+        var tessdata = Path.Combine(AppContext.BaseDirectory, "tessdata");
+        if (!File.Exists(Path.Combine(tessdata, "eng.traineddata")))
+            return null;
+        try
+        {
+            using var engine = new TesseractEngine(tessdata, "eng", EngineMode.LstmOnly);
+            engine.SetVariable("preserve_interword_spaces", true);
+            engine.SetVariable("user_defined_dpi", 300);
+            using var image = Pix.LoadFromMemory(bytes);
+            foreach (var mode in new[] { PageSegMode.SparseText, PageSegMode.Auto, PageSegMode.SingleBlock })
+            {
+                using var page = engine.Process(image, mode);
+                var profile = CorProfileParser.Parse(page.GetText());
+                if (profile is { Email: not null } or { StudentNumber: not null })
+                    return profile;
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Profile OCR runs independently from class-table extraction.
+        }
+        return null;
     }
 
     private static List<ScheduleItem> ReadImageClasses(TesseractEngine engine, Pix image)

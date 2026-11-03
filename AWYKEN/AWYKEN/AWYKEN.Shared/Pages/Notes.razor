@@ -1,5 +1,6 @@
 @page "/notes"
 @using AWYKEN.Shared.Data
+@using AWYKEN.Shared.Services
 @inject IAwykenDataService Data
 @inject NavigationManager Navigation
 
@@ -12,88 +13,113 @@
                 <div class="brand-mark" role="img" aria-label="AWYKEN logo">
                     <img src="_content/AWYKEN.Shared/images/icon/awyken-logo-transparent-cut.png" alt="" />
                 </div>
-                <div><h1>Notes</h1><p>Notes by course and class date</p></div>
+                <div><h1>Notes</h1><p>Your saved notes by subject</p></div>
             </header>
 
-            @if (CourseNotes.Count == 0)
+            @if (SelectedCourseCode is null)
             {
-                <section class="notes-empty">
-                    <h2>Your course notes will appear here</h2>
-                    <p>Open a class in Schedule, choose Notes, and save a note for that date.</p>
-                    <button type="button" @onclick='() => Navigation.NavigateTo("/schedule")'>Open Schedule</button>
+                <section class="notes-subjects" aria-label="Subjects with saved notes">
+                    @if (CourseNotes.Count == 0)
+                    {
+                        <section class="notes-empty">
+                            <h2>No saved notes yet</h2>
+                            <p>Subjects will appear here after you save notes from a class in the Schedule week view.</p>
+                            <button type="button" @onclick='() => Navigation.NavigateTo("/schedule")'>Open Schedule</button>
+                        </section>
+                    }
+                    else
+                    {
+                        <div class="notes-subject-list">
+                            @foreach (var group in CourseNotes.GroupBy(note => new { note.CourseCode, note.CourseTitle }))
+                            {
+                                var latest = group.OrderByDescending(note => note.ClassDate).First();
+                                <button type="button" class="event-card notes-subject-card"
+                                        style="--event-accent:@GetSubjectColor(group.Key.CourseCode)"
+                                        @onclick="() => SelectCourse(group.Key.CourseCode, group.Key.CourseTitle)">
+                                    <span class="event-main">
+                                        <span class="event-course-code">@group.Key.CourseCode</span>
+                                        <span class="notes-subject-title">@group.Key.CourseTitle</span>
+                                        <span class="event-details">
+                                            <span>@group.Count() @(group.Count() == 1 ? "saved note" : "saved notes")</span>
+                                            <span>Latest: @latest.ClassDate.ToString("MMM d, yyyy")</span>
+                                        </span>
+                                    </span>
+                                    <span class="notes-subject-chevron" aria-hidden="true">›</span>
+                                </button>
+                            }
+                        </div>
+                    }
                 </section>
             }
             else
             {
-                @foreach (var group in CourseNotes.GroupBy(note => new { note.CourseCode, note.CourseTitle }))
-                {
-                    <section class="notes-course-group" aria-label="@($"{group.Key.CourseCode} notes")">
-                        <h2>@group.Key.CourseCode <span>@group.Key.CourseTitle</span></h2>
-                        @foreach (var note in group.OrderByDescending(item => item.ClassDate))
+                <section class="notes-course-group" aria-label="@($"{SelectedCourseCode} notes")">
+                    <button type="button" class="notes-back-link" @onclick="ClearSelectedCourse">‹ All subjects</button>
+                    <h2>@SelectedCourseCode <span>@SelectedCourseTitle</span></h2>
+                    @foreach (var note in SelectedCourseNotes)
+                    {
+                        <article class="course-note-card" @key="note.Id">
+                            <div class="course-note-meta">
+                                <time>@note.ClassDate.ToString("ddd, MMM d, yyyy")</time>
+                                <span>Schedule: @note.ClassTimeText</span>
+                                @if (!string.IsNullOrWhiteSpace(note.AttendanceStatus))
+                                {
+                                    <span class="course-note-attendance">@note.AttendanceStatus</span>
+                                }
+                            </div>
+                            @if (EditingNoteId == note.Id)
+                            {
+                                <div class="course-note-editor">
+                                    <label>Notes</label>
+                                    <textarea @bind="EditText" rows="5"></textarea>
+                                    <label>News</label>
+                                    <textarea @bind="EditNews" rows="3" placeholder="News for this class date"></textarea>
+                                    <fieldset>
+                                        <legend>Attendance</legend>
+                                        @foreach (var status in AttendanceStatuses)
                         {
-                            <article class="course-note-card" @key="note.Id">
-                                <div class="course-note-meta">
-                                    <time>@note.ClassDate.ToString("ddd, MMM d, yyyy")</time>
-                                    <span>Schedule: @note.ClassTimeText</span>
-                                    @if (!string.IsNullOrWhiteSpace(note.AttendanceStatus))
-                                    {
-                                        <span class="course-note-attendance">@note.AttendanceStatus</span>
-                                    }
-                                </div>
-                                @if (EditingNoteId == note.Id)
-                                {
-                                    <div class="course-note-editor">
-                                        <label>Notes</label>
-                                        <textarea @bind="EditText" rows="5"></textarea>
-                                        <label>News</label>
-                                        <textarea @bind="EditNews" rows="3" placeholder="News for this class date"></textarea>
-                                        <fieldset>
-                                            <legend>Attendance</legend>
-                                            @foreach (var status in AttendanceStatuses)
-                                            {
-                                                <label class="note-attendance-choice">
-                                                    <input type="radio" name="noteAttendance" value="@status"
-                                                           checked="@(EditAttendance == status)"
-                                                           @onchange="() => EditAttendance = status" /> @status
-                                                </label>
-                                            }
-                                        </fieldset>
-                                        <label>Image</label>
-                                        <Microsoft.AspNetCore.Components.Forms.InputFile accept="image/*" OnChange="LoadEditImageAsync" />
-                                        @if (EditImageData is not null && EditImageContentType is not null)
-                                        {
-                                            <img class="course-note-image" src="@EditImagePreview" alt="Attached note" />
-                                            <button type="button" class="note-edit-link" @onclick="RemoveEditImage">Remove image</button>
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(EditError)) { <p class="note-edit-error">@EditError</p> }
-                                        <div class="course-note-edit-actions">
-                                            <button type="button" @onclick="() => SaveEditAsync(note.Id)">Save changes</button>
-                                            <button type="button" @onclick="CancelEdit">Cancel</button>
-                                        </div>
-                                    </div>
-                                }
-                                else
-                                {
-                                    @if (!string.IsNullOrWhiteSpace(note.Text))
-                                    {
-                                        <p class="course-note-text">@note.Text</p>
-                                    }
-                                    @if (!string.IsNullOrWhiteSpace(note.News))
-                                    {
-                                        <section class="course-note-news"><h3>News</h3><p>@note.News</p></section>
-                                    }
-                                    @if (note.ImageData is not null && !string.IsNullOrWhiteSpace(note.ImageContentType))
-                                    {
-                                        <img class="course-note-image"
-                                             src="@($"data:{note.ImageContentType};base64,{Convert.ToBase64String(note.ImageData)}")"
-                                             alt="Image attached to course note" />
-                                    }
-                                    <button type="button" class="note-edit-link" @onclick="() => OpenEdit(note)">Edit this day</button>
-                                }
-                            </article>
+                                            <label class="note-attendance-choice">
+                                                <input type="radio" name="noteAttendance" value="@status"
+                                                       checked="@(EditAttendance == status)"
+                                                       @onchange="() => EditAttendance = status" /> @status
+                                            </label>
                         }
-                    </section>
-                }
+                                    </fieldset>
+                                    <label>Image</label>
+                                    <Microsoft.AspNetCore.Components.Forms.InputFile accept="image/*" OnChange="LoadEditImageAsync" />
+                                    @if (EditImageData is not null && EditImageContentType is not null)
+                                    {
+                                        <img class="course-note-image" src="@EditImagePreview" alt="Attached note" />
+                                        <button type="button" class="note-edit-link" @onclick="RemoveEditImage">Remove image</button>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(EditError)) { <p class="note-edit-error">@EditError</p> }
+                                    <div class="course-note-edit-actions">
+                                        <button type="button" @onclick="() => SaveEditAsync(note.Id)">Save changes</button>
+                                        <button type="button" @onclick="CancelEdit">Cancel</button>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                @if (!string.IsNullOrWhiteSpace(note.Text))
+                                {
+                                    <p class="course-note-text">@note.Text</p>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(note.News))
+                                {
+                                    <section class="course-note-news"><h3>News</h3><p>@note.News</p></section>
+                                }
+                                @if (note.ImageData is not null && !string.IsNullOrWhiteSpace(note.ImageContentType))
+                                {
+                                    <img class="course-note-image"
+                                         src="@($"data:{note.ImageContentType};base64,{Convert.ToBase64String(note.ImageData)}")"
+                                         alt="Image attached to course note" />
+                                }
+                                <button type="button" class="note-edit-link" @onclick="() => OpenEdit(note)">Edit this day</button>
+                            }
+                        </article>
+                    }
+                </section>
             }
         </div>
     </main>
@@ -111,6 +137,11 @@
     private IReadOnlyList<CourseNoteRecord> CourseNotes = [];
     private static readonly string[] AttendanceStatuses = ["Present", "Absent", "Asynchronous"];
     private int? EditingNoteId;
+    private string? SelectedCourseCode;
+    private string? SelectedCourseTitle;
+    private IEnumerable<CourseNoteRecord> SelectedCourseNotes => CourseNotes
+        .Where(note => note.CourseCode == SelectedCourseCode && note.CourseTitle == SelectedCourseTitle)
+        .OrderByDescending(note => note.ClassDate);
     private string EditText = "";
     private string EditNews = "";
     private string EditCreatedAt = "";
@@ -121,7 +152,33 @@
     private string? EditImagePreview => EditImageData is not null && EditImageContentType is not null
         ? $"data:{EditImageContentType};base64,{Convert.ToBase64String(EditImageData)}" : null;
 
-    protected override async Task OnInitializedAsync() => CourseNotes = await Data.GetCourseNotesAsync();
+    protected override async Task OnInitializedAsync() => await LoadCourseNotesAsync();
+
+    private async Task LoadCourseNotesAsync() => CourseNotes = (await Data.GetCourseNotesAsync())
+        .Where(note => !string.IsNullOrWhiteSpace(note.Text)
+            || !string.IsNullOrWhiteSpace(note.News)
+            || note.ImageData is not null)
+        .ToList();
+
+    private void SelectCourse(string courseCode, string courseTitle)
+    {
+        SelectedCourseCode = courseCode;
+        SelectedCourseTitle = courseTitle;
+        EditingNoteId = null;
+    }
+
+    private void ClearSelectedCourse()
+    {
+        SelectedCourseCode = null;
+        SelectedCourseTitle = null;
+        EditingNoteId = null;
+    }
+
+    private static string GetSubjectColor(string courseCode)
+    {
+        var paletteIndex = 1 + courseCode.ToUpperInvariant().Sum(character => character) % 10;
+        return ScheduleColorPalette.ForRecordId(paletteIndex);
+    }
 
     private void OpenEdit(CourseNoteRecord note)
     {
@@ -141,7 +198,9 @@
         {
             await Data.UpdateCourseNoteAsync(noteId, EditText, EditNews, EditCreatedAt,
                 EditAttendance, EditImageData, EditImageContentType);
-            CourseNotes = await Data.GetCourseNotesAsync();
+            await LoadCourseNotesAsync();
+            if (SelectedCourseCode is not null && !SelectedCourseNotes.Any())
+                ClearSelectedCourse();
             CancelEdit();
         }
         catch (Exception exception) { EditError = exception.Message; }

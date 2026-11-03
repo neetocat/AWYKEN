@@ -1,6 +1,6 @@
-.notes-app-shell { min-height: 100dvh; background: #f5f7fb; color: #0c1230; }
-.notes-scroll { min-height: 100dvh; overflow-y: auto; padding-bottom: 94px; }
-.notes-page { max-width: 720px; margin: 0 auto; padding: 18px 18px 30px; }
+.notes-app-shell { display:flex; flex-direction:column; width:100%; height:100dvh; min-height:0; overflow:hidden; background:var(--page, #f5f7fb); color:#0c1230; }
+.notes-scroll { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+.notes-page { width:100%; max-width:760px; margin:0 auto; padding:max(24px, env(safe-area-inset-top)) 20px 28px; }
 .notes-header { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid #dce2ee; }
 .notes-header h1 { margin: 0; font-size: 20px; }
 .notes-header p { margin: 3px 0 0; color: #75809a; font-size: 13px; }
@@ -8,7 +8,15 @@
 .notes-empty h2 { margin: 0 0 8px; font-size: 18px; }
 .notes-empty p { color: #69748d; }
 .notes-empty button { border: 0; border-radius: 10px; padding: 11px 16px; background: #080d3f; color: white; font-weight: 700; }
-.notes-course-group { margin-top: 22px; }
+.notes-subjects { margin-top: 22px; }
+.notes-subject-list { display: flex; flex-direction: column; gap: 14px; }
+.notes-subject-card { width: 100%; min-height: 100px; text-align: left; font: inherit; color: #0a102b; cursor: pointer; }
+.notes-subject-card .event-main { display: block; }
+.notes-subject-title { display: block; margin: 0 0 12px; color: #0a102b; font-size: 13px; font-weight: 800; line-height: 1.25; }
+.notes-subject-card .event-details { display: flex; flex-wrap: wrap; }
+.notes-subject-chevron { flex: 0 0 auto; align-self: center; color: #758096; font-size: 24px; }
+.notes-back-link { margin: 0 0 12px; padding: 0; border: 0; background: transparent; color: #304db5; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.notes-course-group { margin-top: 14px; }
 .notes-course-group > h2 { margin: 0 0 10px; font-size: 15px; }
 .notes-course-group > h2 span { display: block; margin-top: 3px; color: #737e97; font-size: 13px; font-weight: 500; }
 .course-note-card { margin-bottom: 10px; padding: 15px; border: 1px solid #dce2ee; border-radius: 15px; background: white; }
@@ -31,3 +39,15 @@
 .course-note-edit-actions button + button { background: #e9edf5; color: #26324c; }
 .note-edit-error { margin: 0; color: #a00000; font-size: 12px; }
 .notes-app-shell .schedule-bottom-nav .current { color: #080d3f; }
+
+@media (min-width:700px) {
+    .notes-page { padding-right:28px; padding-left:28px; }
+}
+
+@media (max-width:360px) {
+    .notes-page { padding-right:16px; padding-left:16px; }
+}
+
+@media (min-width:700px) {
+    .notes-subject-card .notes-subject-title { font-size: 14px; }
+}

@@ -10,6 +10,7 @@ public sealed class UserProfileRecord
     public string? DisplayName { get; set; }
     public string? Email { get; set; }
     public string? PasswordHash { get; set; }
+    public string? TeacherPinHash { get; set; }
     public string? FullName { get; set; }
     public string? StudentEmail { get; set; }
     public string? StudentNumber { get; set; }
@@ -18,6 +19,10 @@ public sealed class UserProfileRecord
     public string? YearLevel { get; set; }
     public string? Section { get; set; }
     public string? AcademicTerm { get; set; }
+    public string? StudentAddress { get; set; }
+    public string? Guardian { get; set; }
+    public string? Gender { get; set; }
+    public string? DateOfBirth { get; set; }
     // Store both user-entered addresses and resolved coordinates to avoid repeat lookups.
     public string? HomeAddress { get; set; }
     public double? HomeLatitude { get; set; }

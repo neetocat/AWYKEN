@@ -11,8 +11,6 @@ public static class CorProfileParser
         "Name", "Student No.", "Address", "Gender", "Guardian", "Date of Birth"
     ];
 
-    private static readonly string LabelAlternation = string.Join("|", Labels.Select(Regex.Escape));
-
     private static readonly HashSet<string> SmallWords =
         new(StringComparer.OrdinalIgnoreCase) { "of", "in", "and", "the", "for", "at" };
 
@@ -28,27 +26,60 @@ public static class CorProfileParser
         var (fullName, firstName) = ParseName(Read(header, "Name"));
         var studentNumber = Read(header, "Student No.")?.ToUpperInvariant();
         var program = TitleCase(Read(header, "Program/Major"));
-        if (fullName is null && studentNumber is null && program is null)
+        var email = Read(header, "UMak Email")?.Replace(" ", "").ToLowerInvariant();
+        if (fullName is null && studentNumber is null && program is null && email is null)
             return null;
 
         return new StudentProfile(
             fullName,
             firstName,
-            Read(header, "UMak Email")?.Replace(" ", "").ToLowerInvariant(),
+            email,
             studentNumber,
             TitleCase(Read(header, "College")),
             program,
             TitleCase(Read(header, "Year Level")),
             null,
-            Read(header, "Academic Year & Semester"));
+            Read(header, "Academic Year & Semester"),
+            Read(header, "Address"),
+            TitleCase(Read(header, "Guardian")),
+            TitleCase(Read(header, "Gender")),
+            NormalizeDate(Read(header, "Date of Birth")));
     }
 
     private static string? Read(string header, string label)
     {
-        var pattern = $@"(?<![A-Za-z]){Regex.Escape(label)}\s+(?<value>.+?)(?=\s(?:{LabelAlternation})(?![A-Za-z])|$)";
-        var match = Regex.Match(header, pattern);
-        var value = match.Success ? match.Groups["value"].Value.Trim() : null;
+        // PdfPig may join adjacent PDF text boxes without inserting spaces,
+        // producing strings such as "UMak Emailjescriba@umak.edu.ph".
+        var labelMatch = Regex.Match(header, Regex.Escape(label), RegexOptions.IgnoreCase);
+        if (!labelMatch.Success)
+            return null;
+
+        var valueStart = labelMatch.Index + labelMatch.Length;
+        while (valueStart < header.Length && (char.IsWhiteSpace(header[valueStart]) || header[valueStart] == ':'))
+            valueStart++;
+
+        var valueEnd = header.Length;
+        foreach (var nextLabel in Labels)
+        {
+            if (nextLabel.Equals(label, StringComparison.OrdinalIgnoreCase))
+                continue;
+            var nextIndex = header.IndexOf(nextLabel, valueStart, StringComparison.OrdinalIgnoreCase);
+            if (nextIndex >= 0 && nextIndex < valueEnd)
+                valueEnd = nextIndex;
+        }
+
+        var value = header[valueStart..valueEnd].Trim();
         return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private static string? NormalizeDate(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        var cleaned = Regex.Replace(value, @"\s+", " ").Trim();
+        return DateTime.TryParse(cleaned, out var date)
+            ? date.ToString("MMMM d, yyyy", System.Globalization.CultureInfo.InvariantCulture)
+            : cleaned;
     }
 
     private static (string? Full, string? First) ParseName(string? raw)
@@ -64,16 +95,16 @@ public static class CorProfileParser
         }
 
         var last = TitleCase(parts[0]);
-        var given = parts[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var first = TitleCase(given.Length > 1 ? string.Join(' ', given[..^1]) : given[0]);
-        var middleInitial = given.Length > 1 ? $" {char.ToUpperInvariant(given[^1][0])}." : "";
-        return ($"{first}{middleInitial} {last}", first);
+        var given = TitleCase(parts[1]);
+        var first = given?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        return ($"{given} {last}", first);
     }
 
     private static string? TitleCase(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return null;
+        value = Regex.Replace(value, "INFORMATION\\s*SCIENCES", "INFORMATION SCIENCES", RegexOptions.IgnoreCase);
         var words = value.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return string.Join(' ', words.Select((word, index) =>
             index > 0 && SmallWords.Contains(word) ? word : char.ToUpperInvariant(word[0]) + word[1..]));

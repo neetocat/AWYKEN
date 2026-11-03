@@ -58,7 +58,7 @@
                 {
                     <button class="row-action"
                             aria-label="Log in or sign up"
-                            @onclick="OpenAccountCard"
+                            @onclick="OpenLoginCard"
                             @onclick:stopPropagation="true">
                         ♢
                     </button>
@@ -91,6 +91,19 @@
                         <small>Scan or upload a document</small>
                     </span>
 
+                    <span class="row-chevron">@Icon("chevron")</span>
+                </button>
+            </section>
+
+            <section class="settings-section">
+                <h2>STUDENT INCENTIVES
+                </h2>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/student-records")'>
+                    <span class="row-icon">@Icon("info")</span>
+                    <span class="row-copy">
+                        <strong>Student records</strong>
+                        <small>Subjects and teacher-awarded points</small>
+                    </span>
                     <span class="row-chevron">@Icon("chevron")</span>
                 </button>
             </section>
@@ -689,8 +702,16 @@
     private void OpenAccountCard()
     {
         if (Data.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/profile");
             return;
+        }
 
+        OpenLoginCard();
+    }
+
+    private void OpenLoginCard()
+    {
         ShowAccountCard = true;
         AccountError = null;
     }

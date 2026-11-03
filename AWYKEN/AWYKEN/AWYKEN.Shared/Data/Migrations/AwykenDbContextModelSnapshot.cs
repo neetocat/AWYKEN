@@ -175,6 +175,50 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.ToTable("Schedule", (string)null);
                 });
 
+            modelBuilder.Entity("AWYKEN.Shared.Data.StudentIncentiveRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CourseCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("CourseTitle")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProfileId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("ScheduleRecordId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScheduleRecordId");
+
+                    b.HasIndex("ProfileId", "ScheduleRecordId", "CreatedAt");
+
+                    b.ToTable("StudentIncentives", (string)null);
+                });
+
             modelBuilder.Entity("AWYKEN.Shared.Data.UserProfileRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -191,6 +235,10 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("DateOfBirth")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<string>("DisplayName")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -200,6 +248,14 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("FullName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Guardian")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
@@ -235,6 +291,10 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
 
+                    b.Property<string>("StudentAddress")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
                     b.Property<string>("StudentEmail")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -242,6 +302,10 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.Property<string>("StudentNumber")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("TeacherPinHash")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("YearLevel")
                         .HasMaxLength(40)
@@ -276,6 +340,21 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.HasOne("AWYKEN.Shared.Data.UserProfileRecord", null)
                         .WithMany()
                         .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AWYKEN.Shared.Data.StudentIncentiveRecord", b =>
+                {
+                    b.HasOne("AWYKEN.Shared.Data.UserProfileRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ProfileId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("AWYKEN.Shared.Data.ScheduleRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ScheduleRecordId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

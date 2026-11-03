@@ -22,6 +22,7 @@ builder.Services.AddSingleton(_ =>
 });
 builder.Services.AddSingleton<ICommuteMapService, OpenStreetMapCommuteService>();
 builder.Services.AddSingleton<ICurrentWeatherService, OpenMeteoWeatherService>();
+builder.Services.AddSingleton<IUmakCalendarService, UmakCalendarService>();
 
 // Azure SQL Database replaces the old local file database. Keys come from appsettings,
 // user secrets, environment variables, or the repository's .env file (ignored by Git).
