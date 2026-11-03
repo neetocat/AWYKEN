@@ -12,26 +12,28 @@ which is now implemented by `SqlServerAwykenDataService`.
 | `Microsoft.EntityFrameworkCore.Sqlite` | `Microsoft.EntityFrameworkCore.SqlServer` |
 | `SqliteAwykenDataService` | `SqlServerAwykenDataService` |
 | `options.UseSqlite("Data Source=...\awyken.db")` | `options.UseSqlServer(<connection from .env>)` |
-| SQLite migrations (`InitialSqlite`, ...) | One `InitialAzureSql` SQL Server migration |
+| SQLite migrations (`InitialSqlite`, ...) | SQL Server migrations: `InitialAzureSql`, then `AddTeacherPinAndStudentIncentives` |
 | Secrets: none | Secrets: `.env` (Git-ignored), `.env.example` documents the keys |
 
 ---
 
 ## 1. What data moves to the cloud
 
-The EF model is unchanged, so the same three tables and the same rows move:
+The EF model is unchanged, so the same tables and the same rows move:
 
 | Table | EF entity | What a row represents |
 | --- | --- | --- |
-| `Profiles` | `UserProfileRecord` | One account (or the anonymous **Guest** row with a `NULL` email) plus the student details parsed from a COR and the saved commute endpoints. |
+| `Profiles` | `UserProfileRecord` | One account (or the anonymous **Guest** row with a `NULL` email) plus the student details parsed from a COR, the teacher PIN hash, and the saved commute endpoints. |
 | `Schedule` | `ScheduleRecord` | One class: start/end, course code, title, room or link, instructor, mode, colour, units, `Days` (`\|Mon\|Wed\|` for recurring classes, `NULL` for a one-time class), attendance status. |
 | `Courses` | `CourseNoteRecord` | One note for **one class on one date**, including news, attendance, and an optional image (`varbinary(max)`), unique per `(ProfileId, ScheduleRecordId, ClassDate)`. |
+| `StudentIncentives` | `StudentIncentiveRecord` | One teacher-awarded incentive: points, reason, and the class it belongs to. |
 
 Every row is scoped by `ProfileId`. Deletes cascade down a single chain: `Profiles` →
-`Schedule` → `Courses`. `Courses.ProfileId` is deliberately `NO ACTION` because SQL Server
-rejects a table that can be reached by two cascade paths (error 1785), even though SQLite
-allowed it. Deleting a class still deletes its notes, and deleting a profile still removes
-everything through the `Schedule` rows.
+`Schedule` → `Courses` / `StudentIncentives`. `Courses.ProfileId` and
+`StudentIncentives.ProfileId` are deliberately `NO ACTION` because SQL Server rejects a
+table that can be reached by two cascade paths (error 1785), even though SQLite allowed
+it. Deleting a class still deletes its notes and incentives, and deleting a profile still
+removes everything through the `Schedule` rows.
 
 The SQL Server migration adds the same indexes the SQLite schema had, including the
 filtered unique index `IX_Profiles_Email` (`WHERE [Email] IS NOT NULL`) so the Guest row
