@@ -47,23 +47,14 @@ migration creates `AcademicTerm` correctly.
 
 ## 2. Create the server and database
 
-Using the Azure CLI:
+Using the Azure CLI (single-line commands: they work in both PowerShell and bash; `\`
+line continuations are bash-only and break in PowerShell):
 
 ```bash
-az sql server create \
-  --resource-group AWYKEN \
-  --name awyken-sql \
-  --location southeastasia \
-  --admin-user awykenadmin \
-  --admin-password "<a strong password>"
+az sql server create --resource-group AWYKEN --name awyken-sql --location southeastasia --admin-user awykenadmin --admin-password "<a strong password>"
 
 # A cheap tier is fine for a student project; General Purpose serverless scales to zero.
-az sql db create \
-  --resource-group AWYKEN \
-  --server awyken-sql \
-  --name awyken \
-  --service-objective GP_S_Gen5_2 \
-  --backup-storage-redundancy Local
+az sql db create --resource-group AWYKEN --server awyken-sql --name awyken --service-objective GP_S_Gen5_2 --backup-storage-redundancy Local
 ```
 
 Or in the portal: **Create a resource → Azure SQL → Create** (Database + server), then
@@ -78,13 +69,14 @@ Azure SQL refuses connections from unknown IP addresses, which matters for a mob
 that changes networks:
 
 ```bash
-# The machine running the Web host / MAUI emulator:
-az sql server firewall-rule create -g AWYKEN -s awyken-sql \
-  -n MyLaptop --start-ip-address <your public IP> --end-ip-address <your public IP>
+# The machine running the Web host / MAUI emulator (public IP from https://ifconfig.me):
+az sql server firewall-rule create -g AWYKEN -s awyken-sql -n MyLaptop --start-ip-address <your public IP> --end-ip-address <your public IP>
 
 # Temporary: allow all Azure-hosted resources (App Service, Container Apps, ...)
-az sql server firewall-rule create -g AWYKEN -s awyken-sql \
-  -n AllowAzure --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
+az sql server firewall-rule create -g AWYKEN -s awyken-sql -n AllowAzure --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
+
+# Confirm what is allowed:
+az sql server firewall-rule list -g AWYKEN -s awyken-sql -o table
 ```
 
 A phone on mobile data has its own public IP, so either add that IP, or (recommended for
@@ -299,8 +291,8 @@ curl ifconfig.me        # or open https://ifconfig.me in a browser
 and sends the owner the address, who adds it:
 
 ```bash
-az sql server firewall-rule create -g AWYKEN -s awyken-sql \
-  -n teammate-<name> --start-ip-address <their IP> --end-ip-address <their IP>
+# One line: works in PowerShell and bash alike.
+az sql server firewall-rule create -g AWYKEN -s awyken-sql -n teammate-<name> --start-ip-address <their IP> --end-ip-address <their IP>
 ```
 
 Home and mobile IPs change, so expect to re-add a rule now and then. A phone on mobile data
