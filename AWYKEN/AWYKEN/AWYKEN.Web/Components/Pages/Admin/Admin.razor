@@ -4,6 +4,7 @@
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<AwykenDbContext> ContextFactory
 @inject AWYKEN.Shared.Data.IAwykenDataService DataService
+@inject NavigationManager Nav
 
 <PageTitle>AWYKEN Admin</PageTitle>
 <div class="admin-shell">
@@ -63,11 +64,21 @@
  private List<UserProfileRecord> students = [], recentStudents = [];
  private List<UserProfileRecord> filteredStudents => students.Where(s => string.IsNullOrWhiteSpace(searchText) || string.Join(" ", s.DisplayName, s.FullName, s.StudentNumber, s.Email, s.StudentEmail, s.Program, s.Section).Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
  private string SectionSubtitle => activeSection switch { "Dashboard" => "A clear view of AWYKEN’s academic activity and student accounts.", "Student Management" => "Search and review student account information from the live database.", "Academic Management" => "School wide subjects, classes, academic periods, and official schedules.", "School Calendar" => "Manage holidays, suspensions, examinations, and academic events.", "Announcements" => "Prepare school wide and academic announcements for students.", "Administrators" => "Manage administrator accounts and access permissions.", "Activity Logs" => "Review administrative actions and system activity.", _ => "Configure AWYKEN application settings." };
- private string PlaceholderTitle => activeSection switch { "Academic Management" => "Official academic management is not stored yet", "School Calendar" => "School calendar is not stored yet", "Announcements" => "Announcements are not stored yet", "Administrators" => "Administrator accounts are not configured", "Activity Logs" => "Activity logs are not configured", _ => "Admin settings are not configured" };
- private string PlaceholderDescription => activeSection switch { "Academic Management" => "The current schedule records are student owned. Add official subject, class, and academic period records to enable school wide management.", "School Calendar" => "Add a calendar events data source to publish holidays, suspensions, semester breaks, and examination dates.", "Announcements" => "Add announcement storage to create and schedule student notifications.", "Administrators" => "The current database does not include administrator identities or permission roles.", "Activity Logs" => "The current database does not record administrative activity.", _ => "System settings and backup controls are not available in the current database." };
- protected override async Task OnInitializedAsync() => await RefreshData();
+ private string PlaceholderTitle => activeSection switch { "Academic Management" => "Official academic management is not stored yet", "School Calendar" => "School calendar is not stored yet", "Announcements" => "Announcements are not stored yet", "Administrators" => "Administrator access", "Activity Logs" => "Activity logs are not configured", _ => "Admin settings are not configured" };
+ private string PlaceholderDescription => activeSection switch { "Academic Management" => "The current schedule records are student owned. Add official subject, class, and academic period records to enable school wide management.", "School Calendar" => "Add a calendar events data source to publish holidays, suspensions, semester breaks, and examination dates.", "Announcements" => "Add announcement storage to create and schedule student notifications.", "Administrators" => "Admin access is granted by listing an email in AWYKEN_ADMIN_EMAILS. Editing roles from this screen is not implemented yet.", "Activity Logs" => "The current database does not record administrative activity.", _ => "System settings and backup controls are not available in the current database." };
+ protected override async Task OnInitializedAsync()
+ {
+  await DataService.InitializeAsync();
+  // The role check runs on the server: a signed-in student never receives this page's data.
+  if (!await DataService.IsAdminAsync())
+  {
+   Nav.NavigateTo("/settings", replace: true);
+   return;
+  }
+  await RefreshData();
+ }
  private void Select(string section) => activeSection = section;
  private string IconFor(string section) => section switch { "Academic Management" => "▤", "School Calendar" => "▦", "Announcements" => "▱", "Administrators" => "♙", "Activity Logs" => "▤", _ => "⚙" };
  private static string Initial(string? name) => string.IsNullOrWhiteSpace(name) ? "S" : name.Trim()[0].ToString().ToUpperInvariant();
- private async Task RefreshData() { loading = true; loadError = null; try { await DataService.InitializeAsync(); await using var db = await ContextFactory.CreateDbContextAsync(); students = await db.Profiles.AsNoTracking().Where(p => p.Email != null).OrderBy(p => p.DisplayName).ToListAsync(); registeredStudents = students.Count; classes = await db.Schedule.AsNoTracking().CountAsync(); subjects = await db.Schedule.AsNoTracking().Select(s => s.CourseCode).Distinct().CountAsync(); recentStudents = students.OrderByDescending(p => p.Id).Take(4).ToList(); } catch (Exception ex) { loadError = ex.GetBaseException().Message; } finally { loading = false; } }
+ private async Task RefreshData() { loading = true; loadError = null; try { await DataService.InitializeAsync(); await using var db = await ContextFactory.CreateDbContextAsync(); students = await db.Profiles.AsNoTracking().Where(p => p.Email != null).OrderBy(p => p.DisplayName).Select(p => new UserProfileRecord { Id = p.Id, DisplayName = p.DisplayName, FullName = p.FullName, StudentNumber = p.StudentNumber, Email = p.Email, StudentEmail = p.StudentEmail, Program = p.Program, College = p.College, YearLevel = p.YearLevel, Section = p.Section }).ToListAsync(); registeredStudents = students.Count; classes = await db.Schedule.AsNoTracking().CountAsync(); subjects = await db.Schedule.AsNoTracking().Select(s => s.CourseCode).Distinct().CountAsync(); recentStudents = students.OrderByDescending(p => p.Id).Take(4).ToList(); } catch (Exception ex) { loadError = ex.GetBaseException().Message; } finally { loading = false; } }
 }

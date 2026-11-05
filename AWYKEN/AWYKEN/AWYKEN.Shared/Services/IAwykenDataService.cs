@@ -41,6 +41,4 @@ public interface IAwykenDataService
     Task<bool> ValidateTeacherPinAsync(string pin, CancellationToken cancellationToken = default);
     Task AddStudentIncentiveAsync(int scheduleRecordId, string teacherPin, int points, string reason,
         CancellationToken cancellationToken = default);
-    /// <summary>Read-only totals and account rows for the admin page.</summary>
-    Task<AdminOverview> GetAdminOverviewAsync(CancellationToken cancellationToken = default);
 }

@@ -4,6 +4,7 @@
 @inject AWYKEN.Shared.Services.DashboardState State
 @inject IAwykenDataService Data
 @inject NavigationManager Navigation
+@inject AWYKEN.Shared.Services.IFormFactor FormFactor
 @inject IJSRuntime JS
 
 <PageTitle>Settings - AWYKEN</PageTitle>
@@ -108,7 +109,7 @@
                 </button>
             </section>
 
-            @if (IsAdminUser)
+            @if (IsAdminUser && IsWebHost)
             {
                 <section class="settings-section">
                     <h2>ADMIN</h2>
@@ -560,6 +561,9 @@
     // Shows the ADMIN settings row for accounts flagged as administrators.
     private bool IsAdminUser;
 
+    // The /admin dashboard lives in the Web project, so the redirect and the row are Web-only.
+    private bool IsWebHost;
+
     private string? AccountError;
 
     private string ClassSummary =>
@@ -626,6 +630,7 @@
     protected override async Task OnInitializedAsync()
     {
         await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+        IsWebHost = string.Equals(FormFactor.GetFormFactor(), "Web", StringComparison.OrdinalIgnoreCase);
         IsAdminUser = await Data.IsAdminAsync();
     }
 
@@ -819,7 +824,7 @@
 
                 // Administrators land on their dashboard straight after signing in.
                 IsAdminUser = await Data.IsAdminAsync();
-                if (IsAdminUser)
+                if (IsAdminUser && IsWebHost)
                 {
                     Navigation.NavigateTo("/admin");
                     return;

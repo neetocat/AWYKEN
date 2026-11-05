@@ -214,31 +214,6 @@ public sealed class SqlServerAwykenDataService(
             .SingleOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<AdminOverview> GetAdminOverviewAsync(CancellationToken cancellationToken = default)
-    {
-        await InitializeAsync(cancellationToken);
-        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
-
-        var accounts = await db.Profiles.AsNoTracking()
-            .OrderBy(profile => profile.Id)
-            .Select(profile => new AdminAccountRow(
-                profile.Id,
-                profile.DisplayName,
-                profile.Email,
-                profile.IsAdmin,
-                db.Schedule.Count(row => row.ProfileId == profile.Id),
-                db.Courses.Count(note => note.ProfileId == profile.Id),
-                db.StudentIncentives.Count(item => item.ProfileId == profile.Id)))
-            .ToListAsync(cancellationToken);
-
-        return new AdminOverview(
-            accounts.Count,
-            accounts.Sum(account => account.ClassCount),
-            accounts.Sum(account => account.NoteCount),
-            accounts.Sum(account => account.IncentiveCount),
-            accounts);
-    }
-
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 
     private bool IsConfiguredAdmin(string normalizedEmail) =>

@@ -409,8 +409,9 @@ cheapest way to try schema changes without touching the shared cloud database.
 ## 9. Admin account
 
 The app has one extra role: **admin**. It is a boolean column on `Profiles`, not a separate
-table, and it only unlocks the `/admin` page (a read-only overview of every account with
-its class, note, and incentive counts — no password or PIN hashes are ever selected).
+table. It gates the administration dashboard at `/admin`, which is part of the **Web** app
+(`AWYKEN.Web/Components/Pages/Admin/Admin.razor`). The MAUI app has no admin screen, so
+admins there behave like normal users.
 
 ### Grant the role
 
@@ -421,12 +422,13 @@ AWYKEN_ADMIN_EMAILS=you@example.com,other-admin@example.com
 ```
 
 Restart the app, then sign in (or sign up) with that address. `SignInAsync` /
-`SignUpAsync` see the match and set `Profiles.IsAdmin = 1`; `Settings.razor` then redirects
-you to `/admin` instead of showing "You are logged in".
+`SignUpAsync` see the match and set `Profiles.IsAdmin = 1`; on the Web host `Settings.razor`
+then redirects you to `/admin` instead of showing "You are logged in", and the settings page
+shows an ADMIN row.
 
 Only someone who can edit the server's `.env` can grant admin — there is no self-service
 promotion and no admin password to leak. A signed-in non-admin who types `/admin` is sent
-back to `/settings` by the server-side guard in `Admin.razor`.
+back to `/settings` by the server-side guard at the top of `Admin.razor`.
 
 ### Revoke the role
 
