@@ -333,10 +333,18 @@ CREATE USER awyken_<name> FOR LOGIN awyken_<name>;
 ALTER ROLE db_owner ADD MEMBER awyken_<name>;   -- dev database only: migrations need DDL rights
 ```
 
+> `master` is the server's system database and is not listed in the portal's Explorer tree,
+> which only shows the selected database. The portal Query editor is connected to `awyken`,
+> so `CREATE LOGIN` there fails with *"User must be in the master database"* (error 916).
+> Start the script with `USE master;`, or connect with SSMS/sqlcmd and set the database to
+> `master`. `CREATE USER` and `ALTER ROLE` must run in `awyken`, so use `USE awyken;` for
+> the second half. The portal editor does not accept `GO`.
+
 Least privilege alternative for a shared or demo database: the owner applies migrations
 once, teammates get `ALTER ROLE db_datareader ADD MEMBER ...` and
 `ALTER ROLE db_datawriter ADD MEMBER ...`, and each teammate sets
-`AWYKEN_APPLY_MIGRATIONS_ON_START=False` in their `.env`.
+`AWYKEN_APPLY_MIGRATIONS_ON_START=False` in their `.env`. Pick one path — `db_owner`
+already implies both data roles.
 
 ### 3. Teammate setup
 
