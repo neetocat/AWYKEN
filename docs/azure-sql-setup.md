@@ -272,6 +272,8 @@ one of these:
 | `CREATE TABLE permission denied in database ...` while starting | The SQL login may read and write but not change the schema. Grant `db_owner` (or apply migrations yourself and set `AWYKEN_APPLY_MIGRATIONS_ON_START=False`). |
 | `The INSERT permission was denied on the object ...` / `The UPDATE permission was denied ...` | The login is read-only. Grant `db_datawriter`, or `db_owner` for a dev database. |
 | `The SELECT permission was denied ...` | The login exists on the server but has no user in this database. Run `CREATE USER ... FOR LOGIN ...` in the `awyken` database. |
+| `User must be in the master database` (error 916) | `CREATE LOGIN` only runs in `master`. Either create a contained user (`CREATE USER ... WITH PASSWORD`) in `awyken`, or use SSMS/sqlcmd connected to `master`. |
+| `USE statement is not supported to switch between databases` | The portal Query editor is pinned to one database. Use a contained user, or a client that can connect to `master`. |
 | Startup is blocked by an exception on a page | Cloud database unreachable. The wrapped error names the server and database. |
 
 ---
@@ -319,26 +321,41 @@ has a different address from the same phone on Wi-Fi.
 
 ### 2. Give each teammate their own login
 
-Prefer one login per person: it is auditable, and one person can be removed without
-changing everybody's password. Run on the **master** database:
+Prefer one account per person: it is auditable, and one person can be removed without
+changing everybody's password.
+
+**Option A — contained user (works in the portal Query editor)**
+
+The portal editor is pinned to the database you opened and rejects `USE`, so create a
+database-contained user. Run this in the **awyken** Query editor:
+
+```sql
+CREATE USER awyken_<name> WITH PASSWORD = '<strong password>';
+ALTER ROLE db_owner ADD MEMBER awyken_<name>;   -- dev database only: migrations need DDL rights
+```
+
+No `master` access is needed, and the app connects straight to `awyken`, so contained
+authentication is enough. The catch: a contained user exists only in that database.
+
+**Option B — server-level login**
+
+Use SSMS, Azure Data Studio, or `sqlcmd` with the database set to `master`:
 
 ```sql
 CREATE LOGIN awyken_<name> WITH PASSWORD = '<strong password>';
 ```
 
-then on the **awyken** database:
+then reconnect with the database set to `awyken`:
 
 ```sql
 CREATE USER awyken_<name> FOR LOGIN awyken_<name>;
-ALTER ROLE db_owner ADD MEMBER awyken_<name>;   -- dev database only: migrations need DDL rights
+ALTER ROLE db_owner ADD MEMBER awyken_<name>;
 ```
 
-> `master` is the server's system database and is not listed in the portal's Explorer tree,
-> which only shows the selected database. The portal Query editor is connected to `awyken`,
-> so `CREATE LOGIN` there fails with *"User must be in the master database"* (error 916).
-> Start the script with `USE master;`, or connect with SSMS/sqlcmd and set the database to
-> `master`. `CREATE USER` and `ALTER ROLE` must run in `awyken`, so use `USE awyken;` for
-> the second half. The portal editor does not accept `GO`.
+> `master` is the server's system database and is not listed in the portal Explorer tree,
+> which only shows the selected database. The portal editor also refuses to switch context
+> (*"USE statement is not supported to switch between databases"*), which is why Option A is
+> the shorter path there.
 
 Least privilege alternative for a shared or demo database: the owner applies migrations
 once, teammates get `ALTER ROLE db_datareader ADD MEMBER ...` and
