@@ -108,6 +108,21 @@
                 </button>
             </section>
 
+            @if (IsAdminUser)
+            {
+                <section class="settings-section">
+                    <h2>ADMIN</h2>
+                    <button class="settings-row" @onclick='() => Navigation.NavigateTo("/admin")'>
+                        <span class="row-icon">@Icon("user")</span>
+                        <span class="row-copy">
+                            <strong>Admin dashboard</strong>
+                            <small>All accounts and saved records</small>
+                        </span>
+                        <span class="row-chevron">@Icon("chevron")</span>
+                    </button>
+                </section>
+            }
+
             <!-- REMINDERS -->
 
             <section class="settings-section">
@@ -542,6 +557,9 @@
     private string PasswordInput = "";
     private string ConfirmPasswordInput = "";
 
+    // Shows the ADMIN settings row for accounts flagged as administrators.
+    private bool IsAdminUser;
+
     private string? AccountError;
 
     private string ClassSummary =>
@@ -605,8 +623,11 @@
 
     // Load profile and schedule data.
 
-    protected override Task OnInitializedAsync() =>
-        Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+    protected override async Task OnInitializedAsync()
+    {
+        await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+        IsAdminUser = await Data.IsAdminAsync();
+    }
 
     // Load the saved time format from browser storage.
 
@@ -795,6 +816,14 @@
                 EmailInput = "";
                 PasswordInput = "";
                 ConfirmPasswordInput = "";
+
+                // Administrators land on their dashboard straight after signing in.
+                IsAdminUser = await Data.IsAdminAsync();
+                if (IsAdminUser)
+                {
+                    Navigation.NavigateTo("/admin");
+                    return;
+                }
 
                 message = AccountMode == "Login"
                     ? "You are logged in."

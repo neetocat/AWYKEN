@@ -28,6 +28,8 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(profile => profile.Email).HasMaxLength(200);
             entity.Property(profile => profile.PasswordHash).HasMaxLength(300);
             entity.Property(profile => profile.TeacherPinHash).HasMaxLength(300);
+            // Existing rows get 0 when the column is added, so nobody becomes admin by accident.
+            entity.Property(profile => profile.IsAdmin).HasDefaultValue(false);
             entity.Property(profile => profile.FullName).HasMaxLength(150);
             entity.Property(profile => profile.StudentEmail).HasMaxLength(200);
             entity.Property(profile => profile.StudentNumber).HasMaxLength(30);

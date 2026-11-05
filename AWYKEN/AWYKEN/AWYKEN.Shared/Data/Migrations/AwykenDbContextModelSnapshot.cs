@@ -269,6 +269,11 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.Property<double?>("HomeLongitude")
                         .HasColumnType("float");
 
+                    b.Property<bool>("IsAdmin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("PasswordHash")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");

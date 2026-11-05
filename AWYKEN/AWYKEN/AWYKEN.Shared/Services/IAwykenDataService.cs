@@ -13,6 +13,8 @@ public interface IAwykenDataService
     Task<string?> SignUpAsync(string displayName, string email, string password, CancellationToken cancellationToken = default);
     Task<string?> SignInAsync(string email, string password, CancellationToken cancellationToken = default);
     Task<bool> AccountExistsAsync(string email, CancellationToken cancellationToken = default);
+    /// <summary>True when the signed-in account is an administrator (sees <c>/admin</c>).</summary>
+    Task<bool> IsAdminAsync(CancellationToken cancellationToken = default);
     Task SignOutAsync(DateOnly refreshDate, CancellationToken cancellationToken = default);
     Task RefreshAsync(DateOnly date, CancellationToken cancellationToken = default);
     Task RefreshWeekAsync(DateOnly weekStart, CancellationToken cancellationToken = default);
@@ -39,4 +41,6 @@ public interface IAwykenDataService
     Task<bool> ValidateTeacherPinAsync(string pin, CancellationToken cancellationToken = default);
     Task AddStudentIncentiveAsync(int scheduleRecordId, string teacherPin, int points, string reason,
         CancellationToken cancellationToken = default);
+    /// <summary>Read-only totals and account rows for the admin page.</summary>
+    Task<AdminOverview> GetAdminOverviewAsync(CancellationToken cancellationToken = default);
 }

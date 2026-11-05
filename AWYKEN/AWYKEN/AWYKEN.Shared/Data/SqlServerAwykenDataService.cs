@@ -157,6 +157,8 @@ public sealed class SqlServerAwykenDataService(
                 ? normalizedEmail[..normalizedEmail.IndexOf('@')]
                 : displayName.Trim(),
             Email = normalizedEmail,
+            // Signing up with an address from AWYKEN_ADMIN_EMAILS creates an admin directly.
+            IsAdmin = IsConfiguredAdmin(normalizedEmail),
             PasswordHash = await Task.Run(() => LocalPasswordHasher.Hash(password), cancellationToken)
         };
 
@@ -182,15 +184,65 @@ public sealed class SqlServerAwykenDataService(
         await InitializeAsync(cancellationToken);
         var normalizedEmail = NormalizeEmail(email);
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var profile = await db.Profiles.AsNoTracking()
+        // Tracked, so an account listed in AWYKEN_ADMIN_EMAILS can be promoted in place.
+        var profile = await db.Profiles
             .SingleOrDefaultAsync(item => item.Email == normalizedEmail, cancellationToken);
         if (profile is null || !await Task.Run(() => LocalPasswordHasher.Verify(password, profile.PasswordHash), cancellationToken))
             return "Email or password is incorrect.";
+
+        if (!profile.IsAdmin && IsConfiguredAdmin(normalizedEmail))
+        {
+            profile.IsAdmin = true;
+            await db.SaveChangesAsync(cancellationToken);
+        }
 
         accountSession.SignIn(profile.Id);
         await RefreshAsync(DateOnly.FromDateTime(DateTime.Today), cancellationToken);
         return null;
     }
+
+    public async Task<bool> IsAdminAsync(CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        if (accountSession.ProfileId is not int profileId)
+            return false;
+
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await db.Profiles.AsNoTracking()
+            .Where(profile => profile.Id == profileId)
+            .Select(profile => profile.IsAdmin)
+            .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<AdminOverview> GetAdminOverviewAsync(CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var accounts = await db.Profiles.AsNoTracking()
+            .OrderBy(profile => profile.Id)
+            .Select(profile => new AdminAccountRow(
+                profile.Id,
+                profile.DisplayName,
+                profile.Email,
+                profile.IsAdmin,
+                db.Schedule.Count(row => row.ProfileId == profile.Id),
+                db.Courses.Count(note => note.ProfileId == profile.Id),
+                db.StudentIncentives.Count(item => item.ProfileId == profile.Id)))
+            .ToListAsync(cancellationToken);
+
+        return new AdminOverview(
+            accounts.Count,
+            accounts.Sum(account => account.ClassCount),
+            accounts.Sum(account => account.NoteCount),
+            accounts.Sum(account => account.IncentiveCount),
+            accounts);
+    }
+
+    private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+
+    private bool IsConfiguredAdmin(string normalizedEmail) =>
+        settings.AdminEmails.Contains(normalizedEmail, StringComparer.OrdinalIgnoreCase);
 
     public async Task SignOutAsync(DateOnly refreshDate, CancellationToken cancellationToken = default)
     {
@@ -206,8 +258,6 @@ public sealed class SqlServerAwykenDataService(
         return await db.Profiles.AsNoTracking()
             .AnyAsync(profile => profile.Email == normalizedEmail, cancellationToken);
     }
-
-    private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 
     private static bool IsValidEmail(string email)
     {

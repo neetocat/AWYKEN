@@ -25,6 +25,8 @@ public sealed record AwykenDatabaseSettings
     public const string ConnectTimeoutKey = "AZURE_SQL_CONNECT_TIMEOUT";
     public const string CommandTimeoutKey = "AZURE_SQL_COMMAND_TIMEOUT";
     public const string ApplyMigrationsKey = "AWYKEN_APPLY_MIGRATIONS_ON_START";
+    // Comma-separated list of emails that are promoted to administrator on sign-in.
+    public const string AdminEmailsKey = "AWYKEN_ADMIN_EMAILS";
 
     /// <summary>The ADO.NET connection string handed to EF Core and Microsoft.Data.SqlClient.</summary>
     public required string ConnectionString { get; init; }
@@ -34,6 +36,13 @@ public sealed record AwykenDatabaseSettings
 
     /// <summary>Database name from the connection string, safe to log.</summary>
     public required string InitialCatalog { get; init; }
+
+    /// <summary>
+    /// Emails that become administrators when they sign in, read from
+    /// <c>AWYKEN_ADMIN_EMAILS</c>. Only someone who can edit the server's <c>.env</c>
+    /// can grant the admin role, and no manual SQL is needed.
+    /// </summary>
+    public IReadOnlyList<string> AdminEmails { get; init; } = [];
 
     /// <summary>Seconds EF Core allows a single command to run.</summary>
     public int CommandTimeoutSeconds { get; init; } = 60;
@@ -101,8 +110,21 @@ public sealed record AwykenDatabaseSettings
             InitialCatalog = builder.InitialCatalog,
             CommandTimeoutSeconds = ReadSeconds(Get(CommandTimeoutKey), CommandTimeoutKey) ?? 60,
             ApplyMigrationsOnStartup = ReadBool(Get(ApplyMigrationsKey), ApplyMigrationsKey) ?? true,
+            AdminEmails = ReadEmailList(Get(AdminEmailsKey)),
             DotEnvFile = dotEnvFile
         };
+    }
+
+    private static IReadOnlyList<string> ReadEmailList(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return [];
+
+        return value
+            .Split([',', ';', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(email => email.ToLowerInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static SqlConnectionStringBuilder BuildFromDiscreteKeys(

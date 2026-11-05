@@ -163,6 +163,7 @@ Lookup order, first non-empty value wins: host configuration → `.env` file →
 | `AZURE_SQL_CONNECT_TIMEOUT` | `30` | Seconds to wait for a connection. |
 | `AZURE_SQL_COMMAND_TIMEOUT` | `60` | Seconds EF Core allows per command. |
 | `AWYKEN_APPLY_MIGRATIONS_ON_START` | `True` | Apply migrations on first database access. |
+| `AWYKEN_ADMIN_EMAILS` | – | Comma-separated emails that get the admin role. See [Admin account](#9-admin-account). |
 
 Missing values fail fast with a message naming the keys and the `.env` file that was
 read, rather than silently falling back to a local database.
@@ -268,6 +269,9 @@ one of these:
 | `AWYKEN could not resolve the Azure SQL Database connection` | `.env` missing/empty; the message lists the keys it needs. |
 | `Introducing FOREIGN KEY constraint ... may cause cycles or multiple cascade paths` (error 1785) | A table was reachable by two `ON DELETE CASCADE` paths. Fixed in the model: `Courses.ProfileId` is `NO ACTION`. Drop any half-created tables (see "If a first migration attempt failed") and restart. |
 | `There is already an object named 'Profiles' in the database` | A previous failed attempt left tables behind. Run the drop script in section 4. |
+| `CREATE TABLE permission denied in database ...` while starting | The SQL login may read and write but not change the schema. Grant `db_owner` (or apply migrations yourself and set `AWYKEN_APPLY_MIGRATIONS_ON_START=False`). |
+| `The INSERT permission was denied on the object ...` / `The UPDATE permission was denied ...` | The login is read-only. Grant `db_datawriter`, or `db_owner` for a dev database. |
+| `The SELECT permission was denied ...` | The login exists on the server but has no user in this database. Run `CREATE USER ... FOR LOGIN ...` in the `awyken` database. |
 | Startup is blocked by an exception on a page | Cloud database unreachable. The wrapped error names the server and database. |
 
 ---
@@ -399,3 +403,43 @@ cheapest way to try schema changes without touching the shared cloud database.
   publish the `.env` contents or the live server name in a portfolio write-up.
 * If a laptop with `.env` is lost, rotate that person's SQL login — everyone else keeps
   working.
+
+---
+
+## 9. Admin account
+
+The app has one extra role: **admin**. It is a boolean column on `Profiles`, not a separate
+table, and it only unlocks the `/admin` page (a read-only overview of every account with
+its class, note, and incentive counts — no password or PIN hashes are ever selected).
+
+### Grant the role
+
+Put the login email in `.env`:
+
+```ini
+AWYKEN_ADMIN_EMAILS=you@example.com,other-admin@example.com
+```
+
+Restart the app, then sign in (or sign up) with that address. `SignInAsync` /
+`SignUpAsync` see the match and set `Profiles.IsAdmin = 1`; `Settings.razor` then redirects
+you to `/admin` instead of showing "You are logged in".
+
+Only someone who can edit the server's `.env` can grant admin — there is no self-service
+promotion and no admin password to leak. A signed-in non-admin who types `/admin` is sent
+back to `/settings` by the server-side guard in `Admin.razor`.
+
+### Revoke the role
+
+Remove the address from `.env`, then clear the flag once (the app never demotes anyone
+automatically):
+
+```sql
+UPDATE [Profiles] SET [IsAdmin] = 0 WHERE [Email] = 'you@example.com';
+```
+
+### Notes
+
+* `IsAdmin` defaults to `0`, so the migration cannot promote existing accounts.
+* Multiple admins are fine; each address just needs to be listed.
+* The page reads the database directly with the same login as the rest of the app, so no
+  extra database permissions are needed for admins.
