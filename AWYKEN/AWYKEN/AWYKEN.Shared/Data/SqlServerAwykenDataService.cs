@@ -99,11 +99,72 @@ public sealed class SqlServerAwykenDataService(
                 }
             }
 
+            // Optional shared administrator from .env; created once, then it lives in the database.
+            await EnsureDefaultAdminAsync(db, cancellationToken);
+
             _initialized = true;
         }
         finally
         {
             _initializationLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Creates the shared administrator described by AWYKEN_DEFAULT_ADMIN_EMAIL /
+    /// AWYKEN_DEFAULT_ADMIN_PASSWORD when it does not exist yet. An existing account is only
+    /// promoted, never re-passworded, so changing the password in the app is not undone on
+    /// the next start. Removing the keys stops seeding but leaves the account in place.
+    /// </summary>
+    private async Task EnsureDefaultAdminAsync(AwykenDbContext db, CancellationToken cancellationToken)
+    {
+        if (!settings.HasDefaultAdmin)
+            return;
+
+        var email = settings.DefaultAdminEmail!;
+        var existing = await db.Profiles
+            .SingleOrDefaultAsync(profile => profile.Email == email, cancellationToken);
+
+        if (existing is null)
+        {
+            var password = settings.DefaultAdminPassword!;
+            var hash = await Task.Run(() => LocalPasswordHasher.Hash(password), cancellationToken);
+            db.Profiles.Add(new UserProfileRecord
+            {
+                DisplayName = string.IsNullOrWhiteSpace(settings.DefaultAdminName)
+                    ? "Administrator"
+                    : settings.DefaultAdminName.Trim(),
+                Email = email,
+                IsAdmin = true,
+                PasswordHash = hash
+            });
+
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                // Another client seeded the same account first; promote it instead.
+                db.ChangeTracker.Clear();
+                var seeded = await db.Profiles
+                    .SingleOrDefaultAsync(profile => profile.Email == email, cancellationToken);
+                if (seeded is null)
+                    throw;
+                if (!seeded.IsAdmin)
+                {
+                    seeded.IsAdmin = true;
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+            }
+
+            return;
+        }
+
+        if (!existing.IsAdmin)
+        {
+            existing.IsAdmin = true;
+            await db.SaveChangesAsync(cancellationToken);
         }
     }
 

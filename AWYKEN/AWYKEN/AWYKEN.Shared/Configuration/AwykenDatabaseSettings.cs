@@ -27,6 +27,10 @@ public sealed record AwykenDatabaseSettings
     public const string ApplyMigrationsKey = "AWYKEN_APPLY_MIGRATIONS_ON_START";
     // Comma-separated list of emails that are promoted to administrator on sign-in.
     public const string AdminEmailsKey = "AWYKEN_ADMIN_EMAILS";
+    // Optional shared administrator that the app creates on startup if it does not exist.
+    public const string DefaultAdminEmailKey = "AWYKEN_DEFAULT_ADMIN_EMAIL";
+    public const string DefaultAdminPasswordKey = "AWYKEN_DEFAULT_ADMIN_PASSWORD";
+    public const string DefaultAdminNameKey = "AWYKEN_DEFAULT_ADMIN_NAME";
 
     /// <summary>The ADO.NET connection string handed to EF Core and Microsoft.Data.SqlClient.</summary>
     public required string ConnectionString { get; init; }
@@ -43,6 +47,23 @@ public sealed record AwykenDatabaseSettings
     /// can grant the admin role, and no manual SQL is needed.
     /// </summary>
     public IReadOnlyList<string> AdminEmails { get; init; } = [];
+
+    /// <summary>
+    /// A shared administrator account seeded on startup when
+    /// <c>AWYKEN_DEFAULT_ADMIN_EMAIL</c> and <c>AWYKEN_DEFAULT_ADMIN_PASSWORD</c> are set.
+    /// The account is created only when missing; an existing one keeps its password.
+    /// </summary>
+    public string? DefaultAdminEmail { get; init; }
+
+    /// <summary>Password for <see cref="DefaultAdminEmail"/>; hashed before it is stored.</summary>
+    public string? DefaultAdminPassword { get; init; }
+
+    /// <summary>Display name for the seeded administrator; defaults to "Administrator".</summary>
+    public string? DefaultAdminName { get; init; }
+
+    /// <summary>True when a shared default admin should be seeded.</summary>
+    public bool HasDefaultAdmin =>
+        !string.IsNullOrWhiteSpace(DefaultAdminEmail) && !string.IsNullOrWhiteSpace(DefaultAdminPassword);
 
     /// <summary>Seconds EF Core allows a single command to run.</summary>
     public int CommandTimeoutSeconds { get; init; } = 60;
@@ -103,6 +124,24 @@ public sealed record AwykenDatabaseSettings
                 builder.ConnectTimeout = connectTimeout;
         }
 
+        var defaultAdminEmail = Get(DefaultAdminEmailKey)?.ToLowerInvariant();
+        var defaultAdminPassword = Get(DefaultAdminPasswordKey);
+
+        // A half-configured shared admin is a security trap: fail instead of guessing.
+        if (!string.IsNullOrWhiteSpace(defaultAdminEmail) != !string.IsNullOrWhiteSpace(defaultAdminPassword))
+        {
+            throw new AwykenDatabaseConfigurationException(
+                $"{DefaultAdminEmailKey} and {DefaultAdminPasswordKey} must be set together " +
+                "(or both left empty). A default admin with an email but no password would never " +
+                "be able to sign in.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(defaultAdminPassword) && defaultAdminPassword.Length < 8)
+        {
+            throw new AwykenDatabaseConfigurationException(
+                $"{DefaultAdminPasswordKey} must be at least 8 characters, like any other account password.");
+        }
+
         return new AwykenDatabaseSettings
         {
             ConnectionString = builder.ConnectionString,
@@ -111,6 +150,9 @@ public sealed record AwykenDatabaseSettings
             CommandTimeoutSeconds = ReadSeconds(Get(CommandTimeoutKey), CommandTimeoutKey) ?? 60,
             ApplyMigrationsOnStartup = ReadBool(Get(ApplyMigrationsKey), ApplyMigrationsKey) ?? true,
             AdminEmails = ReadEmailList(Get(AdminEmailsKey)),
+            DefaultAdminEmail = defaultAdminEmail,
+            DefaultAdminPassword = defaultAdminPassword,
+            DefaultAdminName = Get(DefaultAdminNameKey),
             DotEnvFile = dotEnvFile
         };
     }

@@ -164,6 +164,9 @@ Lookup order, first non-empty value wins: host configuration → `.env` file →
 | `AZURE_SQL_COMMAND_TIMEOUT` | `60` | Seconds EF Core allows per command. |
 | `AWYKEN_APPLY_MIGRATIONS_ON_START` | `True` | Apply migrations on first database access. |
 | `AWYKEN_ADMIN_EMAILS` | – | Comma-separated emails that get the admin role. See [Admin account](#9-admin-account). |
+| `AWYKEN_DEFAULT_ADMIN_EMAIL` | – | Optional shared admin, created on first start. Must be set together with the password. |
+| `AWYKEN_DEFAULT_ADMIN_PASSWORD` | – | Password for the shared admin; hashed before storage, never read back. |
+| `AWYKEN_DEFAULT_ADMIN_NAME` | `Administrator` | Display name for the shared admin. |
 
 Missing values fail fast with a message naming the keys and the `.env` file that was
 read, rather than silently falling back to a local database.
@@ -274,6 +277,7 @@ one of these:
 | `The SELECT permission was denied ...` | The login exists on the server but has no user in this database. Run `CREATE USER ... FOR LOGIN ...` in the `awyken` database. |
 | `User must be in the master database` (error 916) | `CREATE LOGIN` only runs in `master`. Either create a contained user (`CREATE USER ... WITH PASSWORD`) in `awyken`, or use SSMS/sqlcmd connected to `master`. |
 | `USE statement is not supported to switch between databases` | The portal Query editor is pinned to one database. Use a contained user, or a client that can connect to `master`. |
+| `AWYKEN_DEFAULT_ADMIN_EMAIL and AWYKEN_DEFAULT_ADMIN_PASSWORD must be set together` | One of the two shared-admin keys is empty. Set both, or remove both to disable seeding. |
 | Startup is blocked by an exception on a page | Cloud database unreachable. The wrapped error names the server and database. |
 
 ---
@@ -454,6 +458,34 @@ shows an ADMIN row.
 Only someone who can edit the server's `.env` can grant admin — there is no self-service
 promotion and no admin password to leak. A signed-in non-admin who types `/admin` is sent
 back to `/settings` by the server-side guard at the top of `Admin.razor`.
+
+### Shared default admin
+
+For a demo where everyone should be able to open the dashboard with the same credentials,
+set both keys in the `.env` of the machine that runs the app first:
+
+```ini
+AWYKEN_DEFAULT_ADMIN_EMAIL=admin@awyken.local
+AWYKEN_DEFAULT_ADMIN_PASSWORD=Awyk3n-Shared-Admin-2026!
+AWYKEN_DEFAULT_ADMIN_NAME=Administrator
+```
+
+On the next start the app creates that account with `IsAdmin = 1` if it is missing, and
+promotes it if it exists without the flag. It never rewrites an existing password, so a
+password changed from the app is not undone. Sign in with those credentials on the Web app
+and you land on `/admin` like any other administrator.
+
+The keys are only needed once — after the row exists in the database, every machine and
+every teammate can use the same login. Beware that this is a shared credential: anyone who
+has it can change or delete the whole timetable, so rotate or remove it after the demo.
+
+Removing the keys stops seeding but leaves the account. To remove access:
+
+```sql
+UPDATE [Profiles] SET [IsAdmin] = 0 WHERE [Email] = 'admin@awyken.local';
+-- or delete it entirely (cascades to its schedule, notes, and incentives):
+DELETE FROM [Profiles] WHERE [Email] = 'admin@awyken.local';
+```
 
 ### Revoke the role
 
