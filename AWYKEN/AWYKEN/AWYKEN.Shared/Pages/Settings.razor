@@ -7,7 +7,7 @@
 @inject AWYKEN.Shared.Services.IFormFactor FormFactor
 @inject IJSRuntime JS
 
-<PageTitle>Settings - AWYKEN</PageTitle>
+<PageTitle>Settings - @AppName</PageTitle>
 
 <div class="flow-shell settings-screen">
     <main class="flow-scroll">
@@ -20,7 +20,7 @@
 
                 <div class="settings-title">
                     <h1>Settings</h1>
-                    <p>Manage your AWYKEN</p>
+                    <p>Manage your @AppName</p>
                 </div>
 
                 <button class="outline-icon-button"
@@ -405,7 +405,7 @@
                 ×
             </button>
 
-            <h2 id="account-card-title">Your AWYKEN account</h2>
+            <h2 id="account-card-title">Your @AppName account</h2>
 
             <p class="account-modal-subtitle">
                 Sign in to keep your schedule with your local profile.
@@ -422,12 +422,15 @@
                     Log in
                 </button>
 
-                <button class="@(AccountMode == "SignUp" ? "selected" : "")"
-                        role="tab"
-                        aria-selected="@(AccountMode == "SignUp")"
-                        @onclick='() => SetAccountMode("SignUp")'>
-                    Sign up
-                </button>
+                @if (SignupsEnabled)
+                {
+                    <button class="@(AccountMode == "SignUp" ? "selected" : "")"
+                            role="tab"
+                            aria-selected="@(AccountMode == "SignUp")"
+                            @onclick='() => SetAccountMode("SignUp")'>
+                        Sign up
+                    </button>
+                }
 
             </div>
 
@@ -563,6 +566,8 @@
 
     // The /admin dashboard lives in the Web project, so the redirect and the row are Web-only.
     private bool IsWebHost;
+    private bool SignupsEnabled = true;
+    private string AppName = "AWYKEN";
 
     private string? AccountError;
 
@@ -632,6 +637,11 @@
         await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
         IsWebHost = string.Equals(FormFactor.GetFormFactor(), "Web", StringComparison.OrdinalIgnoreCase);
         IsAdminUser = await Data.IsAdminAsync();
+        var appSettings = await Data.GetAppSettingsAsync();
+        AppName = appSettings.AppName;
+        SignupsEnabled = appSettings.SignupsEnabled;
+        if (!SignupsEnabled && AccountMode == "SignUp")
+            AccountMode = "Login";
     }
 
     // Load the saved time format from browser storage.
@@ -749,6 +759,8 @@
 
     private void SetAccountMode(string mode)
     {
+        if (mode == "SignUp" && !SignupsEnabled)
+            return;
         AccountMode = mode;
         AccountError = null;
     }

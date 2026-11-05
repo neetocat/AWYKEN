@@ -1,0 +1,74 @@
+@using AWYKEN.Shared.Data
+@inject IAwykenDataService DataService
+@inject NavigationManager Navigation
+
+@if (checking)
+{
+    <main class="maintenance-screen"><p>Checking application status…</p></main>
+}
+else if (loadError is not null)
+{
+    <main class="maintenance-screen">
+        <section><h1>Unable to load the application</h1><p>@loadError</p><button @onclick="LoadStatus">Try again</button></section>
+    </main>
+}
+else if (maintenanceMode && !isAdmin && !IsExemptRoute)
+{
+    <main class="maintenance-screen">
+        <section>
+            <h1>@appName is temporarily unavailable</h1>
+            <p>The application is in maintenance mode. Please try again later.</p>
+            <a href="/settings">Administrator sign-in</a>
+        </section>
+    </main>
+}
+else
+{
+    <RouteView RouteData="RouteData" DefaultLayout="@typeof(AWYKEN.Shared.Layout.MainLayout)" />
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public RouteData RouteData { get; set; } = default!;
+
+    private bool checking = true;
+    private bool maintenanceMode;
+    private bool isAdmin;
+    private string appName = "AWYKEN";
+    private string? loadError;
+
+    private bool IsExemptRoute
+    {
+        get
+        {
+            var path = Navigation.ToBaseRelativePath(Navigation.Uri)
+                .Split(['?', '#'], 2)[0]
+                .TrimEnd('/');
+            return path.Equals("admin", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("settings", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    protected override async Task OnParametersSetAsync() => await LoadStatus();
+
+    private async Task LoadStatus()
+    {
+        checking = true;
+        loadError = null;
+        try
+        {
+            var settings = await DataService.GetAppSettingsAsync();
+            appName = settings.AppName;
+            maintenanceMode = settings.MaintenanceMode;
+            isAdmin = await DataService.IsAdminAsync();
+        }
+        catch (Exception exception)
+        {
+            loadError = exception.GetBaseException().Message;
+        }
+        finally
+        {
+            checking = false;
+        }
+    }
+}
