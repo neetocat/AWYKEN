@@ -471,15 +471,16 @@ AWYKEN_DEFAULT_ADMIN_NAME=Administrator
 ```
 
 On the next start the app creates that account with `IsAdmin = 1` if it is missing, and
-promotes it if it exists without the flag. It never rewrites an existing password, so a
-password changed from the app is not undone. Sign in with those credentials on the Web app
-and you land on `/admin` like any other administrator.
+promotes it if it exists without the flag. It never rewrites an existing password. Sign in
+with those credentials on the Web app and you land on `/admin` like any other administrator.
 
 The keys are only needed once — after the row exists in the database, every machine and
 every teammate can use the same login. Beware that this is a shared credential: anyone who
 has it can change or delete the whole timetable, so rotate or remove it after the demo.
 
-Removing the keys stops seeding but leaves the account. To remove access:
+While the keys are set, a missing `IsAdmin` flag is re-applied on every start. To change
+the password, delete the account row and restart with the new value (the app recreates it
+with the new password). To remove access, drop the keys **and** then:
 
 ```sql
 UPDATE [Profiles] SET [IsAdmin] = 0 WHERE [Email] = 'admin@awyken.local';

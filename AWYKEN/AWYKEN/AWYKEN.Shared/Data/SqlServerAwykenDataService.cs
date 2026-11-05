@@ -113,8 +113,8 @@ public sealed class SqlServerAwykenDataService(
     /// <summary>
     /// Creates the shared administrator described by AWYKEN_DEFAULT_ADMIN_EMAIL /
     /// AWYKEN_DEFAULT_ADMIN_PASSWORD when it does not exist yet. An existing account is only
-    /// promoted, never re-passworded, so changing the password in the app is not undone on
-    /// the next start. Removing the keys stops seeding but leaves the account in place.
+    /// promoted, never re-passworded, so a password already stored is never overwritten.
+    /// Removing the keys stops seeding but leaves the account in place.
     /// </summary>
     private async Task EnsureDefaultAdminAsync(AwykenDbContext db, CancellationToken cancellationToken)
     {
