@@ -79,6 +79,21 @@ az sql server firewall-rule create -g AWYKEN -s awyken-sql -n AllowAzure --start
 az sql server firewall-rule list -g AWYKEN -s awyken-sql -o table
 ```
 
+Get your public IPv4 with `curl -4 -s https://ifconfig.me` — on a dual-stack connection
+the plain address can come back as IPv6, which the command above rejects with
+*"IP address must be a valid IPv4 address"*.
+
+Some ISPs hand out IPv6 and Azure SQL has a separate rule set for it:
+
+```bash
+az sql server ipv6-firewall-rule create -g AWYKEN -s awyken-sql -n MyLaptop-v6 --start-ipv6-address <your IPv6> --end-ipv6-address <your IPv6>
+az sql server ipv6-firewall-rule list -g AWYKEN -s awyken-sql -o table
+```
+
+This only works if the gateway answers over IPv6 for your network; check with
+`Resolve-DnsName awyken-sql.database.windows.net -Type AAAA` first. No AAAA record means
+you need the IPv4 rule instead.
+
 A phone on mobile data has its own public IP, so either add that IP, or (recommended for
 anything beyond a demo) keep the database private and put the existing `AWYKEN.Web` host
 in front of it as an API.
