@@ -23,6 +23,8 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
         {
             entity.ToTable("Profiles");
             entity.Property(profile => profile.DisplayName).HasMaxLength(100);
+            entity.Property(profile => profile.AccountStatus).HasMaxLength(20).HasDefaultValue("Active").IsRequired();
+            entity.HasIndex(profile => profile.AccountStatus);
             // Emails are normalized to lower case in code, and Azure SQL keeps its
             // default case-insensitive collation, so no per-column collation is needed.
             entity.Property(profile => profile.Email).HasMaxLength(200);

@@ -1,0 +1,68 @@
+@using AWYKEN.Shared.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Forms
+@inject IDbContextFactory<AwykenDbContext> ContextFactory
+@inject AWYKEN.Shared.Data.IAwykenDataService DataService
+@inject IJSRuntime JS
+
+<div class="student-management">
+    @if (!string.IsNullOrWhiteSpace(error)) { <div class="notice error-notice"><strong>Student records could not load</strong><span>@error</span><button @onclick="LoadAsync">Retry</button></div> }
+    else if (loading) { <div class="notice">Loading student accounts…</div> }
+    else
+    {
+        <div class="student-metrics">
+            <article class="student-metric"><span>Registered students</span><strong>@students.Count</strong></article>
+            <article class="student-metric"><span>Active accounts</span><strong>@students.Count(s => s.AccountStatus == "Active")</strong></article>
+            <article class="student-metric"><span>Deactivated</span><strong>@students.Count(s => s.AccountStatus == "Deactivated")</strong></article>
+            <article class="student-metric"><span>Suspended</span><strong>@students.Count(s => s.AccountStatus == "Suspended")</strong></article>
+        </div>
+        <section class="feature-card student-admin-panel">
+            <div class="student-admin-heading"><div><h2>Registered students</h2><p>View accounts, edit student information, and manage sign-in access.</p></div><span class="live-dot">LIVE DATA</span></div>
+            <div class="student-tools"><label class="student-search">⌕ <input @bind="search" @bind:event="oninput" placeholder="Search name, email, student number..." /></label><select @bind="statusFilter"><option value="All">All statuses</option><option value="Active">Active</option><option value="Deactivated">Deactivated</option><option value="Suspended">Suspended</option></select><select @bind="programFilter"><option value="All">All programs</option>@foreach (var program in programs) { <option value="@program">@program</option> }</select></div>
+            <div class="table-wrap"><table><thead><tr><th>STUDENT</th><th>STUDENT NUMBER</th><th>PROGRAM / SECTION</th><th>ACCOUNT STATUS</th><th>REGISTERED</th><th>ACTIVITY</th><th></th></tr></thead><tbody>
+            @foreach (var student in FilteredStudents)
+            {
+                <tr class="student-account-row"><td><div class="student-name"><span class="activity-avatar">@Initial(student.DisplayName ?? student.FullName)</span><span><strong>@(student.DisplayName ?? student.FullName ?? "Unnamed student")</strong><small>@(student.Email ?? student.StudentEmail ?? "No email on file")</small></span></div></td><td>@(student.StudentNumber ?? "—")</td><td><span>@(student.Program ?? student.College ?? "—")</span><small class="student-subline">@($"{student.YearLevel ?? "—"} · {student.Section ?? "—"}")</small></td><td><span class="account-status @StatusClass(student.AccountStatus)"><i></i>@student.AccountStatus</span></td><td>@(student.RegisteredAt?.ToLocalTime().ToString("MMM d, yyyy") ?? "Not recorded")</td><td><span class="activity-status @ActivityClass(student.LastActivityAt)">@ActivityLabel(student.LastActivityAt)</span><small class="student-subline">@ActivityDate(student.LastActivityAt)</small></td><td><button class="student-edit-button" @onclick="() => ToggleEdit(student.Id)">@(editingId == student.Id ? "Close" : "View / edit")</button></td></tr>
+                @if (editingId == student.Id)
+                {
+                    <tr class="student-edit-row"><td colspan="7"><EditForm Model="edit" OnValidSubmit="SaveAsync"><div class="profile-editor-heading"><div><h3>Student profile</h3><p>Account email is used for sign-in. Registration date: @(student.RegisteredAt?.ToLocalTime().ToString("f") ?? "Not recorded for this account")</p></div><span>Account #@student.Id</span></div><div class="profile-form-grid">
+                        <label>Display name<InputText @bind-Value="edit.DisplayName" /></label><label>Full name<InputText @bind-Value="edit.FullName" /></label><label>Account email<InputText @bind-Value="edit.Email" /></label><label>Student email<InputText @bind-Value="edit.StudentEmail" /></label><label>Student number<InputText @bind-Value="edit.StudentNumber" /></label><label>College<InputText @bind-Value="edit.College" /></label><label>Program<InputText @bind-Value="edit.Program" /></label><label>Year level<InputText @bind-Value="edit.YearLevel" /></label><label>Section<InputText @bind-Value="edit.Section" /></label><label>Academic term<InputText @bind-Value="edit.AcademicTerm" /></label><label>Guardian<InputText @bind-Value="edit.Guardian" /></label><label>Gender<InputText @bind-Value="edit.Gender" /></label><label>Date of birth<InputText @bind-Value="edit.DateOfBirth" /></label><label>Home address<InputText @bind-Value="edit.HomeAddress" /></label><label>School address<InputText @bind-Value="edit.SchoolAddress" /></label><label class="profile-field-wide">Student address<InputText @bind-Value="edit.StudentAddress" /></label></div><div class="profile-editor-footer"><span class="student-feedback">@feedback</span><button type="submit" class="save-profile-button">Save student information</button></div></EditForm>
+                        <div class="account-access-tools"><strong>Account access</strong><span>Changing status takes effect on the student’s next request or sign-in.</span><div><button class="access-active" disabled="@(student.AccountStatus == "Active")" @onclick='() => SetStatusAsync(student.Id, "Active")'>Activate</button><button class="access-deactivate" disabled="@(student.AccountStatus == "Deactivated")" @onclick='() => SetStatusAsync(student.Id, "Deactivated")'>Deactivate</button><button class="access-suspend" disabled="@(student.AccountStatus == "Suspended")" @onclick='() => SetStatusAsync(student.Id, "Suspended")'>Suspend</button></div></div>
+                    </td></tr>
+                }
+            }
+            @if (FilteredStudents.Count == 0) { <tr><td colspan="7" class="no-results">No registered students match these filters.</td></tr> }
+            </tbody></table></div>
+            <p class="student-legacy-note">Existing accounts created before account tracking was added show “Not recorded” for registration and activity dates. New registrations will record both automatically.</p>
+        </section>
+    }
+</div>
+
+@code {
+    private List<UserProfileRecord> students = [];
+    private bool loading = true;
+    private string? error;
+    private string search = "", statusFilter = "All", programFilter = "All", feedback = "";
+    private int? editingId;
+    private StudentEditDraft edit = new();
+    private List<string> programs => students.Select(s => s.Program ?? s.College).Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(s => s).ToList();
+    private List<UserProfileRecord> FilteredStudents => students.Where(student => (statusFilter == "All" || student.AccountStatus == statusFilter) && (programFilter == "All" || (student.Program ?? student.College) == programFilter) && (string.IsNullOrWhiteSpace(search) || string.Join(" ", student.DisplayName, student.FullName, student.Email, student.StudentEmail, student.StudentNumber, student.Program, student.College, student.YearLevel, student.Section).Contains(search, StringComparison.OrdinalIgnoreCase))).OrderBy(student => student.DisplayName ?? student.FullName).ToList();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private async Task LoadAsync() { loading = true; error = null; try { await DataService.InitializeAsync(); await using var db = await ContextFactory.CreateDbContextAsync(); students = await db.Profiles.AsNoTracking().Where(p => p.Email != null).ToListAsync(); } catch (Exception ex) { error = ex.GetBaseException().Message; } finally { loading = false; } }
+    private void ToggleEdit(int id) { if (editingId == id) { editingId = null; return; } var student = students.Single(s => s.Id == id); edit = StudentEditDraft.From(student); editingId = id; feedback = ""; }
+    private async Task SaveAsync() { feedback = ""; var email = edit.Email.Trim().ToLowerInvariant(); if (!System.Net.Mail.MailAddress.TryCreate(email, out _)) { feedback = "Enter a valid account email."; return; } await using var db = await ContextFactory.CreateDbContextAsync(); if (await db.Profiles.AnyAsync(p => p.Id != editingId && p.Email == email)) { feedback = "That email is already used by another account."; return; } var profile = await db.Profiles.SingleAsync(p => p.Id == editingId); profile.DisplayName = EmptyToNull(edit.DisplayName); profile.FullName = EmptyToNull(edit.FullName); profile.Email = email; profile.StudentEmail = EmptyToNull(edit.StudentEmail); profile.StudentNumber = EmptyToNull(edit.StudentNumber); profile.College = EmptyToNull(edit.College); profile.Program = EmptyToNull(edit.Program); profile.YearLevel = EmptyToNull(edit.YearLevel); profile.Section = EmptyToNull(edit.Section); profile.AcademicTerm = EmptyToNull(edit.AcademicTerm); profile.Guardian = EmptyToNull(edit.Guardian); profile.Gender = EmptyToNull(edit.Gender); profile.StudentAddress = EmptyToNull(edit.StudentAddress); profile.DateOfBirth = EmptyToNull(edit.DateOfBirth); profile.HomeAddress = EmptyToNull(edit.HomeAddress); profile.SchoolAddress = EmptyToNull(edit.SchoolAddress); await db.SaveChangesAsync(); feedback = "Student information saved."; await LoadAsync(); editingId = profile.Id; edit = StudentEditDraft.From(students.Single(s => s.Id == profile.Id)); }
+    private async Task SetStatusAsync(int id, string status) { var student = students.Single(s => s.Id == id); if (status != "Active" && !await JS.InvokeAsync<bool>("confirm", $"{status} {student.DisplayName ?? student.FullName ?? student.Email}? They will not be able to use their account while this status is set.")) return; await using var db = await ContextFactory.CreateDbContextAsync(); var profile = await db.Profiles.SingleAsync(p => p.Id == id); profile.AccountStatus = status; await db.SaveChangesAsync(); await LoadAsync(); if (editingId == id) edit = StudentEditDraft.From(students.Single(s => s.Id == id)); feedback = $"Account status changed to {status}."; }
+    private static string? EmptyToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string Initial(string? name) => string.IsNullOrWhiteSpace(name) ? "S" : name.Trim()[0].ToString().ToUpperInvariant();
+    private static string StatusClass(string status) => status.ToLowerInvariant();
+    private static string ActivityClass(DateTime? timestamp) => timestamp is null ? "activity-unknown" : timestamp >= DateTime.UtcNow.AddDays(-7) ? "activity-recent" : "activity-old";
+    private static string ActivityLabel(DateTime? timestamp) => timestamp is null ? "Not recorded" : timestamp >= DateTime.UtcNow.AddDays(-7) ? "Active this week" : "Inactive";
+    private static string ActivityDate(DateTime? timestamp) => timestamp?.ToLocalTime().ToString("MMM d, yyyy h:mm tt") ?? "No activity date";
+
+    private sealed class StudentEditDraft
+    {
+        public string DisplayName { get; set; } = ""; public string FullName { get; set; } = ""; public string Email { get; set; } = ""; public string StudentEmail { get; set; } = ""; public string StudentNumber { get; set; } = ""; public string College { get; set; } = ""; public string Program { get; set; } = ""; public string YearLevel { get; set; } = ""; public string Section { get; set; } = ""; public string AcademicTerm { get; set; } = ""; public string Guardian { get; set; } = ""; public string Gender { get; set; } = ""; public string DateOfBirth { get; set; } = ""; public string HomeAddress { get; set; } = ""; public string SchoolAddress { get; set; } = ""; public string StudentAddress { get; set; } = "";
+        public static StudentEditDraft From(UserProfileRecord student) => new() { DisplayName = student.DisplayName ?? "", FullName = student.FullName ?? "", Email = student.Email ?? "", StudentEmail = student.StudentEmail ?? "", StudentNumber = student.StudentNumber ?? "", College = student.College ?? "", Program = student.Program ?? "", YearLevel = student.YearLevel ?? "", Section = student.Section ?? "", AcademicTerm = student.AcademicTerm ?? "", Guardian = student.Guardian ?? "", Gender = student.Gender ?? "", DateOfBirth = student.DateOfBirth ?? "", HomeAddress = student.HomeAddress ?? "", SchoolAddress = student.SchoolAddress ?? "", StudentAddress = student.StudentAddress ?? "" };
+    }
+}

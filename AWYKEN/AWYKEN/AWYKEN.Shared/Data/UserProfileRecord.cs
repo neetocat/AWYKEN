@@ -7,6 +7,9 @@ namespace AWYKEN.Shared.Data;
 public sealed class UserProfileRecord
 {
     public int Id { get; set; }
+    public string AccountStatus { get; set; } = "Active";
+    public DateTime? RegisteredAt { get; set; }
+    public DateTime? LastActivityAt { get; set; }
     public string? DisplayName { get; set; }
     public string? Email { get; set; }
     public string? PasswordHash { get; set; }

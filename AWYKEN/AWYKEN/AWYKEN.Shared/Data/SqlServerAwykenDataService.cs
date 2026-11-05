@@ -220,7 +220,10 @@ public sealed class SqlServerAwykenDataService(
             Email = normalizedEmail,
             // Signing up with an address from AWYKEN_ADMIN_EMAILS creates an admin directly.
             IsAdmin = IsConfiguredAdmin(normalizedEmail),
-            PasswordHash = await Task.Run(() => LocalPasswordHasher.Hash(password), cancellationToken)
+            PasswordHash = await Task.Run(() => LocalPasswordHasher.Hash(password), cancellationToken),
+            AccountStatus = "Active",
+            RegisteredAt = DateTime.UtcNow,
+            LastActivityAt = DateTime.UtcNow
         };
 
         try
@@ -254,9 +257,14 @@ public sealed class SqlServerAwykenDataService(
         if (!profile.IsAdmin && IsConfiguredAdmin(normalizedEmail))
         {
             profile.IsAdmin = true;
-            await db.SaveChangesAsync(cancellationToken);
         }
+        if (!string.Equals(profile.AccountStatus, "Active", StringComparison.OrdinalIgnoreCase))
+            return profile.AccountStatus.Equals("Suspended", StringComparison.OrdinalIgnoreCase)
+                ? "This account is suspended. Contact your school administrator."
+                : "This account is deactivated. Contact your school administrator.";
 
+        profile.LastActivityAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
         accountSession.SignIn(profile.Id);
         await RefreshAsync(DateOnly.FromDateTime(DateTime.Today), cancellationToken);
         return null;
@@ -310,7 +318,14 @@ public sealed class SqlServerAwykenDataService(
     private async Task<int> GetCurrentProfileIdAsync(AwykenDbContext db, CancellationToken cancellationToken)
     {
         if (accountSession.ProfileId is int signedInProfileId)
-            return signedInProfileId;
+        {
+            var status = await db.Profiles.AsNoTracking().Where(profile => profile.Id == signedInProfileId)
+                .Select(profile => new { profile.Email, profile.AccountStatus }).SingleOrDefaultAsync(cancellationToken);
+            if (status?.Email is not null && !string.Equals(status.AccountStatus, "Active", StringComparison.OrdinalIgnoreCase))
+                accountSession.SignOut();
+            else if (status is not null)
+                return signedInProfileId;
+        }
 
         // The lowest id keeps the Guest row stable even if an old database holds more than one.
         return await db.Profiles.Where(profile => profile.Email == null)
@@ -326,6 +341,11 @@ public sealed class SqlServerAwykenDataService(
         var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
         var profile = await db.Profiles.AsNoTracking()
             .FirstOrDefaultAsync(item => item.Id == profileId, cancellationToken);
+        if (profile?.Email is not null && string.Equals(profile.AccountStatus, "Active", StringComparison.OrdinalIgnoreCase))
+        {
+            var activityAt = DateTime.UtcNow;
+            await db.Profiles.Where(item => item.Id == profileId).ExecuteUpdateAsync(update => update.SetProperty(item => item.LastActivityAt, activityAt), cancellationToken);
+        }
 
         var startOfDay = date.ToDateTime(TimeOnly.MinValue);
         var startOfNextDay = date.AddDays(1).ToDateTime(TimeOnly.MinValue);
@@ -350,6 +370,11 @@ public sealed class SqlServerAwykenDataService(
         var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
         var profile = await db.Profiles.AsNoTracking()
             .FirstOrDefaultAsync(item => item.Id == profileId, cancellationToken);
+        if (profile?.Email is not null && string.Equals(profile.AccountStatus, "Active", StringComparison.OrdinalIgnoreCase))
+        {
+            var activityAt = DateTime.UtcNow;
+            await db.Profiles.Where(item => item.Id == profileId).ExecuteUpdateAsync(update => update.SetProperty(item => item.LastActivityAt, activityAt), cancellationToken);
+        }
 
         var weekStartDateTime = weekStart.ToDateTime(TimeOnly.MinValue);
         var weekEnd = weekStart.AddDays(7).ToDateTime(TimeOnly.MinValue);
@@ -376,6 +401,11 @@ public sealed class SqlServerAwykenDataService(
         var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
         var profile = await db.Profiles.AsNoTracking()
             .FirstOrDefaultAsync(item => item.Id == profileId, cancellationToken);
+        if (profile?.Email is not null && string.Equals(profile.AccountStatus, "Active", StringComparison.OrdinalIgnoreCase))
+        {
+            var activityAt = DateTime.UtcNow;
+            await db.Profiles.Where(item => item.Id == profileId).ExecuteUpdateAsync(update => update.SetProperty(item => item.LastActivityAt, activityAt), cancellationToken);
+        }
 
         var start = monthStart.ToDateTime(TimeOnly.MinValue);
         var end = monthStart.AddMonths(1).ToDateTime(TimeOnly.MinValue);
