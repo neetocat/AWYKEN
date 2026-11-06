@@ -15,6 +15,19 @@
                 class="acad-tab @(Tab == "classes" ? "selected" : "")" @onclick='() => SwitchTab("classes")'>
             Classes
         </button>
+        <button type="button" role="tab" aria-selected="@(Tab == "collected")"
+                class="acad-tab @(Tab == "collected" ? "selected" : "")" @onclick='() => SwitchTab("collected")'>
+            Collected
+        </button>
+
+        <select class="acad-term-filter" @bind="FilterTermId" @bind:after="ReloadAsync"
+                aria-label="Filter by term">
+            <option value="0">All terms</option>
+            @foreach (var term in TermOptions)
+            {
+                <option value="@term.Id">@term.Name</option>
+            }
+        </select>
 
         <label class="acad-archived">
             <input type="checkbox" @bind="IncludeArchived" @bind:after="ReloadAsync" />
@@ -25,6 +38,10 @@
     @if (Error is not null)
     {
         <p class="acad-error" role="alert">@Error</p>
+    }
+    @if (Info is not null)
+    {
+        <p class="acad-info">@Info</p>
     }
 
     @if (Tab == "terms")
@@ -214,7 +231,7 @@
             }
         </section>
     }
-    else
+    else if (Tab == "classes")
     {
         <section class="acad-panel">
             <header class="acad-panel-head">
@@ -294,6 +311,19 @@
                             </label>
                         }
                     </fieldset>
+
+                    @if (OfferingForm.Id != 0 && OfferingImpact.Linked > 0)
+                    {
+                        <label class="acad-wide acad-apply">
+                            <input type="checkbox" @bind="ApplyToLinked" />
+                            Update @OfferingImpact.Linked linked student class(es)
+                            @if (OfferingImpact.Diverged > 0)
+                            {
+                                <span>(@OfferingImpact.Diverged differ from the catalog)</span>
+                            }
+                        </label>
+                    }
+
                     <div class="acad-form-actions">
                         <button type="button" class="acad-primary" disabled="@Busy" @onclick="SaveOfferingAsync">
                             Save class
@@ -346,10 +376,102 @@
                                         <span class="acad-badge @offering.Status.ToLowerInvariant()">@offering.Status</span>
                                     </td>
                                     <td class="acad-actions">
-                                        <button type="button" @onclick='() => EditOffering(offering)'>Edit</button>
+                                        <button type="button" @onclick='() => EditOfferingAsync(offering)'>Edit</button>
                                         <button type="button" @onclick='() => ToggleArchivedAsync(offering)'>
                                             @(offering.IsArchived ? "Restore" : "Archive")
                                         </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+    else
+    {
+        <section class="acad-panel">
+            <header class="acad-panel-head">
+                <div>
+                    <h2>Collected from students</h2>
+                    <p>Distinct courses found in student schedules, grouped by code, section, and term.</p>
+                </div>
+                <label class="acad-inline">
+                    Create classes in
+                    <select @bind="PromoteTermId">
+                        @foreach (var term in TermOptions)
+                        {
+                            <option value="@term.Id">@term.Name</option>
+                        }
+                    </select>
+                </label>
+            </header>
+
+            <label class="acad-archived acad-unmatched">
+                <input type="checkbox" @bind="OnlyUnmatched" @bind:after="ReloadAsync" />
+                Only courses without a class
+            </label>
+
+            @if (Collected.Count == 0)
+            {
+                <p class="acad-empty">
+                    No student classes found@(OnlyUnmatched ? " without a catalog class" : "").
+                    Students get here by importing their COR or adding a class.
+                </p>
+            }
+            else
+            {
+                <div class="acad-table-wrap">
+                    <table class="acad-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Course</th>
+                                <th scope="col">Section</th>
+                                <th scope="col">Term</th>
+                                <th scope="col" class="acad-number">Students</th>
+                                <th scope="col">Title</th>
+                                <th scope="col">Instructor</th>
+                                <th scope="col">Room</th>
+                                <th scope="col">Days</th>
+                                <th scope="col">Time</th>
+                                <th scope="col">Catalog</th>
+                                <th scope="col" class="acad-actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var course in Collected)
+                            {
+                                <tr>
+                                    <td class="acad-strong">@course.CourseCode</td>
+                                    <td>@course.DisplaySection</td>
+                                    <td class="acad-muted">@(course.TermName ?? "No term")</td>
+                                    <td class="acad-number">@course.StudentCount</td>
+                                    <td>@course.Title</td>
+                                    <td class="acad-muted">@course.Instructor</td>
+                                    <td>@course.Room</td>
+                                    <td>@DisplayDays(course.Days)</td>
+                                    <td class="acad-muted">@(course.MeetingTimes ?? "—")</td>
+                                    <td>
+                                        <span class="acad-badge @StatusClass(course)">@course.Status</span>
+                                    </td>
+                                    <td class="acad-actions">
+                                        @if (!course.HasOffering)
+                                        {
+                                            <button type="button" disabled="@Busy" @onclick='() => PromoteAsync(course)'>
+                                                Promote
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" disabled="@Busy" @onclick='() => LinkAsync(course)'>
+                                                Link @course.StudentCount
+                                            </button>
+                                        }
+                                        @if (course.LinkedCount > 0)
+                                        {
+                                            <span class="acad-linked">@course.LinkedCount linked</span>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -366,15 +488,21 @@
 
     private string Tab = "terms";
     private bool IncludeArchived;
+    private bool OnlyUnmatched;
     private bool Busy;
     private string? Error;
+    private string? Info;
     private string? FormError;
 
     private IReadOnlyList<AcademicTermView> Terms = [];
     private IReadOnlyList<SubjectView> Subjects = [];
     private IReadOnlyList<ClassOfferingView> Offerings = [];
+    private IReadOnlyList<CollectedCourseView> Collected = [];
     private IReadOnlyList<AcademicTermView> TermOptions = [];
     private IReadOnlyList<SubjectView> SubjectOptions = [];
+
+    private int FilterTermId;
+    private int PromoteTermId;
 
     private AcademicTermRecord? TermForm;
     private string TermYear = "";
@@ -398,6 +526,8 @@
     private TimeOnly OfferingStart = new(8, 0);
     private TimeOnly OfferingEnd = new(9, 0);
     private readonly bool[] DayChecks = new bool[7];
+    private (int Linked, int Diverged) OfferingImpact;
+    private bool ApplyToLinked = true;
 
     private bool CanAddClass => TermOptions.Count > 0 && SubjectOptions.Count > 0;
 
@@ -408,11 +538,18 @@
         Busy = true;
         try
         {
-            Terms = await Catalog.GetTermsAsync(IncludeArchived);
-            Subjects = await Catalog.GetSubjectsAsync(IncludeArchived);
-            Offerings = await Catalog.GetOfferingsAsync(null, IncludeArchived);
             TermOptions = await Catalog.GetTermsAsync(includeArchived: false);
             SubjectOptions = await Catalog.GetSubjectsAsync(includeArchived: false);
+            Terms = await Catalog.GetTermsAsync(IncludeArchived);
+            Subjects = await Catalog.GetSubjectsAsync(IncludeArchived);
+
+            var filter = FilterTermId == 0 ? (int?)null : FilterTermId;
+            Offerings = await Catalog.GetOfferingsAsync(filter, IncludeArchived);
+            Collected = await Catalog.GetCollectedCoursesAsync(filter, OnlyUnmatched);
+
+            if (TermOptions.Count > 0 && PromoteTermId == 0)
+                PromoteTermId = TermOptions.FirstOrDefault(term => term.IsCurrent)?.Id ?? TermOptions[0].Id;
+
             Error = null;
         }
         catch (Exception exception)
@@ -428,6 +565,8 @@
     private void SwitchTab(string tab)
     {
         Tab = tab;
+        Error = null;
+        Info = null;
         FormError = null;
         TermForm = null;
         SubjectForm = null;
@@ -559,6 +698,8 @@
     private void NewOffering()
     {
         OfferingForm = new ClassOfferingRecord();
+        OfferingImpact = (0, 0);
+        ApplyToLinked = true;
         OfferingTermId = TermOptions.FirstOrDefault(term => term.IsCurrent)?.Id ?? TermOptions[0].Id;
         OfferingSubjectId = SubjectOptions[0].Id;
         OfferingSection = "";
@@ -571,7 +712,7 @@
         FormError = null;
     }
 
-    private void EditOffering(ClassOfferingView offering)
+    private async Task EditOfferingAsync(ClassOfferingView offering)
     {
         OfferingForm = new ClassOfferingRecord { Id = offering.Id, IsArchived = offering.IsArchived };
         OfferingTermId = offering.TermId;
@@ -583,6 +724,7 @@
         OfferingStart = offering.StartTime;
         OfferingEnd = offering.EndTime;
         FormError = null;
+        ApplyToLinked = true;
 
         Array.Clear(DayChecks);
         var stored = offering.Days.Split('|', StringSplitOptions.RemoveEmptyEntries);
@@ -590,11 +732,22 @@
         {
             DayChecks[day] = stored.Contains(DayNames[day], StringComparer.OrdinalIgnoreCase);
         }
+
+        try
+        {
+            OfferingImpact = await Catalog.GetOfferingImpactAsync(offering.Id);
+        }
+        catch (Exception exception)
+        {
+            OfferingImpact = (0, 0);
+            FormError = exception.GetBaseException().Message;
+        }
     }
 
     private void CancelOffering()
     {
         OfferingForm = null;
+        OfferingImpact = (0, 0);
         FormError = null;
     }
 
@@ -619,11 +772,12 @@
             Status = OfferingStatus
         };
 
-        FormError = await Catalog.SaveOfferingAsync(model);
+        FormError = await Catalog.SaveOfferingAsync(model, OfferingForm.Id != 0 && ApplyToLinked);
         if (FormError is not null)
             return;
 
         OfferingForm = null;
+        OfferingImpact = (0, 0);
         await ReloadAsync();
     }
 
@@ -632,4 +786,66 @@
         Error = await Catalog.ArchiveOfferingAsync(offering.Id, !offering.IsArchived);
         await ReloadAsync();
     }
+
+    // ----- collected from students
+
+    private async Task PromoteAsync(CollectedCourseView course)
+    {
+        if (PromoteTermId == 0)
+        {
+            Error = "Add an academic term first, then choose it in the Collected tab.";
+            return;
+        }
+
+        Busy = true;
+        Error = null;
+        Info = null;
+        try
+        {
+            var error = await Catalog.PromoteCourseAsync(course, PromoteTermId);
+            if (error is not null)
+            {
+                Error = error;
+                return;
+            }
+
+            Info = $"{course.CourseCode} was promoted into the catalog. Use Link to apply it to students.";
+        }
+        finally
+        {
+            Busy = false;
+        }
+
+        await ReloadAsync();
+    }
+
+    private async Task LinkAsync(CollectedCourseView course)
+    {
+        Busy = true;
+        Error = null;
+        Info = null;
+        try
+        {
+            var error = await Catalog.LinkCourseAsync(course, FilterTermId == 0 ? null : FilterTermId);
+            if (error is not null)
+            {
+                Error = error;
+                return;
+            }
+
+            Info = $"{course.StudentCount} student class(es) linked to {course.CourseCode}.";
+        }
+        finally
+        {
+            Busy = false;
+        }
+
+        await ReloadAsync();
+    }
+
+    private static string DisplayDays(string days) =>
+        string.IsNullOrWhiteSpace(days) ? "—" : days.Replace("|", ", ").Trim(' ', ',');
+
+    private static string StatusClass(CollectedCourseView course) =>
+        course.HasOffering ? "published" : course.HasSubject ? "draft" : "archived";
 }

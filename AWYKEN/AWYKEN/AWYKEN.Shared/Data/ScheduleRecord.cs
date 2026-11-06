@@ -25,4 +25,11 @@ public sealed class ScheduleRecord
     public string? MeetingTimes { get; set; }
     public string? Notes { get; set; }
     public string? AttendanceStatus { get; set; }
+
+    // Optional links into the admin catalog. Null means the row was imported and has not
+    // been matched to an official class yet; that null is what the admin report lists.
+    public int? TermId { get; set; }
+    public int? ClassOfferingId { get; set; }
+    // Set whenever the row is changed, so an admin can see which copies diverged.
+    public DateTime? UpdatedAt { get; set; }
 }

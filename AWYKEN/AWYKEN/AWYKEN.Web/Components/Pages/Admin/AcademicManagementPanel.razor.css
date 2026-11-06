@@ -303,3 +303,68 @@
         align-items: stretch;
     }
 }
+
+.acad-term-filter {
+    margin-left: 6px;
+    border: 1px solid #dce2ee;
+    border-radius: 9px;
+    background: #fff;
+    color: #0c1230;
+    font: inherit;
+    font-size: 12px;
+    padding: 7px 9px;
+}
+
+.acad-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4a5570;
+}
+
+.acad-inline select {
+    border: 1px solid #dce2ee;
+    border-radius: 9px;
+    background: #fff;
+    color: #0c1230;
+    font: inherit;
+    font-size: 12px;
+    padding: 7px 9px;
+}
+
+.acad-info {
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid #cfe6d8;
+    border-radius: 12px;
+    background: #f3fbf6;
+    color: #14663f;
+    font-size: 13px;
+}
+
+.acad-unmatched {
+    display: inline-flex;
+    margin: 0 0 12px;
+}
+
+.acad-linked {
+    align-self: center;
+    font-size: 11px;
+    color: #75809a;
+    white-space: nowrap;
+}
+
+.acad-apply {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 8px !important;
+    font-weight: 600;
+    color: #0c1230 !important;
+}
+
+.acad-apply span {
+    color: #8a5a12;
+    font-weight: 600;
+}

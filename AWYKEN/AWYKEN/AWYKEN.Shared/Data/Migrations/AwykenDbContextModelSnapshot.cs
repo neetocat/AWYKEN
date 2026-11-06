@@ -211,6 +211,9 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
 
+                    b.Property<int?>("ClassOfferingId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ColorCode")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -265,6 +268,9 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.Property<DateTime>("StartsAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("TermId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(180)
@@ -274,9 +280,16 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("ClassOfferingId");
+
                     b.HasIndex("StartsAt");
+
+                    b.HasIndex("TermId");
 
                     b.HasIndex("ProfileId", "StartsAt");
 
@@ -505,11 +518,21 @@ namespace AWYKEN.Shared.Data.Migrations
 
             modelBuilder.Entity("AWYKEN.Shared.Data.ScheduleRecord", b =>
                 {
+                    b.HasOne("AWYKEN.Shared.Data.ClassOfferingRecord", null)
+                        .WithMany()
+                        .HasForeignKey("ClassOfferingId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("AWYKEN.Shared.Data.UserProfileRecord", null)
                         .WithMany()
                         .HasForeignKey("ProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("AWYKEN.Shared.Data.AcademicTermRecord", null)
+                        .WithMany()
+                        .HasForeignKey("TermId")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("AWYKEN.Shared.Data.StudentIncentiveRecord", b =>

@@ -76,6 +76,13 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
                 .WithMany()
                 .HasForeignKey(item => item.ProfileId)
                 .OnDelete(DeleteBehavior.Cascade);
+            // Catalog links are optional and never cascade: archiving a class or term must
+            // leave the student's own schedule row (and its notes) intact.
+            entity.HasOne<AcademicTermRecord>().WithMany().HasForeignKey(item => item.TermId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<ClassOfferingRecord>().WithMany().HasForeignKey(item => item.ClassOfferingId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasIndex(item => item.ClassOfferingId);
         });
 
         modelBuilder.Entity<CourseNoteRecord>(entity =>

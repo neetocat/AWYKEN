@@ -71,6 +71,36 @@ public sealed record AcademicTermView(
 public sealed record SubjectView(
     int Id, string Code, string Title, decimal Units, string? College, bool IsArchived);
 
+/// <summary>
+/// One distinct course gathered from the students' own schedule rows, grouped by course code,
+/// section, and term. This is the admin work queue: promote it into the catalog, then link it.
+/// </summary>
+public sealed record CollectedCourseView(
+    string CourseCode,
+    string? Section,
+    string Title,
+    string Instructor,
+    string Room,
+    string Days,
+    string? MeetingTimes,
+    decimal? Units,
+    int? TermId,
+    string? TermName,
+    int StudentCount,
+    int RowCount,
+    int LinkedCount,
+    int? SubjectId,
+    int? OfferingId)
+{
+    public bool HasSubject => SubjectId is not null;
+
+    public bool HasOffering => OfferingId is not null;
+
+    public string Status => HasOffering ? "In catalog" : HasSubject ? "Subject only" : "Not in catalog";
+
+    public string DisplaySection => string.IsNullOrWhiteSpace(Section) ? "—" : Section;
+}
+
 /// <summary>Class offering joined with its term and subject for the admin tables.</summary>
 public sealed record ClassOfferingView(
     int Id, int TermId, string TermSchoolYear, string TermSemester,

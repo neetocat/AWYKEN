@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using AWYKEN.Shared.Services;
 using Microsoft.EntityFrameworkCore;
@@ -231,7 +233,8 @@ public sealed class AcademicCatalogService(
     }
 
     public async Task<string?> SaveOfferingAsync(
-        ClassOfferingRecord offering, CancellationToken cancellationToken = default)
+        ClassOfferingRecord offering, bool applyToLinkedStudents = false,
+        CancellationToken cancellationToken = default)
     {
         var section = offering.SectionCode.Trim().ToUpperInvariant();
         var instructor = offering.Instructor.Trim();
@@ -292,6 +295,23 @@ public sealed class AcademicCatalogService(
         row.Status = status;
         row.UpdatedAt = DateTime.UtcNow;
 
+        // Optionally push the official values onto every student row linked to this class.
+        // The rows keep their own identity, so course notes and incentives stay attached.
+        if (applyToLinkedStudents && row.Id != 0)
+        {
+            var subject = await db.Subjects.AsNoTracking()
+                .SingleAsync(item => item.Id == row.SubjectId, cancellationToken);
+            var linkedRows = await db.Schedule
+                .Where(item => item.ClassOfferingId == row.Id)
+                .ToListAsync(cancellationToken);
+            var meetingTimes = FormatMeetingTimes(row.StartTime, row.EndTime);
+
+            foreach (var scheduleRow in linkedRows)
+            {
+                ApplyOfferingToSchedule(scheduleRow, row, subject, meetingTimes);
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         return null;
     }
@@ -314,10 +334,251 @@ public sealed class AcademicCatalogService(
         return null;
     }
 
+    // ----------------------------------------------------------- student harvest
+
+    public async Task<IReadOnlyList<CollectedCourseView>> GetCollectedCoursesAsync(
+        int? termId = null, bool onlyUnmatched = false, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var rows = await db.Schedule.AsNoTracking()
+            .Where(row => termId == null || row.TermId == termId)
+            .Select(row => new
+            {
+                row.ProfileId,
+                row.CourseCode,
+                row.Title,
+                row.Section,
+                row.Instructor,
+                row.Location,
+                row.Days,
+                row.MeetingTimes,
+                row.Units,
+                row.TermId,
+                row.ClassOfferingId
+            })
+            .ToListAsync(cancellationToken);
+
+        // The catalog is small, so matching runs in memory with the same normalization the
+        // grouping uses. Doing it in SQL would need a computed column for every comparison.
+        var subjects = await db.Subjects.AsNoTracking()
+            .Select(subject => new { subject.Id, subject.Code })
+            .ToListAsync(cancellationToken);
+        var subjectByKey = subjects
+            .GroupBy(subject => NormalizeKey(subject.Code))
+            .Where(group => group.Key.Length > 0)
+            .ToDictionary(group => group.Key, group => group.First().Id);
+
+        var offerings = await db.ClassOfferings.AsNoTracking()
+            .Select(offering => new { offering.Id, offering.TermId, offering.SubjectId, offering.SectionCode })
+            .ToListAsync(cancellationToken);
+
+        var termNames = (await db.AcademicTerms.AsNoTracking()
+                .Select(term => new { term.Id, term.SchoolYear, term.Semester })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(term => term.Id, term => $"{term.SchoolYear} · {term.Semester}");
+
+        var collected = new List<CollectedCourseView>();
+        foreach (var group in rows.GroupBy(row => new
+                 {
+                     Code = NormalizeKey(row.CourseCode),
+                     Section = NormalizeKey(row.Section),
+                     row.TermId
+                 }))
+        {
+            if (group.Key.Code.Length == 0)
+                continue;
+
+            var rowsInGroup = group.ToList();
+            var subjectId = subjectByKey.TryGetValue(group.Key.Code, out var matchedSubject)
+                ? matchedSubject
+                : (int?)null;
+
+            int? offeringId = null;
+            if (subjectId is int subjectKey)
+            {
+                var termKey = group.Key.TermId;
+                // A row without a term still shows the newest matching class so it can be
+                // linked; linking writes the offering's term back onto the row.
+                offeringId = offerings
+                    .Where(offering => offering.SubjectId == subjectKey
+                        && NormalizeKey(offering.SectionCode) == group.Key.Section
+                        && (termKey == null || offering.TermId == termKey))
+                    .OrderByDescending(offering => offering.TermId)
+                    .Select(offering => (int?)offering.Id)
+                    .FirstOrDefault();
+            }
+
+            collected.Add(new CollectedCourseView(
+                MostCommon(rowsInGroup.Select(row => row.CourseCode)) ?? "",
+                MostCommon(rowsInGroup.Select(row => row.Section)),
+                MostCommon(rowsInGroup.Select(row => row.Title)) ?? "",
+                MostCommon(rowsInGroup.Select(row => row.Instructor)) ?? "—",
+                MostCommon(rowsInGroup.Select(row => row.Location)) ?? "—",
+                MostCommon(rowsInGroup.Select(row => row.Days)) ?? "",
+                MostCommon(rowsInGroup.Select(row => row.MeetingTimes)),
+                MostCommonUnits(rowsInGroup.Select(row => row.Units)),
+                group.Key.TermId,
+                group.Key.TermId is int id && termNames.TryGetValue(id, out var name) ? name : null,
+                rowsInGroup.Select(row => row.ProfileId).Distinct().Count(),
+                rowsInGroup.Count,
+                rowsInGroup.Count(row => row.ClassOfferingId is not null),
+                subjectId,
+                offeringId));
+        }
+
+        return collected
+            .Where(course => !onlyUnmatched || !course.HasOffering)
+            .OrderByDescending(course => course.StudentCount)
+            .ThenBy(course => course.CourseCode)
+            .ThenBy(course => course.Section)
+            .ToList();
+    }
+
+    public async Task<string?> PromoteCourseAsync(
+        CollectedCourseView course, int termId, CancellationToken cancellationToken = default)
+    {
+        if (termId == 0)
+            return "Choose the term the new class belongs to.";
+
+        var code = NormalizeKey(course.CourseCode);
+        if (code.Length == 0)
+            return "This course has no course code to promote.";
+
+        var days = NormalizeDays(course.Days);
+        if (days is null)
+            return "This course has no meeting days, so it cannot become a class automatically.";
+
+        if (!TryParseMeetingTimes(course.MeetingTimes, out var start, out var end))
+            return $"The meeting time '{course.MeetingTimes}' could not be read. Create this class by hand instead.";
+
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        if (!await IsAdminAsync(db, cancellationToken))
+            return NotAnAdmin;
+
+        var term = await db.AcademicTerms.SingleOrDefaultAsync(item => item.Id == termId, cancellationToken);
+        if (term is null)
+            return "That term no longer exists.";
+        if (term.IsArchived)
+            return "That term is archived. Restore it or choose another term.";
+
+        var title = string.IsNullOrWhiteSpace(course.Title) ? course.CourseCode.Trim() : course.Title.Trim();
+        var units = course.Units ?? 3m;
+
+        var subjects = await db.Subjects.ToListAsync(cancellationToken);
+        var subject = subjects.FirstOrDefault(item => NormalizeKey(item.Code) == code);
+        if (subject is null)
+        {
+            subject = new SubjectRecord
+            {
+                Code = course.CourseCode.Trim().ToUpperInvariant(),
+                Title = title,
+                Units = units,
+                UpdatedAt = DateTime.UtcNow
+            };
+            db.Subjects.Add(subject);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        // "—" normalizes to an empty key, so a group without a section still matches its class.
+        var section = string.IsNullOrWhiteSpace(course.Section)
+            ? "—"
+            : course.Section.Trim().ToUpperInvariant();
+
+        // Idempotent: promoting the same group twice must not duplicate the class.
+        if (await db.ClassOfferings.AnyAsync(
+                row => row.TermId == termId && row.SubjectId == subject.Id && row.SectionCode == section,
+                cancellationToken))
+            return null;
+
+        db.ClassOfferings.Add(new ClassOfferingRecord
+        {
+            TermId = termId,
+            SubjectId = subject.Id,
+            SectionCode = section,
+            Instructor = string.IsNullOrWhiteSpace(course.Instructor) || course.Instructor == "—"
+                ? "TBA"
+                : course.Instructor.Trim(),
+            Room = string.IsNullOrWhiteSpace(course.Room) || course.Room == "—"
+                ? "TBA"
+                : course.Room.Trim(),
+            Days = days,
+            StartTime = start,
+            EndTime = end,
+            Status = ClassOfferingStatuses.Draft,
+            UpdatedAt = DateTime.UtcNow
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
+    public async Task<string?> LinkCourseAsync(
+        CollectedCourseView course, int? termId, CancellationToken cancellationToken = default)
+    {
+        if (course.OfferingId is not int offeringId)
+            return "Promote this course into the catalog before linking students.";
+
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        if (!await IsAdminAsync(db, cancellationToken))
+            return NotAnAdmin;
+
+        var offering = await db.ClassOfferings
+            .SingleOrDefaultAsync(item => item.Id == offeringId, cancellationToken)
+            ?? throw new InvalidOperationException("That class no longer exists.");
+        var subject = await db.Subjects
+            .SingleAsync(item => item.Id == offering.SubjectId, cancellationToken);
+
+        // Only untouched rows are claimed; a row already linked to another class is left alone.
+        var candidates = await db.Schedule
+            .Where(row => row.ClassOfferingId == null || row.ClassOfferingId == offeringId)
+            .ToListAsync(cancellationToken);
+
+        var code = NormalizeKey(course.CourseCode);
+        var section = NormalizeKey(course.Section);
+        var targetTerm = course.TermId ?? termId;
+        var affected = candidates
+            .Where(row => NormalizeKey(row.CourseCode) == code
+                && NormalizeKey(row.Section) == section
+                && (targetTerm is null || row.TermId is null || row.TermId == targetTerm))
+            .ToList();
+
+        if (affected.Count == 0)
+            return "No unlinked student classes match this course any more.";
+
+        var meetingTimes = FormatMeetingTimes(offering.StartTime, offering.EndTime);
+        foreach (var scheduleRow in affected)
+        {
+            ApplyOfferingToSchedule(scheduleRow, offering, subject, meetingTimes);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
+    public async Task<(int Linked, int Diverged)> GetOfferingImpactAsync(
+        int offeringId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var offering = await db.ClassOfferings.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == offeringId, cancellationToken);
+        if (offering is null)
+            return (0, 0);
+
+        var subject = await db.Subjects.AsNoTracking()
+            .SingleAsync(item => item.Id == offering.SubjectId, cancellationToken);
+        var rows = await db.Schedule.AsNoTracking()
+            .Where(item => item.ClassOfferingId == offeringId)
+            .ToListAsync(cancellationToken);
+        var meetingTimes = FormatMeetingTimes(offering.StartTime, offering.EndTime);
+
+        return (rows.Count, rows.Count(row => !MatchesOffering(row, offering, subject, meetingTimes)));
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private const string NotAnAdmin = "Only an administrator can change academic records.";
-
     private async Task<bool> IsAdminAsync(AwykenDbContext db, CancellationToken cancellationToken)
     {
         if (accountSession.ProfileId is not int profileId)
@@ -346,4 +607,96 @@ public sealed class AcademicCatalogService(
 
         return names.Length == 0 ? null : $"|{string.Join('|', names)}|";
     }
+
+    /// <summary>Uppercases and drops punctuation/spaces so "CC 101" and "cc-101" group together.</summary>
+    private static string NormalizeKey(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return "";
+
+        var buffer = new StringBuilder(value.Length);
+        foreach (var character in value)
+        {
+            if (char.IsLetterOrDigit(character))
+                buffer.Append(char.ToUpperInvariant(character));
+        }
+
+        return buffer.ToString();
+    }
+
+    private static string? MostCommon(IEnumerable<string?> values) =>
+        values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!.Trim())
+            .GroupBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.Key)
+            .FirstOrDefault();
+
+    private static decimal? MostCommonUnits(IEnumerable<decimal?> values) =>
+        values
+            .Where(value => value.HasValue)
+            .GroupBy(value => value!.Value)
+            .OrderByDescending(group => group.Count())
+            .Select(group => (decimal?)group.Key)
+            .FirstOrDefault();
+
+    private static string FormatMeetingTimes(TimeOnly start, TimeOnly end) =>
+        $"{DateTime.Today.Add(start.ToTimeSpan()):h:mm tt} – {DateTime.Today.Add(end.ToTimeSpan()):h:mm tt}";
+
+    /// <summary>Reads "9:00 AM – 10:30 AM" (or "9:00-10:30") into two times.</summary>
+    private static bool TryParseMeetingTimes(string? value, out TimeOnly start, out TimeOnly end)
+    {
+        start = default;
+        end = default;
+
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        var parts = Regex.Split(value.Trim(), @"\s*(?:–|—|-|to)\s*", RegexOptions.IgnoreCase);
+        if (parts.Length != 2)
+            return false;
+
+        return TryParseTime(parts[0], out start)
+            && TryParseTime(parts[1], out end)
+            && end > start;
+    }
+
+    private static bool TryParseTime(string value, out TimeOnly time) =>
+        TimeOnly.TryParseExact(
+            value.Trim(),
+            ["h:mm tt", "hh:mm tt", "h:mmtt", "H:mm", "HH:mm"],
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out time);
+
+    /// <summary>Copies the official class values onto a student's own row, keeping its Id.</summary>
+    private static void ApplyOfferingToSchedule(
+        ScheduleRecord scheduleRow, ClassOfferingRecord offering, SubjectRecord subject, string meetingTimes)
+    {
+        scheduleRow.CourseCode = subject.Code;
+        scheduleRow.Title = subject.Title;
+        scheduleRow.Section = offering.SectionCode;
+        scheduleRow.Instructor = offering.Instructor;
+        scheduleRow.Location = offering.Room;
+        scheduleRow.Days = offering.Days;
+        scheduleRow.MeetingTimes = meetingTimes;
+        scheduleRow.Units = subject.Units;
+        scheduleRow.TermId = offering.TermId;
+        scheduleRow.ClassOfferingId = offering.Id;
+        scheduleRow.UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static bool MatchesOffering(
+        ScheduleRecord row, ClassOfferingRecord offering, SubjectRecord subject, string meetingTimes) =>
+        string.Equals(row.CourseCode, subject.Code, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(row.Title, subject.Title, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(row.Section, offering.SectionCode, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(row.Instructor, offering.Instructor, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(row.Location, offering.Room, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(row.Days, offering.Days, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(row.MeetingTimes, meetingTimes, StringComparison.OrdinalIgnoreCase)
+        && row.Units == subject.Units
+        && row.TermId == offering.TermId;
 }
