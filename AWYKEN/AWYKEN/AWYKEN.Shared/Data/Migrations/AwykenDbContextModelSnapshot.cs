@@ -67,6 +67,90 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.ToTable("AcademicTerms", (string)null);
                 });
 
+            modelBuilder.Entity("AWYKEN.Shared.Data.CalendarEventRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("FeedId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeedId", "StartDate");
+
+                    b.HasIndex("StartDate", "EndDate");
+
+                    b.ToTable("CalendarEvents", (string)null);
+                });
+
+            modelBuilder.Entity("AWYKEN.Shared.Data.CalendarFeedRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LastSyncMessage")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("LastSyncedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CalendarFeeds", (string)null);
+                });
+
             modelBuilder.Entity("AWYKEN.Shared.Data.ClassOfferingRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -484,6 +568,14 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasFilter("[Email] IS NOT NULL");
 
                     b.ToTable("Profiles", (string)null);
+                });
+
+            modelBuilder.Entity("AWYKEN.Shared.Data.CalendarEventRecord", b =>
+                {
+                    b.HasOne("AWYKEN.Shared.Data.CalendarFeedRecord", null)
+                        .WithMany()
+                        .HasForeignKey("FeedId")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("AWYKEN.Shared.Data.ClassOfferingRecord", b =>

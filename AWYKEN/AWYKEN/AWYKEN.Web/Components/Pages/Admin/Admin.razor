@@ -53,6 +53,7 @@
     @if (filteredStudents.Count == 0) { <tr><td colspan="5" class="no-results">No students match this search.</td></tr> }
     </tbody></table></div></section><p class="data-note">Account activation, suspension, registration dates, and last activity are not represented in the existing student database schema.</p>
    } else if (activeSection == "Academic Management") { <AcademicManagementPanel />
+   } else if (activeSection == "School Calendar") { <SchoolCalendarPanel />
    } else { <section class="feature-card module-placeholder"><div class="empty-state"><span class="empty-icon">@IconFor(activeSection)</span><strong>@PlaceholderTitle</strong><p>@PlaceholderDescription</p></div><div class="database-status"><span class="status-dot"></span><span>Database status: connected</span><small>Existing student accounts and schedules are available to the dashboard.</small></div></section> }
    }
   </section>

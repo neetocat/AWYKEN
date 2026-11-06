@@ -1,5 +1,6 @@
 @using AWYKEN.Shared.Data
 @inject IAcademicCatalogService Catalog
+@inject ISchoolCalendarService Calendar
 
 <div class="acad">
     <div class="acad-tabs" role="tablist">
@@ -81,6 +82,9 @@
                     <div class="acad-form-actions">
                         <button type="button" class="acad-primary" disabled="@Busy" @onclick="SaveTermAsync">
                             Save term
+                        </button>
+                        <button type="button" disabled="@Busy" @onclick="UseCalendarDatesAsync">
+                            Use calendar dates
                         </button>
                         <button type="button" @onclick="CancelTerm">Cancel</button>
                     </div>
@@ -622,6 +626,29 @@
 
         TermForm = null;
         await ReloadAsync();
+    }
+
+    /// <summary>Takes the term's start and end from the school calendar, when it has a range.</summary>
+    private async Task UseCalendarDatesAsync()
+    {
+        FormError = null;
+        try
+        {
+            var dates = await Calendar.FindTermDatesAsync(TermYear, TermSemester);
+            if (dates is null)
+            {
+                FormError = "The school calendar has no semester range for that school year and semester. " +
+                    "Add one under School Calendar with the kind \"Semester range\".";
+                return;
+            }
+
+            TermStart = dates.Value.Start;
+            TermEnd = dates.Value.End;
+        }
+        catch (Exception exception)
+        {
+            FormError = exception.GetBaseException().Message;
+        }
     }
 
     private async Task MakeCurrentAsync(int termId)

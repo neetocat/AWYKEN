@@ -36,9 +36,14 @@ student tables and is never deleted, only archived:
 | `AcademicTerms` | `AcademicTermRecord` | One academic period (`2026-2027` + `1st`/`2nd`/`Summer`) with its dates. A filtered unique index allows exactly one current term. |
 | `Subjects` | `SubjectRecord` | A catalog subject: unique code, title, units, college. |
 | `ClassOfferings` | `ClassOfferingRecord` | One section of a subject in a term: section code, instructor, room, `Days` (`\|Mon\|Wed\|`), start/end time, and a Draft/Published/Cancelled status. |
+| `CalendarFeeds` | `CalendarFeedRecord` | A public iCal (.ics) address the admin can import school-calendar entries from, with its last sync result. |
+| `CalendarEvents` | `CalendarEventRecord` | A holiday, suspension, semester break, examination, or semester range. Term dates can be taken from a semester range. |
 
 Reference rows have `IsArchived` instead of being deleted, and their foreign keys are
 `NO ACTION` so a term or subject can never silently remove classes or student data.
+`Schedule.TermId` and `Schedule.ClassOfferingId` are nullable links: rows imported from a
+COR start unlinked and are claimed by the admin's "Link" action, which keeps their ids so
+course notes and incentives survive.
 
 Every row is scoped by `ProfileId`. Deletes cascade down a single chain: `Profiles` →
 `Schedule` → `Courses` / `StudentIncentives`. `Courses.ProfileId` and

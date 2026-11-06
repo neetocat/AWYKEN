@@ -1,0 +1,428 @@
+@using AWYKEN.Shared.Data
+@inject ISchoolCalendarService Calendar
+
+<div class="cal">
+    <div class="cal-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="@(Tab == "events")"
+                class="cal-tab @(Tab == "events" ? "selected" : "")" @onclick='() => SwitchTab("events")'>
+            Events
+        </button>
+        <button type="button" role="tab" aria-selected="@(Tab == "sources")"
+                class="cal-tab @(Tab == "sources" ? "selected" : "")" @onclick='() => SwitchTab("sources")'>
+            Data sources
+        </button>
+
+        <label class="cal-archived">
+            <input type="checkbox" @bind="IncludeArchived" @bind:after="ReloadAsync" />
+            Show archived
+        </label>
+    </div>
+
+    @if (Error is not null)
+    {
+        <p class="cal-error" role="alert">@Error</p>
+    }
+    @if (Info is not null)
+    {
+        <p class="cal-info">@Info</p>
+    }
+
+    @if (Tab == "events")
+    {
+        <section class="cal-panel">
+            <header class="cal-panel-head">
+                <div>
+                    <h2>Calendar entries</h2>
+                    <p>Holidays, suspensions, semester breaks, examinations, and semester ranges.</p>
+                </div>
+                <button type="button" class="cal-primary" @onclick="NewEvent">+ Add entry</button>
+            </header>
+
+            @if (EventForm is not null)
+            {
+                <div class="cal-form">
+                    <label class="wide">
+                        Title
+                        <input @bind="EventTitle" placeholder="1st Semester 2026-2027" />
+                    </label>
+                    <label>
+                        Kind
+                        <select @bind="EventKind">
+                            @foreach (var kind in CalendarEventKinds.All)
+                            {
+                                <option value="@kind">@CalendarEventKinds.Label(kind)</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Starts
+                        <input type="date" @bind="EventStart" />
+                    </label>
+                    <label>
+                        Ends
+                        <input type="date" @bind="EventEnd" />
+                    </label>
+                    <label class="cal-wide cal-apply">
+                        <input type="checkbox" @bind="EventPublished" />
+                        Published to students
+                    </label>
+                    <div class="cal-form-actions">
+                        <button type="button" class="cal-primary" disabled="@Busy" @onclick="SaveEventAsync">
+                            Save entry
+                        </button>
+                        <button type="button" @onclick="CancelEvent">Cancel</button>
+                    </div>
+                    @if (FormError is not null)
+                    {
+                        <p class="cal-form-error">@FormError</p>
+                    }
+                </div>
+            }
+
+            @if (Events.Count == 0)
+            {
+                <p class="cal-empty">
+                    No calendar entries yet. Add one by hand, or import a data source on the next tab.
+                </p>
+            }
+            else
+            {
+                <div class="cal-table-wrap">
+                    <table class="cal-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Date</th>
+                                <th scope="col">Title</th>
+                                <th scope="col">Kind</th>
+                                <th scope="col">Source</th>
+                                <th scope="col">Published</th>
+                                <th scope="col" class="cal-actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Events)
+                            {
+                                <tr class="@(item.IsArchived ? "archived" : "")">
+                                    <td class="cal-date">@item.DateRange</td>
+                                    <td class="cal-strong">@item.Title</td>
+                                    <td><span class="cal-kind">@item.KindLabel</span></td>
+                                    <td class="cal-muted">@(item.FeedName ?? "Manual")</td>
+                                    <td>
+                                        @if (item.IsPublished)
+                                        {
+                                            <span class="cal-badge published">Published</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="cal-badge">Draft</span>
+                                        }
+                                    </td>
+                                    <td class="cal-actions">
+                                        <button type="button" @onclick='() => EditEvent(item)'>Edit</button>
+                                        <button type="button" @onclick='() => TogglePublishedAsync(item)'>
+                                            @(item.IsPublished ? "Unpublish" : "Publish")
+                                        </button>
+                                        <button type="button" @onclick='() => ToggleArchivedAsync(item)'>
+                                            @(item.IsArchived ? "Restore" : "Archive")
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+    else
+    {
+        <section class="cal-panel">
+            <header class="cal-panel-head">
+                <div>
+                    <h2>Data sources</h2>
+                    <p>Public iCal (.ics) feeds, the same format the student calendar reads.</p>
+                </div>
+                <button type="button" class="cal-primary" @onclick="NewFeed">+ Add data source</button>
+            </header>
+
+            @if (FeedForm is not null)
+            {
+                <div class="cal-form">
+                    <label>
+                        Name
+                        <input @bind="FeedName" placeholder="UMak academic calendar" />
+                    </label>
+                    <label class="wide">
+                        Feed address
+                        <input @bind="FeedUrl" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics" />
+                    </label>
+                    <label class="cal-wide cal-apply">
+                        <input type="checkbox" @bind="FeedEnabled" />
+                        Enabled
+                    </label>
+                    <div class="cal-form-actions">
+                        <button type="button" class="cal-primary" disabled="@Busy" @onclick="SaveFeedAsync">
+                            Save data source
+                        </button>
+                        <button type="button" @onclick="CancelFeed">Cancel</button>
+                    </div>
+                    @if (FormError is not null)
+                    {
+                        <p class="cal-form-error">@FormError</p>
+                    }
+                </div>
+            }
+
+            @if (Feeds.Count == 0)
+            {
+                <p class="cal-empty">
+                    No data sources yet. Add the public iCal address of the school calendar to import
+                    holidays and term dates automatically.
+                </p>
+            }
+            else
+            {
+                <div class="cal-table-wrap">
+                    <table class="cal-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">Address</th>
+                                <th scope="col">Last sync</th>
+                                <th scope="col" class="cal-actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var feed in Feeds)
+                            {
+                                <tr class="@(feed.IsArchived ? "archived" : "")">
+                                    <td class="cal-strong">@feed.Name</td>
+                                    <td class="cal-url">@feed.Url</td>
+                                    <td class="cal-muted">
+                                        @if (feed.LastSyncedAt is DateTime synced)
+                                        {
+                                            <span>@synced.ToLocalTime().ToString("MMM d, h:mm tt")</span>
+                                            <span class="cal-sub">@feed.LastSyncMessage</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Never</span>
+                                        }
+                                    </td>
+                                    <td class="cal-actions">
+                                        <button type="button" disabled="@Busy" @onclick='() => ImportAsync(feed)'>
+                                            Import now
+                                        </button>
+                                        <button type="button" @onclick='() => EditFeed(feed)'>Edit</button>
+                                        <button type="button" @onclick='() => ToggleArchivedAsync(feed)'>
+                                            @(feed.IsArchived ? "Restore" : "Archive")
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private string Tab = "events";
+    private bool IncludeArchived;
+    private bool Busy;
+    private string? Error;
+    private string? Info;
+    private string? FormError;
+
+    private IReadOnlyList<CalendarEventView> Events = [];
+    private IReadOnlyList<CalendarFeedView> Feeds = [];
+
+    private CalendarEventRecord? EventForm;
+    private string EventTitle = "";
+    private string EventKind = CalendarEventKinds.Semester;
+    private DateOnly EventStart = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly EventEnd = DateOnly.FromDateTime(DateTime.Today);
+    private bool EventPublished = true;
+
+    private CalendarFeedRecord? FeedForm;
+    private string FeedName = "";
+    private string FeedUrl = "";
+    private bool FeedEnabled = true;
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    private async Task ReloadAsync()
+    {
+        Busy = true;
+        try
+        {
+            Events = await Calendar.GetEventsAsync(IncludeArchived);
+            Feeds = await Calendar.GetFeedsAsync(IncludeArchived);
+            Error = null;
+        }
+        catch (Exception exception)
+        {
+            Error = exception.GetBaseException().Message;
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+
+    private void SwitchTab(string tab)
+    {
+        Tab = tab;
+        Error = null;
+        Info = null;
+        FormError = null;
+        EventForm = null;
+        FeedForm = null;
+    }
+
+    // ----- events
+
+    private void NewEvent()
+    {
+        EventForm = new CalendarEventRecord();
+        EventTitle = "";
+        EventKind = CalendarEventKinds.Semester;
+        EventStart = DateOnly.FromDateTime(DateTime.Today);
+        EventEnd = EventStart;
+        EventPublished = true;
+        FormError = null;
+    }
+
+    private void EditEvent(CalendarEventView item)
+    {
+        EventForm = new CalendarEventRecord { Id = item.Id, IsArchived = item.IsArchived };
+        EventTitle = item.Title;
+        EventKind = item.Kind;
+        EventStart = item.StartDate;
+        EventEnd = item.EndDate;
+        EventPublished = item.IsPublished;
+        FormError = null;
+    }
+
+    private void CancelEvent()
+    {
+        EventForm = null;
+        FormError = null;
+    }
+
+    private async Task SaveEventAsync()
+    {
+        if (EventForm is null)
+            return;
+
+        FormError = null;
+        var model = new CalendarEventRecord
+        {
+            Id = EventForm.Id,
+            Title = EventTitle,
+            Kind = EventKind,
+            StartDate = EventStart,
+            EndDate = EventEnd,
+            IsPublished = EventPublished
+        };
+
+        FormError = await Calendar.SaveEventAsync(model);
+        if (FormError is not null)
+            return;
+
+        EventForm = null;
+        await ReloadAsync();
+    }
+
+    private async Task TogglePublishedAsync(CalendarEventView item)
+    {
+        Error = await Calendar.SetPublishedAsync(item.Id, !item.IsPublished);
+        await ReloadAsync();
+    }
+
+    private async Task ToggleArchivedAsync(CalendarEventView item)
+    {
+        Error = await Calendar.ArchiveEventAsync(item.Id, !item.IsArchived);
+        await ReloadAsync();
+    }
+
+    // ----- feeds
+
+    private void NewFeed()
+    {
+        FeedForm = new CalendarFeedRecord();
+        FeedName = "";
+        FeedUrl = "";
+        FeedEnabled = true;
+        FormError = null;
+    }
+
+    private void EditFeed(CalendarFeedView feed)
+    {
+        FeedForm = new CalendarFeedRecord { Id = feed.Id, IsArchived = feed.IsArchived };
+        FeedName = feed.Name;
+        FeedUrl = feed.Url;
+        FeedEnabled = feed.IsEnabled;
+        FormError = null;
+    }
+
+    private void CancelFeed()
+    {
+        FeedForm = null;
+        FormError = null;
+    }
+
+    private async Task SaveFeedAsync()
+    {
+        if (FeedForm is null)
+            return;
+
+        FormError = null;
+        var model = new CalendarFeedRecord
+        {
+            Id = FeedForm.Id,
+            Name = FeedName,
+            Url = FeedUrl,
+            IsEnabled = FeedEnabled
+        };
+
+        FormError = await Calendar.SaveFeedAsync(model);
+        if (FormError is not null)
+            return;
+
+        FeedForm = null;
+        await ReloadAsync();
+    }
+
+    private async Task ImportAsync(CalendarFeedView feed)
+    {
+        Busy = true;
+        Error = null;
+        Info = null;
+        try
+        {
+            var error = await Calendar.ImportFeedAsync(feed.Id);
+            if (error is not null)
+            {
+                Error = error;
+                return;
+            }
+
+            Info = "Import finished. Open the Events tab to review the new entries.";
+        }
+        finally
+        {
+            Busy = false;
+        }
+
+        await ReloadAsync();
+    }
+
+    private async Task ToggleArchivedAsync(CalendarFeedView feed)
+    {
+        Error = await Calendar.ArchiveFeedAsync(feed.Id, !feed.IsArchived);
+        await ReloadAsync();
+    }
+}

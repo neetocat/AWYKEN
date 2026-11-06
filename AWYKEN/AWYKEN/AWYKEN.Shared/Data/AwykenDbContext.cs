@@ -17,6 +17,8 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
     public DbSet<AcademicTermRecord> AcademicTerms => Set<AcademicTermRecord>();
     public DbSet<SubjectRecord> Subjects => Set<SubjectRecord>();
     public DbSet<ClassOfferingRecord> ClassOfferings => Set<ClassOfferingRecord>();
+    public DbSet<CalendarFeedRecord> CalendarFeeds => Set<CalendarFeedRecord>();
+    public DbSet<CalendarEventRecord> CalendarEvents => Set<CalendarEventRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -165,6 +167,26 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.HasOne<AcademicTermRecord>().WithMany().HasForeignKey(offering => offering.TermId)
                 .OnDelete(DeleteBehavior.NoAction);
             entity.HasOne<SubjectRecord>().WithMany().HasForeignKey(offering => offering.SubjectId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<CalendarFeedRecord>(entity =>
+        {
+            entity.ToTable("CalendarFeeds");
+            entity.Property(feed => feed.Name).HasMaxLength(120).IsRequired();
+            entity.Property(feed => feed.Url).HasMaxLength(500).IsRequired();
+            entity.Property(feed => feed.LastSyncMessage).HasMaxLength(300);
+        });
+
+        modelBuilder.Entity<CalendarEventRecord>(entity =>
+        {
+            entity.ToTable("CalendarEvents");
+            entity.Property(item => item.Title).HasMaxLength(200).IsRequired();
+            entity.Property(item => item.Kind).HasMaxLength(30).IsRequired();
+            entity.HasIndex(item => new { item.StartDate, item.EndDate });
+            entity.HasIndex(item => new { item.FeedId, item.StartDate });
+            // Deleting a feed leaves its imported entries in place; they are archived instead.
+            entity.HasOne<CalendarFeedRecord>().WithMany().HasForeignKey(item => item.FeedId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
     }
