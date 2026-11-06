@@ -25,6 +25,9 @@
  <main class="admin-main">
   <header class="admin-topbar"><label class="admin-search"><span>⌕</span><input placeholder="Search students, subjects, events..." @bind="searchText" @bind:event="oninput" /></label><div class="topbar-right"><span class="access-pill">Admin Access</span><button class="notification-button" title="Notifications">♧</button><span class="user-avatar">A</span><div class="greeting"><strong>Good morning, Admin</strong><span>@DateTime.Now.ToString("dddd, MMMM d")</span></div></div></header>
   <section class="admin-content">
+   @if (accessDenied) {
+    <div class="notice error-notice"><strong>Administrator access required</strong><span>Sign in with an administrator account to open this dashboard.</span><button @onclick='() => Nav.NavigateTo("/settings")'>Go to sign in</button></div>
+   } else {
    <div class="page-heading"><div><div class="eyebrow">AWYKEN ADMIN <span>·</span> @DateTime.Now.ToString("dddd, MMMM d").ToUpperInvariant()</div><h1>@activeSection</h1><p>@SectionSubtitle</p></div><button class="outline-action" @onclick="RefreshData">↻ &nbsp; Refresh data</button></div>
    @if (!string.IsNullOrWhiteSpace(loadError)) { <div class="notice error-notice"><strong>Database connection issue</strong><span>@loadError</span><button @onclick="RefreshData">Retry</button></div> }
    else if (loading) { <div class="notice">Connecting to the AWYKEN database…</div> }
@@ -51,6 +54,7 @@
     </tbody></table></div></section><p class="data-note">Account activation, suspension, registration dates, and last activity are not represented in the existing student database schema.</p>
    } else if (activeSection == "Academic Management") { <AcademicManagementPanel />
    } else { <section class="feature-card module-placeholder"><div class="empty-state"><span class="empty-icon">@IconFor(activeSection)</span><strong>@PlaceholderTitle</strong><p>@PlaceholderDescription</p></div><div class="database-status"><span class="status-dot"></span><span>Database status: connected</span><small>Existing student accounts and schedules are available to the dashboard.</small></div></section> }
+   }
   </section>
  </main>
 </div>
@@ -60,6 +64,7 @@
  private static readonly MenuItem[] Navigation = [new("Dashboard", "Dashboard", "⌂"), new("Student Management", "Student Management", "♧"), new("Academic Management", "Academic Management", "▤"), new("School Calendar", "School Calendar", "▦"), new("Announcements", "Announcements", "▱")];
  private string activeSection = "Dashboard", searchText = "";
  private bool loading = true;
+ private bool accessDenied;
  private string? loadError;
  private int registeredStudents, classes, subjects;
  private List<UserProfileRecord> students = [], recentStudents = [];
@@ -69,14 +74,24 @@
  private string PlaceholderDescription => activeSection switch { "Academic Management" => "The current schedule records are student owned. Add official subject, class, and academic period records to enable school wide management.", "School Calendar" => "Add a calendar events data source to publish holidays, suspensions, semester breaks, and examination dates.", "Announcements" => "Add announcement storage to create and schedule student notifications.", "Administrators" => "Admin access is granted by listing an email in AWYKEN_ADMIN_EMAILS. Editing roles from this screen is not implemented yet.", "Activity Logs" => "The current database does not record administrative activity.", _ => "System settings and backup controls are not available in the current database." };
  protected override async Task OnInitializedAsync()
  {
-  await DataService.InitializeAsync();
-  // The role check runs on the server: a signed-in student never receives this page's data.
-  if (!await DataService.IsAdminAsync())
+  try
   {
-   Nav.NavigateTo("/settings", replace: true);
-   return;
+   await DataService.InitializeAsync();
+   // The role check runs on the server: a signed-in student never receives this page's data.
+   // Refusing in place instead of redirecting avoids a NavigationException during the first render.
+   if (!await DataService.IsAdminAsync())
+   {
+    accessDenied = true;
+    loading = false;
+    return;
+   }
+   await RefreshData();
   }
-  await RefreshData();
+  catch (Exception exception)
+  {
+   loadError = exception.GetBaseException().Message;
+   loading = false;
+  }
  }
  private void Select(string section) => activeSection = section;
  private string IconFor(string section) => section switch { "Academic Management" => "▤", "School Calendar" => "▦", "Announcements" => "▱", "Administrators" => "♙", "Activity Logs" => "▤", _ => "⚙" };
