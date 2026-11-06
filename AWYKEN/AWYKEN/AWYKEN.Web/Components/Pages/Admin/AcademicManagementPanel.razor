@@ -1,0 +1,635 @@
+@using AWYKEN.Shared.Data
+@inject IAcademicCatalogService Catalog
+
+<div class="acad">
+    <div class="acad-tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="@(Tab == "terms")"
+                class="acad-tab @(Tab == "terms" ? "selected" : "")" @onclick='() => SwitchTab("terms")'>
+            Terms
+        </button>
+        <button type="button" role="tab" aria-selected="@(Tab == "subjects")"
+                class="acad-tab @(Tab == "subjects" ? "selected" : "")" @onclick='() => SwitchTab("subjects")'>
+            Subjects
+        </button>
+        <button type="button" role="tab" aria-selected="@(Tab == "classes")"
+                class="acad-tab @(Tab == "classes" ? "selected" : "")" @onclick='() => SwitchTab("classes")'>
+            Classes
+        </button>
+
+        <label class="acad-archived">
+            <input type="checkbox" @bind="IncludeArchived" @bind:after="ReloadAsync" />
+            Show archived
+        </label>
+    </div>
+
+    @if (Error is not null)
+    {
+        <p class="acad-error" role="alert">@Error</p>
+    }
+
+    @if (Tab == "terms")
+    {
+        <section class="acad-panel">
+            <header class="acad-panel-head">
+                <div>
+                    <h2>Academic terms</h2>
+                    <p>Academic year and semester. Exactly one term is current.</p>
+                </div>
+                <button type="button" class="acad-primary" @onclick="NewTerm">+ Add term</button>
+            </header>
+
+            @if (TermForm is not null)
+            {
+                <div class="acad-form">
+                    <label>
+                        School year
+                        <input @bind="TermYear" placeholder="2026-2027" />
+                    </label>
+                    <label>
+                        Semester
+                        <select @bind="TermSemester">
+                            <option value="1st">1st</option>
+                            <option value="2nd">2nd</option>
+                            <option value="Summer">Summer</option>
+                        </select>
+                    </label>
+                    <label>
+                        Start
+                        <input type="date" @bind="TermStart" />
+                    </label>
+                    <label>
+                        End
+                        <input type="date" @bind="TermEnd" />
+                    </label>
+                    <div class="acad-form-actions">
+                        <button type="button" class="acad-primary" disabled="@Busy" @onclick="SaveTermAsync">
+                            Save term
+                        </button>
+                        <button type="button" @onclick="CancelTerm">Cancel</button>
+                    </div>
+                    @if (FormError is not null)
+                    {
+                        <p class="acad-form-error">@FormError</p>
+                    }
+                </div>
+            }
+
+            @if (Terms.Count == 0)
+            {
+                <p class="acad-empty">No terms yet. Add the current school year and semester first.</p>
+            }
+            else
+            {
+                <div class="acad-table-wrap">
+                    <table class="acad-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">School year</th>
+                                <th scope="col">Semester</th>
+                                <th scope="col">Dates</th>
+                                <th scope="col">Status</th>
+                                <th scope="col" class="acad-actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var term in Terms)
+                            {
+                                <tr class="@(term.IsArchived ? "archived" : "")">
+                                    <td class="acad-strong">@term.SchoolYear</td>
+                                    <td>@term.Semester</td>
+                                    <td class="acad-muted">
+                                        @term.StartDate.ToString("MMM d, yyyy") – @term.EndDate.ToString("MMM d, yyyy")
+                                    </td>
+                                    <td>
+                                        @if (term.IsCurrent)
+                                        {
+                                            <span class="acad-badge current">Current</span>
+                                        }
+                                        @if (term.IsArchived)
+                                        {
+                                            <span class="acad-badge archived">Archived</span>
+                                        }
+                                        @if (!term.IsCurrent && !term.IsArchived)
+                                        {
+                                            <span class="acad-badge">Open</span>
+                                        }
+                                    </td>
+                                    <td class="acad-actions">
+                                        <button type="button" @onclick='() => EditTerm(term)'>Edit</button>
+                                        @if (!term.IsCurrent && !term.IsArchived)
+                                        {
+                                            <button type="button" @onclick='() => MakeCurrentAsync(term.Id)'>Set current</button>
+                                        }
+                                        <button type="button" @onclick='() => ToggleArchivedAsync(term)'>
+                                            @(term.IsArchived ? "Restore" : "Archive")
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+    else if (Tab == "subjects")
+    {
+        <section class="acad-panel">
+            <header class="acad-panel-head">
+                <div>
+                    <h2>Subjects</h2>
+                    <p>The school catalog that classes are offered under.</p>
+                </div>
+                <button type="button" class="acad-primary" @onclick="NewSubject">+ Add subject</button>
+            </header>
+
+            @if (SubjectForm is not null)
+            {
+                <div class="acad-form">
+                    <label>
+                        Code
+                        <input @bind="SubjectCode" placeholder="CC 101" />
+                    </label>
+                    <label class="wide">
+                        Title
+                        <input @bind="SubjectTitle" placeholder="Introduction to Computing" />
+                    </label>
+                    <label>
+                        Units
+                        <input type="number" step="0.5" min="0" max="30" @bind="SubjectUnits" />
+                    </label>
+                    <label class="wide">
+                        College
+                        <input @bind="SubjectCollege" placeholder="College of Computer Studies" />
+                    </label>
+                    <div class="acad-form-actions">
+                        <button type="button" class="acad-primary" disabled="@Busy" @onclick="SaveSubjectAsync">
+                            Save subject
+                        </button>
+                        <button type="button" @onclick="CancelSubject">Cancel</button>
+                    </div>
+                    @if (FormError is not null)
+                    {
+                        <p class="acad-form-error">@FormError</p>
+                    }
+                </div>
+            }
+
+            @if (Subjects.Count == 0)
+            {
+                <p class="acad-empty">No subjects yet. Add the first one to start building classes.</p>
+            }
+            else
+            {
+                <div class="acad-table-wrap">
+                    <table class="acad-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Code</th>
+                                <th scope="col">Title</th>
+                                <th scope="col" class="acad-number">Units</th>
+                                <th scope="col">College</th>
+                                <th scope="col" class="acad-actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var subject in Subjects)
+                            {
+                                <tr class="@(subject.IsArchived ? "archived" : "")">
+                                    <td class="acad-strong">@subject.Code</td>
+                                    <td>@subject.Title</td>
+                                    <td class="acad-number">@subject.Units.ToString("0.##")</td>
+                                    <td class="acad-muted">@(subject.College ?? "—")</td>
+                                    <td class="acad-actions">
+                                        <button type="button" @onclick='() => EditSubject(subject)'>Edit</button>
+                                        <button type="button" @onclick='() => ToggleArchivedAsync(subject)'>
+                                            @(subject.IsArchived ? "Restore" : "Archive")
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+    else
+    {
+        <section class="acad-panel">
+            <header class="acad-panel-head">
+                <div>
+                    <h2>Classes</h2>
+                    <p>Subject sections with days, times, room, and instructor.</p>
+                </div>
+                <button type="button" class="acad-primary" disabled="@(!CanAddClass)" @onclick="NewOffering">
+                    + Add class
+                </button>
+            </header>
+
+            @if (!CanAddClass)
+            {
+                <p class="acad-empty">Add at least one term and one subject before creating a class.</p>
+            }
+
+            @if (OfferingForm is not null)
+            {
+                <div class="acad-form">
+                    <label>
+                        Term
+                        <select @bind="OfferingTermId">
+                            @foreach (var term in TermOptions)
+                            {
+                                <option value="@term.Id">@term.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Subject
+                        <select @bind="OfferingSubjectId">
+                            @foreach (var subject in SubjectOptions)
+                            {
+                                <option value="@subject.Id">@subject.Code — @subject.Title</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Section
+                        <input @bind="OfferingSection" placeholder="A1" />
+                    </label>
+                    <label>
+                        Instructor
+                        <input @bind="OfferingInstructor" placeholder="Prof. Dela Cruz" />
+                    </label>
+                    <label>
+                        Room
+                        <input @bind="OfferingRoom" placeholder="Room 302" />
+                    </label>
+                    <label>
+                        Status
+                        <select @bind="OfferingStatus">
+                            @foreach (var status in ClassOfferingStatuses.All)
+                            {
+                                <option value="@status">@status</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        Start time
+                        <input type="time" @bind="OfferingStart" />
+                    </label>
+                    <label>
+                        End time
+                        <input type="time" @bind="OfferingEnd" />
+                    </label>
+                    <fieldset class="acad-days">
+                        <legend>Days</legend>
+                        @for (var day = 0; day < DayNames.Length; day++)
+                        {
+                            var index = day;
+                            <label class="acad-day">
+                                <input type="checkbox" checked="@DayChecks[index]"
+                                       @onchange="eventArgs => DayChecks[index] = (bool)eventArgs.Value!" />
+                                @DayNames[index]
+                            </label>
+                        }
+                    </fieldset>
+                    <div class="acad-form-actions">
+                        <button type="button" class="acad-primary" disabled="@Busy" @onclick="SaveOfferingAsync">
+                            Save class
+                        </button>
+                        <button type="button" @onclick="CancelOffering">Cancel</button>
+                    </div>
+                    @if (FormError is not null)
+                    {
+                        <p class="acad-form-error">@FormError</p>
+                    }
+                </div>
+            }
+
+            @if (Offerings.Count == 0)
+            {
+                <p class="acad-empty">No classes yet. Pick a term, subject, and meeting schedule.</p>
+            }
+            else
+            {
+                <div class="acad-table-wrap">
+                    <table class="acad-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Term</th>
+                                <th scope="col">Subject</th>
+                                <th scope="col">Section</th>
+                                <th scope="col">Days</th>
+                                <th scope="col">Time</th>
+                                <th scope="col">Room</th>
+                                <th scope="col">Instructor</th>
+                                <th scope="col">Status</th>
+                                <th scope="col" class="acad-actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var offering in Offerings)
+                            {
+                                <tr class="@(offering.IsArchived ? "archived" : "")">
+                                    <td class="acad-muted">@offering.TermName</td>
+                                    <td>
+                                        <span class="acad-strong">@offering.SubjectCode</span>
+                                        <span class="acad-sub">@offering.SubjectTitle</span>
+                                    </td>
+                                    <td>@offering.SectionCode</td>
+                                    <td>@offering.DisplayDays</td>
+                                    <td class="acad-muted">@offering.TimeRange</td>
+                                    <td>@offering.Room</td>
+                                    <td class="acad-muted">@offering.Instructor</td>
+                                    <td>
+                                        <span class="acad-badge @offering.Status.ToLowerInvariant()">@offering.Status</span>
+                                    </td>
+                                    <td class="acad-actions">
+                                        <button type="button" @onclick='() => EditOffering(offering)'>Edit</button>
+                                        <button type="button" @onclick='() => ToggleArchivedAsync(offering)'>
+                                            @(offering.IsArchived ? "Restore" : "Archive")
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private static readonly string[] DayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    private string Tab = "terms";
+    private bool IncludeArchived;
+    private bool Busy;
+    private string? Error;
+    private string? FormError;
+
+    private IReadOnlyList<AcademicTermView> Terms = [];
+    private IReadOnlyList<SubjectView> Subjects = [];
+    private IReadOnlyList<ClassOfferingView> Offerings = [];
+    private IReadOnlyList<AcademicTermView> TermOptions = [];
+    private IReadOnlyList<SubjectView> SubjectOptions = [];
+
+    private AcademicTermRecord? TermForm;
+    private string TermYear = "";
+    private string TermSemester = "1st";
+    private DateOnly TermStart = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly TermEnd = DateOnly.FromDateTime(DateTime.Today).AddDays(120);
+
+    private SubjectRecord? SubjectForm;
+    private string SubjectCode = "";
+    private string SubjectTitle = "";
+    private string SubjectCollege = "";
+    private decimal SubjectUnits = 3m;
+
+    private ClassOfferingRecord? OfferingForm;
+    private int OfferingTermId;
+    private int OfferingSubjectId;
+    private string OfferingSection = "";
+    private string OfferingInstructor = "";
+    private string OfferingRoom = "";
+    private string OfferingStatus = ClassOfferingStatuses.Draft;
+    private TimeOnly OfferingStart = new(8, 0);
+    private TimeOnly OfferingEnd = new(9, 0);
+    private readonly bool[] DayChecks = new bool[7];
+
+    private bool CanAddClass => TermOptions.Count > 0 && SubjectOptions.Count > 0;
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    private async Task ReloadAsync()
+    {
+        Busy = true;
+        try
+        {
+            Terms = await Catalog.GetTermsAsync(IncludeArchived);
+            Subjects = await Catalog.GetSubjectsAsync(IncludeArchived);
+            Offerings = await Catalog.GetOfferingsAsync(null, IncludeArchived);
+            TermOptions = await Catalog.GetTermsAsync(includeArchived: false);
+            SubjectOptions = await Catalog.GetSubjectsAsync(includeArchived: false);
+            Error = null;
+        }
+        catch (Exception exception)
+        {
+            Error = exception.GetBaseException().Message;
+        }
+        finally
+        {
+            Busy = false;
+        }
+    }
+
+    private void SwitchTab(string tab)
+    {
+        Tab = tab;
+        FormError = null;
+        TermForm = null;
+        SubjectForm = null;
+        OfferingForm = null;
+    }
+
+    // ----- terms
+
+    private void NewTerm()
+    {
+        TermForm = new AcademicTermRecord();
+        TermYear = "";
+        TermSemester = "1st";
+        TermStart = DateOnly.FromDateTime(DateTime.Today);
+        TermEnd = TermStart.AddDays(120);
+        FormError = null;
+    }
+
+    private void EditTerm(AcademicTermView term)
+    {
+        TermForm = new AcademicTermRecord { Id = term.Id, IsCurrent = term.IsCurrent, IsArchived = term.IsArchived };
+        TermYear = term.SchoolYear;
+        TermSemester = term.Semester;
+        TermStart = term.StartDate;
+        TermEnd = term.EndDate;
+        FormError = null;
+    }
+
+    private void CancelTerm()
+    {
+        TermForm = null;
+        FormError = null;
+    }
+
+    private async Task SaveTermAsync()
+    {
+        if (TermForm is null)
+            return;
+
+        FormError = null;
+        var model = new AcademicTermRecord
+        {
+            Id = TermForm.Id,
+            SchoolYear = TermYear,
+            Semester = TermSemester,
+            StartDate = TermStart,
+            EndDate = TermEnd
+        };
+
+        FormError = await Catalog.SaveTermAsync(model);
+        if (FormError is not null)
+            return;
+
+        TermForm = null;
+        await ReloadAsync();
+    }
+
+    private async Task MakeCurrentAsync(int termId)
+    {
+        Error = await Catalog.SetCurrentTermAsync(termId);
+        await ReloadAsync();
+    }
+
+    private async Task ToggleArchivedAsync(AcademicTermView term)
+    {
+        Error = await Catalog.ArchiveTermAsync(term.Id, !term.IsArchived);
+        await ReloadAsync();
+    }
+
+    // ----- subjects
+
+    private void NewSubject()
+    {
+        SubjectForm = new SubjectRecord();
+        SubjectCode = "";
+        SubjectTitle = "";
+        SubjectCollege = "";
+        SubjectUnits = 3m;
+        FormError = null;
+    }
+
+    private void EditSubject(SubjectView subject)
+    {
+        SubjectForm = new SubjectRecord { Id = subject.Id, IsArchived = subject.IsArchived };
+        SubjectCode = subject.Code;
+        SubjectTitle = subject.Title;
+        SubjectCollege = subject.College ?? "";
+        SubjectUnits = subject.Units;
+        FormError = null;
+    }
+
+    private void CancelSubject()
+    {
+        SubjectForm = null;
+        FormError = null;
+    }
+
+    private async Task SaveSubjectAsync()
+    {
+        if (SubjectForm is null)
+            return;
+
+        FormError = null;
+        var model = new SubjectRecord
+        {
+            Id = SubjectForm.Id,
+            Code = SubjectCode,
+            Title = SubjectTitle,
+            Units = SubjectUnits,
+            College = SubjectCollege
+        };
+
+        FormError = await Catalog.SaveSubjectAsync(model);
+        if (FormError is not null)
+            return;
+
+        SubjectForm = null;
+        await ReloadAsync();
+    }
+
+    private async Task ToggleArchivedAsync(SubjectView subject)
+    {
+        Error = await Catalog.ArchiveSubjectAsync(subject.Id, !subject.IsArchived);
+        await ReloadAsync();
+    }
+
+    // ----- classes
+
+    private void NewOffering()
+    {
+        OfferingForm = new ClassOfferingRecord();
+        OfferingTermId = TermOptions.FirstOrDefault(term => term.IsCurrent)?.Id ?? TermOptions[0].Id;
+        OfferingSubjectId = SubjectOptions[0].Id;
+        OfferingSection = "";
+        OfferingInstructor = "";
+        OfferingRoom = "";
+        OfferingStatus = ClassOfferingStatuses.Draft;
+        OfferingStart = new TimeOnly(8, 0);
+        OfferingEnd = new TimeOnly(9, 0);
+        Array.Clear(DayChecks);
+        FormError = null;
+    }
+
+    private void EditOffering(ClassOfferingView offering)
+    {
+        OfferingForm = new ClassOfferingRecord { Id = offering.Id, IsArchived = offering.IsArchived };
+        OfferingTermId = offering.TermId;
+        OfferingSubjectId = offering.SubjectId;
+        OfferingSection = offering.SectionCode;
+        OfferingInstructor = offering.Instructor;
+        OfferingRoom = offering.Room;
+        OfferingStatus = offering.Status;
+        OfferingStart = offering.StartTime;
+        OfferingEnd = offering.EndTime;
+        FormError = null;
+
+        Array.Clear(DayChecks);
+        var stored = offering.Days.Split('|', StringSplitOptions.RemoveEmptyEntries);
+        for (var day = 0; day < DayNames.Length; day++)
+        {
+            DayChecks[day] = stored.Contains(DayNames[day], StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private void CancelOffering()
+    {
+        OfferingForm = null;
+        FormError = null;
+    }
+
+    private async Task SaveOfferingAsync()
+    {
+        if (OfferingForm is null)
+            return;
+
+        FormError = null;
+        var selectedDays = string.Join("|", DayNames.Where((_, index) => DayChecks[index]));
+        var model = new ClassOfferingRecord
+        {
+            Id = OfferingForm.Id,
+            TermId = OfferingTermId,
+            SubjectId = OfferingSubjectId,
+            SectionCode = OfferingSection,
+            Instructor = OfferingInstructor,
+            Room = OfferingRoom,
+            Days = selectedDays.Length == 0 ? "" : $"|{selectedDays}|",
+            StartTime = OfferingStart,
+            EndTime = OfferingEnd,
+            Status = OfferingStatus
+        };
+
+        FormError = await Catalog.SaveOfferingAsync(model);
+        if (FormError is not null)
+            return;
+
+        OfferingForm = null;
+        await ReloadAsync();
+    }
+
+    private async Task ToggleArchivedAsync(ClassOfferingView offering)
+    {
+        Error = await Catalog.ArchiveOfferingAsync(offering.Id, !offering.IsArchived);
+        await ReloadAsync();
+    }
+}

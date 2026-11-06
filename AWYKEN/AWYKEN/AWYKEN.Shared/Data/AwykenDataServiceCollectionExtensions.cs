@@ -34,6 +34,7 @@ public static class AwykenDataServiceCollectionExtensions
         // The service reports the resolved server/database when a query fails.
         services.AddSingleton(settings);
         services.AddScoped<IAwykenDataService, SqlServerAwykenDataService>();
+        services.AddScoped<IAcademicCatalogService, AcademicCatalogService>();
         return services;
     }
 }

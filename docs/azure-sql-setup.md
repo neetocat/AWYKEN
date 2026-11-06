@@ -28,6 +28,18 @@ The EF model is unchanged, so the same tables and the same rows move:
 | `Courses` | `CourseNoteRecord` | One note for **one class on one date**, including news, attendance, and an optional image (`varbinary(max)`), unique per `(ProfileId, ScheduleRecordId, ClassDate)`. |
 | `StudentIncentives` | `StudentIncentiveRecord` | One teacher-awarded incentive: points, reason, and the class it belongs to. |
 
+Admin-owned reference data (added with the Academic Management module) sits beside the
+student tables and is never deleted, only archived:
+
+| Table | EF entity | What a row represents |
+| --- | --- | --- |
+| `AcademicTerms` | `AcademicTermRecord` | One academic period (`2026-2027` + `1st`/`2nd`/`Summer`) with its dates. A filtered unique index allows exactly one current term. |
+| `Subjects` | `SubjectRecord` | A catalog subject: unique code, title, units, college. |
+| `ClassOfferings` | `ClassOfferingRecord` | One section of a subject in a term: section code, instructor, room, `Days` (`\|Mon\|Wed\|`), start/end time, and a Draft/Published/Cancelled status. |
+
+Reference rows have `IsArchived` instead of being deleted, and their foreign keys are
+`NO ACTION` so a term or subject can never silently remove classes or student data.
+
 Every row is scoped by `ProfileId`. Deletes cascade down a single chain: `Profiles` →
 `Schedule` → `Courses` / `StudentIncentives`. `Courses.ProfileId` and
 `StudentIncentives.ProfileId` are deliberately `NO ACTION` because SQL Server rejects a

@@ -1,0 +1,305 @@
+.acad {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    color: #0c1230;
+}
+
+.acad-tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.acad-tab {
+    border: 1px solid #dce2ee;
+    border-radius: 999px;
+    background: #fff;
+    color: #4a5570;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+.acad-tab.selected {
+    background: #080d3f;
+    border-color: #080d3f;
+    color: #fff;
+}
+
+.acad-archived {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: #75809a;
+    cursor: pointer;
+}
+
+.acad-panel {
+    border: 1px solid #dce2ee;
+    border-radius: 18px;
+    background: #fff;
+    padding: 18px;
+}
+
+.acad-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.acad-panel-head h2 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.acad-panel-head p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #75809a;
+}
+
+.acad-primary {
+    border: 0;
+    border-radius: 10px;
+    background: #080d3f;
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.acad-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.acad-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+    border: 1px dashed #cdd6e6;
+    border-radius: 14px;
+    background: #fafbff;
+}
+
+.acad-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4a5570;
+}
+
+.acad-form .wide {
+    grid-column: span 2;
+}
+
+.acad-form input,
+.acad-form select {
+    border: 1px solid #dce2ee;
+    border-radius: 9px;
+    padding: 8px 10px;
+    font: inherit;
+    font-size: 13px;
+    color: #0c1230;
+    background: #fff;
+}
+
+.acad-form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 8px;
+}
+
+.acad-form-actions button:not(.acad-primary) {
+    border: 1px solid #dce2ee;
+    border-radius: 10px;
+    background: #fff;
+    font: inherit;
+    font-size: 13px;
+    padding: 10px 16px;
+    cursor: pointer;
+}
+
+.acad-form-error {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: #a32b2b;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.acad-days {
+    grid-column: 1 / -1;
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.acad-days legend {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4a5570;
+    margin-bottom: 6px;
+}
+
+.acad-day {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+    margin-right: 12px;
+    font-size: 12px;
+    color: #0c1230;
+}
+
+.acad-table-wrap {
+    overflow-x: auto;
+}
+
+.acad-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.acad-table th,
+.acad-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #eef1f7;
+}
+
+.acad-table th {
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #75809a;
+    background: #fafbff;
+}
+
+.acad-table tr.archived td {
+    color: #9aa3b8;
+}
+
+.acad-table tr.archived .acad-strong {
+    text-decoration: line-through;
+}
+
+.acad-strong {
+    font-weight: 700;
+}
+
+.acad-sub {
+    display: block;
+    font-size: 11px;
+    color: #75809a;
+}
+
+.acad-muted {
+    color: #4a5570;
+}
+
+.acad-number {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.acad-badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #eef1f9;
+    color: #4a5570;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.acad-badge.current,
+.acad-badge.published {
+    background: #e4f5ec;
+    color: #14663f;
+}
+
+.acad-badge.archived,
+.acad-badge.cancelled {
+    background: #f6e7e7;
+    color: #8a2b2b;
+}
+
+.acad-badge.draft {
+    background: #fff4e2;
+    color: #8a5a12;
+}
+
+.acad-actions-col {
+    text-align: right;
+}
+
+.acad-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.acad-actions button {
+    border: 1px solid #dce2ee;
+    border-radius: 8px;
+    background: #fff;
+    font: inherit;
+    font-size: 12px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+.acad-actions button:hover {
+    background: #eef1f9;
+}
+
+.acad-empty {
+    margin: 0;
+    padding: 18px;
+    border: 1px dashed #dce2ee;
+    border-radius: 12px;
+    color: #75809a;
+    font-size: 13px;
+}
+
+.acad-error {
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid #f0c9c9;
+    border-radius: 12px;
+    background: #fff7f7;
+    color: #8a2b2b;
+    font-size: 13px;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 720px) {
+    .acad-form .wide {
+        grid-column: auto;
+    }
+
+    .acad-panel-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

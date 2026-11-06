@@ -14,6 +14,9 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
     public DbSet<ScheduleRecord> Schedule => Set<ScheduleRecord>();
     public DbSet<CourseNoteRecord> Courses => Set<CourseNoteRecord>();
     public DbSet<StudentIncentiveRecord> StudentIncentives => Set<StudentIncentiveRecord>();
+    public DbSet<AcademicTermRecord> AcademicTerms => Set<AcademicTermRecord>();
+    public DbSet<SubjectRecord> Subjects => Set<SubjectRecord>();
+    public DbSet<ClassOfferingRecord> ClassOfferings => Set<ClassOfferingRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -111,6 +114,51 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
                 .OnDelete(DeleteBehavior.NoAction);
             entity.HasOne<ScheduleRecord>().WithMany().HasForeignKey(item => item.ScheduleRecordId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // --- Admin-owned reference data ------------------------------------------------
+        // Nothing here belongs to a student, so rows are archived instead of deleted and
+        // the student schedule keeps working regardless of catalog changes.
+
+        modelBuilder.Entity<AcademicTermRecord>(entity =>
+        {
+            entity.ToTable("AcademicTerms");
+            entity.Property(term => term.SchoolYear).HasMaxLength(20).IsRequired();
+            entity.Property(term => term.Semester).HasMaxLength(20).IsRequired();
+            // "2026-2027" + "1st" can exist only once.
+            entity.HasIndex(term => new { term.SchoolYear, term.Semester }).IsUnique();
+            // SQL Server allows a single current term through this filtered unique index.
+            entity.HasIndex(term => term.IsCurrent).IsUnique().HasFilter("[IsCurrent] = 1");
+        });
+
+        modelBuilder.Entity<SubjectRecord>(entity =>
+        {
+            entity.ToTable("Subjects");
+            entity.Property(subject => subject.Code).HasMaxLength(40).IsRequired();
+            entity.Property(subject => subject.Title).HasMaxLength(180).IsRequired();
+            entity.Property(subject => subject.Units).HasPrecision(5, 2);
+            entity.Property(subject => subject.College).HasMaxLength(120);
+            // Codes are stable identifiers, so they stay reserved even after archiving.
+            entity.HasIndex(subject => subject.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<ClassOfferingRecord>(entity =>
+        {
+            entity.ToTable("ClassOfferings");
+            entity.Property(offering => offering.SectionCode).HasMaxLength(40).IsRequired();
+            entity.Property(offering => offering.Instructor).HasMaxLength(120).IsRequired();
+            entity.Property(offering => offering.Room).HasMaxLength(120).IsRequired();
+            entity.Property(offering => offering.Days).HasMaxLength(40).IsRequired();
+            entity.Property(offering => offering.Status).HasMaxLength(20).IsRequired();
+            // One section of a subject per term.
+            entity.HasIndex(offering => new { offering.TermId, offering.SubjectId, offering.SectionCode })
+                .IsUnique();
+            entity.HasIndex(offering => new { offering.TermId, offering.Days });
+            // Reference rows are never hard-deleted, so block cascades instead of propagating them.
+            entity.HasOne<AcademicTermRecord>().WithMany().HasForeignKey(offering => offering.TermId)
+                .OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<SubjectRecord>().WithMany().HasForeignKey(offering => offering.SubjectId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }
