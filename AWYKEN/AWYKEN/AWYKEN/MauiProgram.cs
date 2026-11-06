@@ -1,4 +1,4 @@
-using AWYKEN.Services;
+﻿using AWYKEN.Services;
 using AWYKEN.Shared.Configuration;
 using AWYKEN.Shared.Data;
 using AWYKEN.Shared.Services;
@@ -32,7 +32,7 @@ namespace AWYKEN
             });
             builder.Services.AddSingleton<ICommuteMapService, OpenStreetMapCommuteService>();
             builder.Services.AddSingleton<ICurrentWeatherService, OpenMeteoWeatherService>();
-            builder.Services.AddSingleton<IUmakCalendarService, UmakCalendarService>();
+            builder.Services.AddSingleton<IUmakCalendarService, AWYKEN.Shared.Data.DatabaseCalendarService>();
 
             // Azure SQL Database replaces the old on-device SQLite file. The Azure keys live
             // in a .env file that Git ignores, found in this order: the repository root (or

@@ -263,6 +263,15 @@
     background: #eef1f9;
 }
 
+.cal-actions button.cal-danger {
+    color: #9f2828;
+    border-color: #edcaca;
+}
+
+.cal-actions button.cal-danger:hover {
+    background: #fff1f1;
+}
+
 .cal-empty {
     margin: 0;
     padding: 18px;

@@ -17,6 +17,7 @@ public sealed class SchoolCalendarService(
 {
     private const string NotAnAdmin = "Only an administrator can change the school calendar.";
     private static readonly Regex SchoolYearPattern = new(@"^(\d{4})-(\d{4})$", RegexOptions.Compiled);
+    private static readonly SemaphoreSlim SeedGate = new(1, 1);
 
     // ---------------------------------------------------------------- events
 
@@ -24,6 +25,36 @@ public sealed class SchoolCalendarService(
         bool includeArchived = true, CancellationToken cancellationToken = default)
     {
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+        // The bundled official calendar is the initial content for a new shared calendar.
+        // Seeding it here makes the admin's first visit show the same editable entries that
+        // students have been seeing as the bundled fallback.
+        if (await IsAdminAsync(db, cancellationToken)
+            && !await db.CalendarEvents.AnyAsync(cancellationToken))
+        {
+            await SeedGate.WaitAsync(cancellationToken);
+            try
+            {
+                if (!await db.CalendarEvents.AnyAsync(cancellationToken))
+                {
+                    var bundled = await UmakCalendarService.LoadBundledEventsAsync(cancellationToken);
+                    db.CalendarEvents.AddRange(bundled.Select(item => new CalendarEventRecord
+                    {
+                        Title = item.Title,
+                        Kind = MapKind(item.Type),
+                        StartDate = DateOnly.FromDateTime(item.Start),
+                        EndDate = DateOnly.FromDateTime(item.End),
+                        IsPublished = true,
+                        UpdatedAt = DateTime.UtcNow
+                    }));
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+            }
+            finally
+            {
+                SeedGate.Release();
+            }
+        }
 
         var events = await db.CalendarEvents.AsNoTracking()
             .Where(item => includeArchived || !item.IsArchived)
@@ -121,6 +152,22 @@ public sealed class SchoolCalendarService(
 
         item.IsArchived = archived;
         item.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
+    public async Task<string?> DeleteEventAsync(
+        int eventId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        if (!await IsAdminAsync(db, cancellationToken))
+            return NotAnAdmin;
+
+        var item = await db.CalendarEvents.SingleOrDefaultAsync(row => row.Id == eventId, cancellationToken);
+        if (item is null)
+            return "That calendar entry no longer exists.";
+
+        db.CalendarEvents.Remove(item);
         await db.SaveChangesAsync(cancellationToken);
         return null;
     }
@@ -307,33 +354,62 @@ public sealed class SchoolCalendarService(
         var candidates = await db.CalendarEvents.AsNoTracking()
             .Where(item => !item.IsArchived
                 && item.StartDate >= rangeStart
-                && item.StartDate <= rangeEnd
-                && (item.Kind == CalendarEventKinds.Semester
-                    || item.Kind == CalendarEventKinds.SemesterStart
-                    || item.Kind == CalendarEventKinds.SemesterEnd))
+                && item.StartDate <= rangeEnd)
             .ToListAsync(cancellationToken);
 
+        // An explicitly entered Semester range is the clearest source when present.
+        var ranges = candidates
+            .Where(item => item.Kind == CalendarEventKinds.Semester)
+            .Where(item => TitleMentionsSemester(item.Title, semesterKey))
+            .ToList();
+        if (ranges.Count > 0)
+        {
+            var range = ranges.OrderBy(item => item.StartDate).First();
+            return range.EndDate > range.StartDate ? (range.StartDate, range.EndDate) : null;
+        }
+
+        // Otherwise pair entries by their Kind and chronological position. This works for
+        // titles such as "First Day of Classes" that do not contain "1st semester".
+        var starts = candidates
+            .Where(item => IsCalendarKind(item.Kind, CalendarEventKinds.SemesterStart))
+            .OrderBy(item => item.StartDate)
+            .ToList();
+        var remainingEnds = candidates
+            .Where(item => IsCalendarKind(item.Kind, CalendarEventKinds.SemesterEnd))
+            .OrderBy(item => item.EndDate)
+            .ToList();
+
+        var pairs = new List<(DateOnly Start, DateOnly End)>();
+        foreach (var startEvent in starts)
+        {
+            var endIndex = remainingEnds.FindIndex(item => item.EndDate >= startEvent.StartDate);
+            if (endIndex < 0)
+                continue;
+
+            var endEvent = remainingEnds[endIndex];
+            remainingEnds.RemoveAt(endIndex);
+            pairs.Add((startEvent.StartDate, endEvent.EndDate));
+        }
+
+        var pairIndex = semesterKey switch { "1" => 0, "2" => 1, _ => 2 };
+        if (pairIndex < pairs.Count)
+            return pairs[pairIndex];
+
+        // Keep title-based lookup for calendars that label a standalone start/end by semester.
         var matching = candidates
             .Where(item => TitleMentionsSemester(item.Title, semesterKey))
             .ToList();
-        if (matching.Count == 0)
-            return null;
+        var titledStart = matching.FirstOrDefault(item => IsCalendarKind(item.Kind, CalendarEventKinds.SemesterStart));
+        var titledEnd = matching.FirstOrDefault(item => IsCalendarKind(item.Kind, CalendarEventKinds.SemesterEnd));
+        return titledStart is not null && titledEnd is not null && titledEnd.EndDate > titledStart.StartDate
+            ? (titledStart.StartDate, titledEnd.EndDate)
+            : null;
+    }
 
-        var starts = matching
-            .Where(item => item.Kind is CalendarEventKinds.Semester or CalendarEventKinds.SemesterStart)
-            .Select(item => item.StartDate)
-            .ToList();
-        var ends = matching
-            .Where(item => item.Kind is CalendarEventKinds.Semester or CalendarEventKinds.SemesterEnd)
-            .Select(item => item.EndDate)
-            .ToList();
-
-        if (starts.Count == 0 || ends.Count == 0)
-            return null;
-
-        var start = starts.Min();
-        var end = ends.Max();
-        return end > start ? (start, end) : null;
+    private static bool IsCalendarKind(string actual, string expected)
+    {
+        static string Normalize(string value) => new(value.Where(char.IsLetterOrDigit).ToArray());
+        return string.Equals(Normalize(actual), Normalize(expected), StringComparison.OrdinalIgnoreCase);
     }
 
     // ---------------------------------------------------------------- helpers

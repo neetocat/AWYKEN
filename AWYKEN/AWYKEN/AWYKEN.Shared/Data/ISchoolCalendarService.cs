@@ -14,6 +14,7 @@ public interface ISchoolCalendarService
         CancellationToken cancellationToken = default);
     Task<string?> ArchiveEventAsync(int eventId, bool archived,
         CancellationToken cancellationToken = default);
+    Task<string?> DeleteEventAsync(int eventId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<CalendarFeedView>> GetFeedsAsync(bool includeArchived = true,
         CancellationToken cancellationToken = default);

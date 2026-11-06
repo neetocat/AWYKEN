@@ -125,6 +125,15 @@
                                         <button type="button" @onclick='() => ToggleArchivedAsync(item)'>
                                             @(item.IsArchived ? "Restore" : "Archive")
                                         </button>
+                                        @if (DeleteConfirmId == item.Id)
+                                        {
+                                            <button type="button" class="cal-danger" disabled="@Busy" @onclick='() => DeleteEventAsync(item)'>Confirm delete</button>
+                                            <button type="button" @onclick="() => DeleteConfirmId = null">Cancel</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="cal-danger" @onclick="() => DeleteConfirmId = item.Id">Delete</button>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -232,6 +241,7 @@
     private string Tab = "events";
     private bool IncludeArchived;
     private bool Busy;
+    private int? DeleteConfirmId;
     private string? Error;
     private string? Info;
     private string? FormError;
@@ -346,6 +356,17 @@
     {
         Error = await Calendar.ArchiveEventAsync(item.Id, !item.IsArchived);
         await ReloadAsync();
+    }
+
+    private async Task DeleteEventAsync(CalendarEventView item)
+    {
+        Busy = true;
+        Error = await Calendar.DeleteEventAsync(item.Id);
+        DeleteConfirmId = null;
+        if (Error is null)
+            await ReloadAsync();
+        else
+            Busy = false;
     }
 
     // ----- feeds

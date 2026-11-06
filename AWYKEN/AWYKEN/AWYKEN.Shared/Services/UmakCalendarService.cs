@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using AWYKEN.Shared.Models;
@@ -9,7 +9,7 @@ using Ical.Net.DataTypes;
 namespace AWYKEN.Shared.Services;
 
 /// <summary>Where the events currently being shown came from.</summary>
-public enum UmakCalendarSource { Live, Cache, Bundled }
+public enum UmakCalendarSource { Live, Cache, Bundled, Database }
 
 /// <param name="Source">Live feed, the last saved copy of the feed, or the built-in sample JSON.</param>
 /// <param name="RetrievedAt">When the data was downloaded (Live/Cache). Null for the bundled sample.</param>
@@ -182,7 +182,7 @@ public sealed class UmakCalendarService : IUmakCalendarService
             }
         }
 
-        var bundled = await LoadBundledAsync(ct);
+        var bundled = await LoadBundledEventsAsync(ct);
         return new Snapshot(null, bundled, new UmakCalendarStatus(UmakCalendarSource.Bundled, null, error), now);
     }
 
@@ -202,7 +202,7 @@ public sealed class UmakCalendarService : IUmakCalendarService
         }
     }
 
-    private static async Task<IReadOnlyList<UmakEvent>> LoadBundledAsync(CancellationToken ct)
+    public static async Task<IReadOnlyList<UmakEvent>> LoadBundledEventsAsync(CancellationToken ct)
     {
         // Embedded in AWYKEN.Shared (see the csproj) so the Web and MAUI hosts load it the same way.
         await using var stream = typeof(UmakCalendarService).Assembly.GetManifestResourceStream(BundledResourceName)

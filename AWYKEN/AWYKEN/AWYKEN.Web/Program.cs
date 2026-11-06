@@ -1,4 +1,4 @@
-using AWYKEN.Shared.Configuration;
+﻿using AWYKEN.Shared.Configuration;
 using AWYKEN.Shared.Services;
 using AWYKEN.Shared.Data;
 using AWYKEN.Web.Components;
@@ -22,7 +22,7 @@ builder.Services.AddSingleton(_ =>
 });
 builder.Services.AddSingleton<ICommuteMapService, OpenStreetMapCommuteService>();
 builder.Services.AddSingleton<ICurrentWeatherService, OpenMeteoWeatherService>();
-builder.Services.AddSingleton<IUmakCalendarService, UmakCalendarService>();
+builder.Services.AddSingleton<IUmakCalendarService, AWYKEN.Shared.Data.DatabaseCalendarService>();
 
 // Azure SQL Database replaces the old local file database. Keys come from appsettings,
 // user secrets, environment variables, or the repository's .env file (ignored by Git).

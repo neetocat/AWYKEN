@@ -171,7 +171,9 @@
         { Source: UmakCalendarSource.Cache, RetrievedAt: { } saved } =>
             $"You're offline or the calendar is unavailable. Showing the copy saved on {saved.ToLocalTime():MMM d, yyyy h:mm tt}.",
         { Source: UmakCalendarSource.Bundled } =>
-            "Showing the official UMak University Calendar AY 2026-2027 (BOR Resolution No. 2026-010). Dates may change, so check umak.edu.ph for updates.",
+            "Showing the built-in UMak University Calendar AY 2026-2027. The administrator has not published the shared calendar yet.",
+        { Source: UmakCalendarSource.Database } =>
+            "Showing the shared AWYKEN school calendar, maintained by the administrator.",
         _ => null
     };
 

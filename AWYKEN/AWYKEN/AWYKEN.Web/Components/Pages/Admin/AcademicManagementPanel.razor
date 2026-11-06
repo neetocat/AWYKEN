@@ -84,7 +84,7 @@
                             Save term
                         </button>
                         <button type="button" disabled="@Busy" @onclick="UseCalendarDatesAsync">
-                            Use calendar dates
+                            Find dates and save from calendar
                         </button>
                         <button type="button" @onclick="CancelTerm">Cancel</button>
                     </div>
@@ -628,26 +628,51 @@
         await ReloadAsync();
     }
 
-    /// <summary>Takes the term's start and end from the school calendar, when it has a range.</summary>
+    /// <summary>Finds the selected school year's semester dates in the shared calendar and saves the term.</summary>
     private async Task UseCalendarDatesAsync()
     {
         FormError = null;
+        Info = null;
+        Busy = true;
         try
         {
             var dates = await Calendar.FindTermDatesAsync(TermYear, TermSemester);
             if (dates is null)
             {
-                FormError = "The school calendar has no semester range for that school year and semester. " +
-                    "Add one under School Calendar with the kind \"Semester range\".";
+                FormError = $"The shared calendar has no matching {TermSemester} semester start and end dates for {TermYear}. " +
+                    "Add or check the semester start and end entries in School Calendar.";
                 return;
             }
 
             TermStart = dates.Value.Start;
             TermEnd = dates.Value.End;
+
+            if (TermForm is null)
+                return;
+
+            var model = new AcademicTermRecord
+            {
+                Id = TermForm.Id,
+                SchoolYear = TermYear,
+                Semester = TermSemester,
+                StartDate = TermStart,
+                EndDate = TermEnd
+            };
+            FormError = await Catalog.SaveTermAsync(model);
+            if (FormError is not null)
+                return;
+
+            TermForm = null;
+            await ReloadAsync();
+            Info = $"Saved the {TermSemester} semester for {TermYear} using dates from the shared calendar.";
         }
         catch (Exception exception)
         {
             FormError = exception.GetBaseException().Message;
+        }
+        finally
+        {
+            Busy = false;
         }
     }
 
