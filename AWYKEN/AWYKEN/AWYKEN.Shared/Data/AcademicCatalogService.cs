@@ -201,32 +201,32 @@ public sealed class AcademicCatalogService(
         int? termId = null, bool includeArchived = true, CancellationToken cancellationToken = default)
     {
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
-        return await db.ClassOfferings.AsNoTracking()
-            .Where(offering => (includeArchived || !offering.IsArchived)
-                && (termId == null || offering.TermId == termId))
-            .Join(db.AcademicTerms.AsNoTracking(),
-                offering => offering.TermId, term => term.Id, (offering, term) => new { offering, term })
-            .Join(db.Subjects.AsNoTracking(),
-                pair => pair.offering.SubjectId, subject => subject.Id,
-                (pair, subject) => new ClassOfferingView(
-                    pair.offering.Id,
-                    pair.offering.TermId,
-                    pair.term.SchoolYear,
-                    pair.term.Semester,
+
+        // Ordering happens on the joined tables, before the projection. Ordering a query whose
+        // select already builds a record is not translatable by EF Core.
+        return await (
+                from offering in db.ClassOfferings.AsNoTracking()
+                join term in db.AcademicTerms.AsNoTracking() on offering.TermId equals term.Id
+                join subject in db.Subjects.AsNoTracking() on offering.SubjectId equals subject.Id
+                where (includeArchived || !offering.IsArchived)
+                    && (termId == null || offering.TermId == termId)
+                orderby term.SchoolYear descending, term.Semester, subject.Code, offering.SectionCode
+                select new ClassOfferingView(
+                    offering.Id,
+                    offering.TermId,
+                    term.SchoolYear,
+                    term.Semester,
                     subject.Id,
                     subject.Code,
                     subject.Title,
-                    pair.offering.SectionCode,
-                    pair.offering.Instructor,
-                    pair.offering.Room,
-                    pair.offering.Days,
-                    pair.offering.StartTime,
-                    pair.offering.EndTime,
-                    pair.offering.Status,
-                    pair.offering.IsArchived))
-            .OrderByDescending(offering => offering.TermSchoolYear)
-            .ThenBy(offering => offering.SubjectCode)
-            .ThenBy(offering => offering.SectionCode)
+                    offering.SectionCode,
+                    offering.Instructor,
+                    offering.Room,
+                    offering.Days,
+                    offering.StartTime,
+                    offering.EndTime,
+                    offering.Status,
+                    offering.IsArchived))
             .ToListAsync(cancellationToken);
     }
 
