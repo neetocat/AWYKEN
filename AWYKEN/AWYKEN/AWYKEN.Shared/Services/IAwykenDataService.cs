@@ -15,6 +15,14 @@ public interface IAwykenDataService
     Task<bool> AccountExistsAsync(string email, CancellationToken cancellationToken = default);
     /// <summary>True when the signed-in account is an administrator (sees <c>/admin</c>).</summary>
     Task<bool> IsAdminAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AdminUserSummary>> GetAdminUsersAsync(CancellationToken cancellationToken = default);
+    Task<string?> SetAdminRoleAsync(int profileId, bool isAdmin, CancellationToken cancellationToken = default);
+    Task<string?> SetAccountDisabledAsync(int profileId, bool isDisabled, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AdminActivityLogRecord>> GetAdminActivityLogsAsync(int take = 100,
+        CancellationToken cancellationToken = default);
+    Task<AppSettingsSnapshot> GetAppSettingsAsync(CancellationToken cancellationToken = default);
+    Task<string?> UpdateAppSettingsAsync(string appName, bool signupsEnabled, bool maintenanceMode,
+        CancellationToken cancellationToken = default);
     Task SignOutAsync(DateOnly refreshDate, CancellationToken cancellationToken = default);
     Task RefreshAsync(DateOnly date, CancellationToken cancellationToken = default);
     Task RefreshWeekAsync(DateOnly weekStart, CancellationToken cancellationToken = default);

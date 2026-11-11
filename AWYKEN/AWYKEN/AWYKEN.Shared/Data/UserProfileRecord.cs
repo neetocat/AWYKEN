@@ -16,6 +16,7 @@ public sealed class UserProfileRecord
     public string? TeacherPinHash { get; set; }
     // Administrators see /admin. Granted by listing the email in AWYKEN_ADMIN_EMAILS.
     public bool IsAdmin { get; set; }
+    public bool IsDisabled { get; set; }
     public string? FullName { get; set; }
     public string? StudentEmail { get; set; }
     public string? StudentNumber { get; set; }

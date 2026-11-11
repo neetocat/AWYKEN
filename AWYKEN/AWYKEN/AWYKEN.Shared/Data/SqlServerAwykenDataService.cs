@@ -1,3 +1,4 @@
+using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using AWYKEN.Shared.Configuration;
@@ -101,6 +102,7 @@ public sealed class SqlServerAwykenDataService(
 
             // Optional shared administrator from .env; created once, then it lives in the database.
             await EnsureDefaultAdminAsync(db, cancellationToken);
+            await EnsureAppSettingsAsync(db, cancellationToken);
 
             _initialized = true;
         }
@@ -112,9 +114,8 @@ public sealed class SqlServerAwykenDataService(
 
     /// <summary>
     /// Creates the shared administrator described by AWYKEN_DEFAULT_ADMIN_EMAIL /
-    /// AWYKEN_DEFAULT_ADMIN_PASSWORD when it does not exist yet. An existing account is only
-    /// promoted, never re-passworded, so a password already stored is never overwritten.
-    /// Removing the keys stops seeding but leaves the account in place.
+    /// AWYKEN_DEFAULT_ADMIN_PASSWORD when it does not exist yet. Existing roles are controlled
+    /// in the database so an administrator demotion is not undone on the next startup.
     /// </summary>
     private async Task EnsureDefaultAdminAsync(AwykenDbContext db, CancellationToken cancellationToken)
     {
@@ -125,46 +126,56 @@ public sealed class SqlServerAwykenDataService(
         var existing = await db.Profiles
             .SingleOrDefaultAsync(profile => profile.Email == email, cancellationToken);
 
-        if (existing is null)
-        {
-            var password = settings.DefaultAdminPassword!;
-            var hash = await Task.Run(() => LocalPasswordHasher.Hash(password), cancellationToken);
-            db.Profiles.Add(new UserProfileRecord
-            {
-                DisplayName = string.IsNullOrWhiteSpace(settings.DefaultAdminName)
-                    ? "Administrator"
-                    : settings.DefaultAdminName.Trim(),
-                Email = email,
-                IsAdmin = true,
-                PasswordHash = hash
-            });
-
-            try
-            {
-                await db.SaveChangesAsync(cancellationToken);
-            }
-            catch (DbUpdateException)
-            {
-                // Another client seeded the same account first; promote it instead.
-                db.ChangeTracker.Clear();
-                var seeded = await db.Profiles
-                    .SingleOrDefaultAsync(profile => profile.Email == email, cancellationToken);
-                if (seeded is null)
-                    throw;
-                if (!seeded.IsAdmin)
-                {
-                    seeded.IsAdmin = true;
-                    await db.SaveChangesAsync(cancellationToken);
-                }
-            }
-
+        if (existing is not null)
             return;
-        }
 
-        if (!existing.IsAdmin)
+        var password = settings.DefaultAdminPassword!;
+        var hash = await Task.Run(() => LocalPasswordHasher.Hash(password), cancellationToken);
+        db.Profiles.Add(new UserProfileRecord
         {
-            existing.IsAdmin = true;
+            DisplayName = string.IsNullOrWhiteSpace(settings.DefaultAdminName)
+                ? "Administrator"
+                : settings.DefaultAdminName.Trim(),
+            Email = email,
+            IsAdmin = true,
+            PasswordHash = hash
+        });
+
+        try
+        {
             await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            db.ChangeTracker.Clear();
+            if (!await db.Profiles.AnyAsync(profile => profile.Email == email, cancellationToken))
+                throw;
+        }
+    }
+
+    private static async Task EnsureAppSettingsAsync(AwykenDbContext db, CancellationToken cancellationToken)
+    {
+        if (await db.AppSettings.AnyAsync(item => item.Id == 1, cancellationToken))
+            return;
+
+        db.AppSettings.Add(new AppSettingsRecord
+        {
+            Id = 1,
+            AppName = "AWYKEN",
+            SignupsEnabled = true,
+            MaintenanceMode = false,
+            UpdatedAtUtc = DateTime.UtcNow
+        });
+
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            db.ChangeTracker.Clear();
+            if (!await db.AppSettings.AnyAsync(item => item.Id == 1, cancellationToken))
+                throw;
         }
     }
 
@@ -209,6 +220,11 @@ public sealed class SqlServerAwykenDataService(
             return "Use a password with at least 8 characters.";
 
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var appSettings = await db.AppSettings.AsNoTracking()
+            .SingleAsync(item => item.Id == 1, cancellationToken);
+        if (!appSettings.SignupsEnabled)
+            return "New account sign-ups are currently disabled.";
+
         if (await db.Profiles.AnyAsync(profile => profile.Email == normalizedEmail, cancellationToken))
             return "An account with that email already exists. Log in instead.";
 
@@ -248,15 +264,24 @@ public sealed class SqlServerAwykenDataService(
         await InitializeAsync(cancellationToken);
         var normalizedEmail = NormalizeEmail(email);
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
-        // Tracked, so an account listed in AWYKEN_ADMIN_EMAILS can be promoted in place.
         var profile = await db.Profiles
             .SingleOrDefaultAsync(item => item.Email == normalizedEmail, cancellationToken);
         if (profile is null || !await Task.Run(() => LocalPasswordHasher.Verify(password, profile.PasswordHash), cancellationToken))
             return "Email or password is incorrect.";
 
-        if (!profile.IsAdmin && IsConfiguredAdmin(normalizedEmail))
+        if (profile.IsDisabled)
+            return "This account is disabled. Contact an administrator.";
+
+        if (profile.IsAdmin)
         {
-            profile.IsAdmin = true;
+            db.AdminActivityLogs.Add(new AdminActivityLogRecord
+            {
+                ActorProfileId = profile.Id,
+                ActorEmail = profile.Email!,
+                Action = "Administrator sign-in",
+                OccurredAtUtc = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync(cancellationToken);
         }
         if (!string.Equals(profile.AccountStatus, "Active", StringComparison.OrdinalIgnoreCase))
             return profile.AccountStatus.Equals("Suspended", StringComparison.OrdinalIgnoreCase)
@@ -279,8 +304,162 @@ public sealed class SqlServerAwykenDataService(
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
         return await db.Profiles.AsNoTracking()
             .Where(profile => profile.Id == profileId)
-            .Select(profile => profile.IsAdmin)
+            .Select(profile => profile.IsAdmin && !profile.IsDisabled)
             .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AdminUserSummary>> GetAdminUsersAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        await RequireAdminAsync(db, cancellationToken);
+        return await db.Profiles.AsNoTracking()
+            .Where(profile => profile.Email != null)
+            .OrderBy(profile => profile.Email)
+            .Select(profile => new AdminUserSummary(
+                profile.Id, profile.DisplayName, profile.Email!, profile.IsAdmin, profile.IsDisabled))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<string?> SetAdminRoleAsync(int profileId, bool isAdmin,
+        CancellationToken cancellationToken = default)
+    {
+        if (profileId <= 0)
+            return "Select a valid account.";
+
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        var actor = await RequireAdminAsync(db, cancellationToken);
+        var target = await db.Profiles.SingleOrDefaultAsync(
+            profile => profile.Id == profileId && profile.Email != null, cancellationToken);
+        if (target is null)
+            return "That account could not be found.";
+        if (target.IsDisabled && isAdmin)
+            return "Enable the account before granting administrator access.";
+        if (target.Id == actor.Id && !isAdmin)
+            return "You cannot remove your own administrator access.";
+        if (target.IsAdmin == isAdmin)
+            return null;
+
+        if (!isAdmin && target.IsAdmin && !target.IsDisabled && await db.Profiles.CountAsync(
+                profile => profile.IsAdmin && !profile.IsDisabled && profile.Email != null,
+                cancellationToken) <= 1)
+            return "The last enabled administrator cannot be demoted.";
+
+        target.IsAdmin = isAdmin;
+        db.AdminActivityLogs.Add(new AdminActivityLogRecord
+        {
+            ActorProfileId = actor.Id,
+            ActorEmail = actor.Email!,
+            Action = isAdmin ? "Administrator promoted" : "Administrator demoted",
+            TargetProfileId = target.Id,
+            TargetEmail = target.Email,
+            OccurredAtUtc = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return null;
+    }
+
+    public async Task<string?> SetAccountDisabledAsync(int profileId, bool isDisabled,
+        CancellationToken cancellationToken = default)
+    {
+        if (profileId <= 0)
+            return "Select a valid account.";
+
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable, cancellationToken);
+        var actor = await RequireAdminAsync(db, cancellationToken);
+        var target = await db.Profiles.SingleOrDefaultAsync(
+            profile => profile.Id == profileId && profile.Email != null, cancellationToken);
+        if (target is null)
+            return "That account could not be found.";
+        if (target.Id == actor.Id && isDisabled)
+            return "You cannot disable your own account.";
+        if (target.IsDisabled == isDisabled)
+            return null;
+
+        if (isDisabled && target.IsAdmin && await db.Profiles.CountAsync(
+                profile => profile.IsAdmin && !profile.IsDisabled && profile.Email != null,
+                cancellationToken) <= 1)
+            return "The last enabled administrator cannot be disabled.";
+
+        target.IsDisabled = isDisabled;
+        db.AdminActivityLogs.Add(new AdminActivityLogRecord
+        {
+            ActorProfileId = actor.Id,
+            ActorEmail = actor.Email!,
+            Action = isDisabled ? "Account disabled" : "Account enabled",
+            TargetProfileId = target.Id,
+            TargetEmail = target.Email,
+            OccurredAtUtc = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return null;
+    }
+
+    public async Task<IReadOnlyList<AdminActivityLogRecord>> GetAdminActivityLogsAsync(
+        int take = 100, CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        await RequireAdminAsync(db, cancellationToken);
+        take = Math.Clamp(take, 1, 250);
+        return await db.AdminActivityLogs.AsNoTracking()
+            .OrderByDescending(item => item.OccurredAtUtc)
+            .ThenByDescending(item => item.Id)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<AppSettingsSnapshot> GetAppSettingsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var appSettings = await db.AppSettings.AsNoTracking()
+            .SingleAsync(item => item.Id == 1, cancellationToken);
+        return new AppSettingsSnapshot(
+            appSettings.AppName, appSettings.SignupsEnabled,
+            appSettings.MaintenanceMode, appSettings.UpdatedAtUtc);
+    }
+
+    public async Task<string?> UpdateAppSettingsAsync(string appName, bool signupsEnabled,
+        bool maintenanceMode, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(appName) || appName.Trim().Length > 100)
+            return "The app name must be between 1 and 100 characters.";
+
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var actor = await RequireAdminAsync(db, cancellationToken);
+        var appSettings = await db.AppSettings.SingleAsync(item => item.Id == 1, cancellationToken);
+        appSettings.AppName = appName.Trim();
+        appSettings.SignupsEnabled = signupsEnabled;
+        appSettings.MaintenanceMode = maintenanceMode;
+        appSettings.UpdatedAtUtc = DateTime.UtcNow;
+        appSettings.UpdatedByEmail = actor.Email;
+        await db.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
+    private async Task<UserProfileRecord> RequireAdminAsync(
+        AwykenDbContext db, CancellationToken cancellationToken)
+    {
+        if (accountSession.ProfileId is not int profileId)
+            throw new UnauthorizedAccessException("Administrator access is required.");
+
+        var actor = await db.Profiles.SingleOrDefaultAsync(
+            profile => profile.Id == profileId, cancellationToken);
+        if (actor is null || actor.IsDisabled || !actor.IsAdmin || actor.Email is null)
+            throw new UnauthorizedAccessException("Administrator access is required.");
+        return actor;
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
@@ -319,12 +498,16 @@ public sealed class SqlServerAwykenDataService(
     {
         if (accountSession.ProfileId is int signedInProfileId)
         {
-            var status = await db.Profiles.AsNoTracking().Where(profile => profile.Id == signedInProfileId)
-                .Select(profile => new { profile.Email, profile.AccountStatus }).SingleOrDefaultAsync(cancellationToken);
-            if (status?.Email is not null && !string.Equals(status.AccountStatus, "Active", StringComparison.OrdinalIgnoreCase))
+            var isEnabled = await db.Profiles.AsNoTracking()
+                .Where(profile => profile.Id == signedInProfileId)
+                .Select(profile => !profile.IsDisabled)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (!isEnabled)
+            {
                 accountSession.SignOut();
-            else if (status is not null)
-                return signedInProfileId;
+                throw new UnauthorizedAccessException("This account is disabled or no longer exists.");
+            }
+            return signedInProfileId;
         }
 
         // The lowest id keeps the Guest row stable even if an old database holds more than one.

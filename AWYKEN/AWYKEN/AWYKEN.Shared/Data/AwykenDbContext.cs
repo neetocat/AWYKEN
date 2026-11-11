@@ -14,6 +14,8 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
     public DbSet<ScheduleRecord> Schedule => Set<ScheduleRecord>();
     public DbSet<CourseNoteRecord> Courses => Set<CourseNoteRecord>();
     public DbSet<StudentIncentiveRecord> StudentIncentives => Set<StudentIncentiveRecord>();
+    public DbSet<AdminActivityLogRecord> AdminActivityLogs => Set<AdminActivityLogRecord>();
+    public DbSet<AppSettingsRecord> AppSettings => Set<AppSettingsRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,6 +34,7 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(profile => profile.TeacherPinHash).HasMaxLength(300);
             // Existing rows get 0 when the column is added, so nobody becomes admin by accident.
             entity.Property(profile => profile.IsAdmin).HasDefaultValue(false);
+            entity.Property(profile => profile.IsDisabled).HasDefaultValue(false);
             entity.Property(profile => profile.FullName).HasMaxLength(150);
             entity.Property(profile => profile.StudentEmail).HasMaxLength(200);
             entity.Property(profile => profile.StudentNumber).HasMaxLength(30);
@@ -113,6 +116,26 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
                 .OnDelete(DeleteBehavior.NoAction);
             entity.HasOne<ScheduleRecord>().WithMany().HasForeignKey(item => item.ScheduleRecordId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AdminActivityLogRecord>(entity =>
+        {
+            entity.ToTable("AdminActivityLogs");
+            entity.Property(item => item.ActorEmail).HasMaxLength(200).IsRequired();
+            entity.Property(item => item.Action).HasMaxLength(80).IsRequired();
+            entity.Property(item => item.TargetEmail).HasMaxLength(200);
+            entity.HasIndex(item => item.OccurredAtUtc);
+        });
+
+        modelBuilder.Entity<AppSettingsRecord>(entity =>
+        {
+            entity.ToTable("AppSettings");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).ValueGeneratedNever();
+            entity.Property(item => item.AppName).HasMaxLength(100).IsRequired();
+            entity.Property(item => item.SignupsEnabled).HasDefaultValue(true);
+            entity.Property(item => item.MaintenanceMode).HasDefaultValue(false);
+            entity.Property(item => item.UpdatedByEmail).HasMaxLength(200);
         });
     }
 }

@@ -6,10 +6,10 @@
 @inject AWYKEN.Shared.Data.IAwykenDataService DataService
 @inject NavigationManager Nav
 
-<PageTitle>AWYKEN Admin</PageTitle>
+<PageTitle>@(appSettings?.AppName ?? "AWYKEN") Admin</PageTitle>
 <div class="admin-shell">
  <aside class="admin-sidebar">
-  <a class="admin-brand" href="/admin"><img class="brand-logo" src="_content/AWYKEN.Shared/images/icon/awyken-logo-transparent-cut.png" alt="AWYKEN logo" /><span>AWYKEN</span></a>
+   <a class="admin-brand" href="/admin"><img class="brand-logo" src="_content/AWYKEN.Shared/images/icon/awyken-logo-transparent-cut.png" alt="AWYKEN logo" /><span>@(appSettings?.AppName ?? "AWYKEN")</span></a>
   <div class="sidebar-label">MAIN MENU</div>
   <nav class="admin-nav" aria-label="Admin navigation">
    @foreach (var item in Navigation) { <button class="nav-item @(activeSection == item.Key ? "selected" : "")" @onclick="() => Select(item.Key)"><span class="nav-icon">@item.Icon</span><span>@item.Label</span></button> }
@@ -45,8 +45,44 @@
     </div>
     <section class="quick-actions"><div><h2>Quick actions</h2><p>Manage AWYKEN academic information</p></div><button @onclick='() => Select("School Calendar")'><span>＋</span> Add event</button><button @onclick='() => Select("Announcements")'><span>＋</span> Add announcement</button><button @onclick='() => Select("Academic Management")'><span>▦</span> Manage academics</button></section>
    } else if (activeSection == "Student Management") {
-    <StudentManagement />
-   } else { <section class="feature-card module-placeholder"><div class="empty-state"><span class="empty-icon">@IconFor(activeSection)</span><strong>@PlaceholderTitle</strong><p>@PlaceholderDescription</p></div><div class="database-status"><span class="status-dot"></span><span>Database status: connected</span><small>Existing student accounts and schedules are available to the dashboard.</small></div></section> }
+    <section class="feature-card student-panel"><div class="card-heading"><div><h2>Registered students</h2><p>@filteredStudents.Count student accounts found in the database</p></div><span class="live-dot">LIVE DATA</span></div><div class="table-wrap"><table><thead><tr><th>STUDENT</th><th>STUDENT NUMBER</th><th>PROGRAM</th><th>YEAR / SECTION</th><th>ACCOUNT ID</th></tr></thead><tbody>
+    @foreach (var student in filteredStudents) { <tr><td><div class="student-name"><span class="activity-avatar">@Initial(student.DisplayName ?? student.FullName)</span><span><strong>@(student.DisplayName ?? student.FullName ?? "Unnamed student")</strong><small>@(student.StudentEmail ?? student.Email ?? "No email on file")</small></span></div></td><td>@(student.StudentNumber ?? "—")</td><td>@(student.Program ?? student.College ?? "—")</td><td>@($"{student.YearLevel ?? "—"} · {student.Section ?? "—"}")</td><td>#@student.Id</td></tr> }
+    @if (filteredStudents.Count == 0) { <tr><td colspan="5" class="no-results">No students match this search.</td></tr> }
+    </tbody></table></div></section><p class="data-note">Account activation, suspension, registration dates, and last activity are not represented in the existing student database schema.</p>
+    } else if (activeSection == "Administrators") {
+     <section class="feature-card student-panel admin-management-panel">
+      <div class="card-heading"><div><h2>Account access</h2><p>Promote or demote administrators and disable accounts.</p></div><span class="live-dot">@adminUsers.Count ACCOUNTS</span></div>
+      @if (adminNotice is not null) { <p class="admin-notice">@adminNotice</p> }
+      <label class="admin-search account-search"><span>⌕</span><input placeholder="Filter by name or email" @bind="accountSearch" @bind:event="oninput" /></label>
+      <div class="table-wrap"><table><thead><tr><th>ACCOUNT</th><th>ACCESS</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>
+       @foreach (var account in filteredAdminUsers) {
+        <tr><td><div class="student-name"><span class="activity-avatar">@Initial(account.DisplayName ?? account.Email)</span><span><strong>@(account.DisplayName ?? "Unnamed account")</strong><small>@account.Email</small></span></div></td>
+         <td>@(account.IsAdmin ? "Administrator" : "User")</td><td>@(account.IsDisabled ? "Disabled" : "Enabled")</td>
+         <td class="admin-actions"><button class="outline-action" disabled="@account.IsDisabled" @onclick="() => ChangeAdminRole(account)">@(account.IsAdmin ? "Demote" : "Promote")</button><button class="outline-action" @onclick="() => ChangeAccountStatus(account)">@(account.IsDisabled ? "Enable" : "Disable")</button></td></tr>
+       }
+       @if (filteredAdminUsers.Count == 0) { <tr><td colspan="4" class="no-results">No accounts match this filter.</td></tr> }
+      </tbody></table></div>
+     </section>
+    } else if (activeSection == "Activity Logs") {
+     <section class="feature-card student-panel">
+      <div class="card-heading"><div><h2>Administrator activity</h2><p>Recent administrator sign-ins and account-access changes.</p></div><span class="live-dot">LATEST @activityLogs.Count</span></div>
+      <div class="table-wrap"><table><thead><tr><th>TIME (LOCAL)</th><th>ADMINISTRATOR</th><th>ACTIVITY</th><th>ACCOUNT</th></tr></thead><tbody>
+       @foreach (var entry in activityLogs) { <tr><td>@entry.OccurredAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</td><td>@entry.ActorEmail</td><td>@entry.Action</td><td>@(entry.TargetEmail ?? "—")</td></tr> }
+       @if (activityLogs.Count == 0) { <tr><td colspan="4" class="no-results">No administrator activity has been recorded yet.</td></tr> }
+      </tbody></table></div>
+      <p class="data-note">Showing up to 100 newest administrator events.</p>
+     </section>
+     } else if (activeSection == "Settings") {
+      <section class="feature-card admin-settings-panel">
+       <div class="card-heading"><div><h2>Application settings</h2><p>Control the public app name, registrations, and maintenance access.</p></div><span class="live-dot">SAVED TO DATABASE</span></div>
+       @if (adminNotice is not null) { <p class="admin-notice">@adminNotice</p> }
+       <label class="admin-setting-field">Application name<input maxlength="100" @bind="appNameInput" /></label>
+       <label class="admin-setting-toggle"><span><strong>Allow new sign-ups</strong><small>Existing accounts can still sign in when this is off.</small></span><input type="checkbox" @bind="signupsEnabled" /></label>
+       <label class="admin-setting-toggle"><span><strong>Maintenance mode</strong><small>Non-admin users will see a maintenance page; administrators retain access.</small></span><input type="checkbox" @bind="maintenanceMode" /></label>
+       <button class="primary-action admin-save-settings" disabled="@loading" @onclick="SaveSettings">Save settings</button>
+       <button class="outline-action admin-logout" @onclick="LogOut">Log out of administrator dashboard</button>
+      </section>
+     } else { <section class="feature-card module-placeholder"><div class="empty-state"><span class="empty-icon">@IconFor(activeSection)</span><strong>@PlaceholderTitle</strong><p>@PlaceholderDescription</p></div><div class="database-status"><span class="status-dot"></span><span>Database status: connected</span><small>Existing student accounts and schedules are available to the dashboard.</small></div></section> }
   </section>
  </main>
 </div>
@@ -54,11 +90,18 @@
 @code {
  private sealed record MenuItem(string Key, string Label, string Icon);
  private static readonly MenuItem[] Navigation = [new("Dashboard", "Dashboard", "⌂"), new("Student Management", "Student Management", "♧"), new("Academic Management", "Academic Management", "▤"), new("School Calendar", "School Calendar", "▦"), new("Announcements", "Announcements", "▱")];
- private string activeSection = "Dashboard", searchText = "";
+  private string activeSection = "Dashboard", searchText = "", accountSearch = "";
  private bool loading = true;
  private string? loadError;
  private int registeredStudents, activeStudents, classes, subjects;
  private List<UserProfileRecord> students = [], recentStudents = [];
+  private List<AdminUserSummary> adminUsers = [];
+  private List<AdminActivityLogRecord> activityLogs = [];
+  private string? adminNotice;
+   private AppSettingsSnapshot? appSettings;
+   private string appNameInput = "AWYKEN";
+   private bool signupsEnabled = true, maintenanceMode;
+  private List<AdminUserSummary> filteredAdminUsers => adminUsers.Where(account => string.IsNullOrWhiteSpace(accountSearch) || $"{account.DisplayName} {account.Email}".Contains(accountSearch, StringComparison.OrdinalIgnoreCase)).ToList();
  private List<UserProfileRecord> filteredStudents => students.Where(s => string.IsNullOrWhiteSpace(searchText) || string.Join(" ", s.DisplayName, s.FullName, s.StudentNumber, s.Email, s.StudentEmail, s.Program, s.Section).Contains(searchText, StringComparison.OrdinalIgnoreCase)).ToList();
  private string SectionSubtitle => activeSection switch { "Dashboard" => "A clear view of AWYKEN’s academic activity and student accounts.", "Student Management" => "Search and review student account information from the live database.", "Academic Management" => "School wide subjects, classes, academic periods, and official schedules.", "School Calendar" => "Manage holidays, suspensions, examinations, and academic events.", "Announcements" => "Prepare school wide and academic announcements for students.", "Administrators" => "Manage administrator accounts and access permissions.", "Activity Logs" => "Review administrative actions and system activity.", _ => "Configure AWYKEN application settings." };
  private string PlaceholderTitle => activeSection switch { "Academic Management" => "Official academic management is not stored yet", "School Calendar" => "School calendar is not stored yet", "Announcements" => "Announcements are not stored yet", "Administrators" => "Administrator access", "Activity Logs" => "Activity logs are not configured", _ => "Admin settings are not configured" };
@@ -74,8 +117,12 @@
   }
   await RefreshData();
  }
- private void Select(string section) => activeSection = section;
+  private async Task Select(string section) { activeSection = section; await RefreshData(); }
  private string IconFor(string section) => section switch { "Academic Management" => "▤", "School Calendar" => "▦", "Announcements" => "▱", "Administrators" => "♙", "Activity Logs" => "▤", _ => "⚙" };
  private static string Initial(string? name) => string.IsNullOrWhiteSpace(name) ? "S" : name.Trim()[0].ToString().ToUpperInvariant();
- private async Task RefreshData() { loading = true; loadError = null; try { await DataService.InitializeAsync(); await using var db = await ContextFactory.CreateDbContextAsync(); students = await db.Profiles.AsNoTracking().Where(p => p.Email != null).OrderBy(p => p.DisplayName).ToListAsync(); registeredStudents = students.Count; activeStudents = students.Count(p => string.Equals(p.AccountStatus, "Active", StringComparison.OrdinalIgnoreCase)); classes = await db.Schedule.AsNoTracking().CountAsync(); subjects = await db.Schedule.AsNoTracking().Select(s => s.CourseCode).Distinct().CountAsync(); recentStudents = students.OrderByDescending(p => p.LastActivityAt ?? p.RegisteredAt).Take(4).ToList(); } catch (Exception ex) { loadError = ex.GetBaseException().Message; } finally { loading = false; } }
+  private async Task RefreshData() { loading = true; loadError = null; try { await DataService.InitializeAsync(); if (!await DataService.IsAdminAsync()) { Nav.NavigateTo("/settings", replace: true); return; } await using var db = await ContextFactory.CreateDbContextAsync(); students = await db.Profiles.AsNoTracking().Where(p => p.Email != null).OrderBy(p => p.DisplayName).Select(p => new UserProfileRecord { Id = p.Id, DisplayName = p.DisplayName, FullName = p.FullName, StudentNumber = p.StudentNumber, Email = p.Email, StudentEmail = p.StudentEmail, Program = p.Program, College = p.College, YearLevel = p.YearLevel, Section = p.Section }).ToListAsync(); registeredStudents = students.Count; classes = await db.Schedule.AsNoTracking().CountAsync(); subjects = await db.Schedule.AsNoTracking().Select(s => s.CourseCode).Distinct().CountAsync(); recentStudents = students.OrderByDescending(p => p.Id).Take(4).ToList(); if (activeSection == "Administrators") adminUsers = (await DataService.GetAdminUsersAsync()).ToList(); if (activeSection == "Activity Logs") activityLogs = (await DataService.GetAdminActivityLogsAsync()).ToList(); if (activeSection == "Settings") { appSettings = await DataService.GetAppSettingsAsync(); appNameInput = appSettings.AppName; signupsEnabled = appSettings.SignupsEnabled; maintenanceMode = appSettings.MaintenanceMode; } } catch (Exception ex) { loadError = ex.GetBaseException().Message; } finally { loading = false; } }
+  private async Task ChangeAdminRole(AdminUserSummary account) { adminNotice = await DataService.SetAdminRoleAsync(account.Id, !account.IsAdmin); if (adminNotice is null) { adminNotice = $"Administrator access {(account.IsAdmin ? "removed from" : "granted to")} {account.Email}."; await RefreshData(); } }
+  private async Task ChangeAccountStatus(AdminUserSummary account) { adminNotice = await DataService.SetAccountDisabledAsync(account.Id, !account.IsDisabled); if (adminNotice is null) { adminNotice = $"Account {(account.IsDisabled ? "enabled" : "disabled")}: {account.Email}."; await RefreshData(); } }
+  private async Task SaveSettings() { adminNotice = await DataService.UpdateAppSettingsAsync(appNameInput, signupsEnabled, maintenanceMode); if (adminNotice is null) { appSettings = await DataService.GetAppSettingsAsync(); adminNotice = "Application settings saved."; } }
+  private async Task LogOut() { await DataService.SignOutAsync(DateOnly.FromDateTime(DateTime.Today)); Nav.NavigateTo("/settings", replace: true); }
 }
