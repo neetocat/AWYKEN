@@ -21,6 +21,7 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
     public DbSet<AcademicTermRecord> AcademicTerms => Set<AcademicTermRecord>();
     public DbSet<SubjectRecord> Subjects => Set<SubjectRecord>();
     public DbSet<ClassOfferingRecord> ClassOfferings => Set<ClassOfferingRecord>();
+    public DbSet<AnnouncementRecord> Announcements => Set<AnnouncementRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -196,6 +197,14 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.HasIndex(item => new { item.FeedId, item.StartDate });
             entity.HasOne<CalendarFeedRecord>().WithMany().HasForeignKey(item => item.FeedId)
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<AnnouncementRecord>(entity =>
+        {
+            entity.ToTable("Announcements");
+            entity.Property(item => item.Title).HasMaxLength(160).IsRequired();
+            entity.Property(item => item.Body).HasColumnType("nvarchar(max)").IsRequired();
+            entity.HasIndex(item => new { item.IsPublished, item.PublishedAtUtc });
         });
     }
 }

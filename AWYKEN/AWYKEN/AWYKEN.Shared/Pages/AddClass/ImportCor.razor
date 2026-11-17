@@ -3,6 +3,7 @@
 @inject NavigationManager Navigation
 @inject DashboardState State
 @inject CorScheduleImporter Importer
+@inject AWYKEN.Shared.Data.IAwykenDataService Data
 
 <PageTitle>AWYKEN</PageTitle>
 
@@ -11,12 +12,36 @@
         <div class="flow-content">
             <header class="flow-header app-page-header">
                 <button class="back-button" @onclick='() => Navigation.NavigateTo("/settings")' aria-label="Back">‹</button>
-                <div><h1>Import your COR</h1><p>Step 1 of 3</p></div>
+                <div><h1>Import your COR</h1><p>@(Data.IsAuthenticated ? "Step 2 of 3" : "Step 1 of 3")</p></div>
                 <button class="outline-icon-button" aria-label="Notifications">♧</button>
             </header>
 
-            <div class="stepper" aria-label="Import progress"><span class="current"></span><i></i><span></span></div>
+            <div class="stepper" aria-label="Import progress"><span class="@(Data.IsAuthenticated ? "complete" : "current")"></span><i></i><span class="@(Data.IsAuthenticated ? "current" : "")"></span><i></i><span></span></div>
 
+            @if (!Data.IsAuthenticated)
+            {
+                <section class="import-auth-card">
+                    <div class="scan-icon">✉</div>
+                    <h2>Sign in before importing</h2>
+                    <p>Use your AWYKEN email to connect this COR to your account. Your COR details will be saved to this signed-in profile.</p>
+                    <div class="import-auth-mode"><button class="@(CreateAccount ? "" : "selected")" @onclick="() => CreateAccount = false">Log in</button><button class="@(CreateAccount ? "selected" : "")" @onclick="() => CreateAccount = true">Create account</button></div>
+                    @if (CreateAccount)
+                    {
+                        <label class="import-auth-field">Name<input @bind="DisplayName" autocomplete="name" maxlength="100" /></label>
+                    }
+                    <label class="import-auth-field">Email<input type="email" @bind="Email" autocomplete="email" /></label>
+                    <label class="import-auth-field">Password<input type="password" @bind="Password" autocomplete="@(CreateAccount ? "new-password" : "current-password")" /></label>
+                    @if (CreateAccount)
+                    {
+                        <label class="import-auth-field">Confirm password<input type="password" @bind="ConfirmPassword" autocomplete="new-password" /></label>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(status)) { <p class="import-account-error" role="alert">@status</p> }
+                    <button class="import-auth-submit" disabled="@Working" @onclick="Authenticate">@(Working ? "Please wait…" : CreateAccount ? "Create account and continue" : "Log in and continue")</button>
+                    <small>Your COR importer and review flow stay the same after sign-in.</small>
+                </section>
+            }
+            else
+            {
             <section class="import-intro">
                 <div class="scan-icon">⌗<b>✦</b></div>
                 <h2>Build your schedule<br />in one scan.</h2>
@@ -37,16 +62,70 @@
             {
                 <p class="flow-status" role="status">@status</p>
             }
+            }
         </div>
     </main>
 </div>
 
 @code {
     private string? status;
+    private bool CreateAccount;
+    private bool Working;
+    private string Email = "";
+    private string Password = "";
+    private string ConfirmPassword = "";
+    private string DisplayName = "";
     private readonly string[] AllowedExtensions = { ".pdf", ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff" };
+
+    protected override async Task OnInitializedAsync() => await Data.InitializeAsync();
+
+    private async Task Authenticate()
+    {
+        status = null;
+        if (string.IsNullOrWhiteSpace(Email) || !Email.Contains('@'))
+        {
+            status = "Enter the email address for your AWYKEN account.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(Password))
+        {
+            status = "Enter your password to continue.";
+            return;
+        }
+        if (CreateAccount && Password != ConfirmPassword)
+        {
+            status = "The passwords do not match.";
+            return;
+        }
+
+        Working = true;
+        try
+        {
+            status = CreateAccount
+                ? await Data.SignUpAsync(string.IsNullOrWhiteSpace(DisplayName) ? Email.Trim() : DisplayName.Trim(), Email, Password)
+                : await Data.SignInAsync(Email, Password);
+            if (status is null && Data.IsAuthenticated)
+                status = null;
+            else if (status is null)
+                status = "We couldn't sign you in. Please try again.";
+        }
+        catch (Exception)
+        {
+            status = "We couldn't access your account. Please try again.";
+        }
+        finally
+        {
+            Working = false;
+        }
+    }
 
     private async Task SelectFile(InputFileChangeEventArgs args)
     {
+        if (!Data.IsAuthenticated)
+        {
+            status = "Log in before importing your COR.";
+            return;
+        }
         var file = args.File;
         if (file is null)
         {
@@ -86,9 +165,19 @@
             return;
         }
 
-        // The profile details travel with the classes and are saved when the user confirms.
+        // Keep the COR parsing and preview behavior intact, then attach the COR profile
+        // to the account that signed in before upload.
         State.SetImportPreview(result.Classes, result.Profile);
-        Navigation.NavigateTo("/import-account");
+        try
+        {
+            if (result.Profile is not null)
+                await Data.SaveImportedProfileAsync(result.Profile, DateOnly.FromDateTime(DateTime.Today));
+            Navigation.NavigateTo("/verify-schedule");
+        }
+        catch (Exception)
+        {
+            status = "We couldn't save your COR details. Please try again.";
+        }
     }
     private void EnterManually() => Navigation.NavigateTo("/add-class");
 }

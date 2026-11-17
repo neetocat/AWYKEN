@@ -87,6 +87,19 @@
             Loading = false;
             return;
         }
+        if (Data.IsAuthenticated)
+        {
+            try
+            {
+                await Data.SaveImportedProfileAsync(Student, DateOnly.FromDateTime(DateTime.Today));
+                Navigation.NavigateTo("/verify-schedule", replace: true);
+                return;
+            }
+            catch (Exception)
+            {
+                Error = "We couldn't save your COR details to this account. Please try again.";
+            }
+        }
         AccountExists = await Data.AccountExistsAsync(Student.Email);
         Loading = false;
     }

@@ -449,6 +449,102 @@ public sealed class SqlServerAwykenDataService(
         return null;
     }
 
+    public async Task<IReadOnlyList<AnnouncementRecord>> GetPublishedAnnouncementsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await db.Announcements.AsNoTracking()
+            .Where(item => item.IsPublished)
+            .OrderByDescending(item => item.PublishedAtUtc)
+            .ThenByDescending(item => item.Id)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<AnnouncementRecord>> GetAnnouncementsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        await RequireAdminAsync(db, cancellationToken);
+        return await db.Announcements.AsNoTracking()
+            .OrderByDescending(item => item.UpdatedAtUtc)
+            .ThenByDescending(item => item.Id)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<string?> SaveAnnouncementAsync(int? id, string title, string body,
+        bool isPublished, CancellationToken cancellationToken = default)
+    {
+        title = title.Trim();
+        body = body.Trim();
+        if (title.Length is < 1 or > 160)
+            return "Add a title between 1 and 160 characters.";
+        if (body.Length is < 1 or > 10000)
+            return "Add a message between 1 and 10,000 characters.";
+
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var actor = await RequireAdminAsync(db, cancellationToken);
+        var now = DateTime.UtcNow;
+        AnnouncementRecord announcement;
+        if (id is int announcementId)
+        {
+            announcement = await db.Announcements.SingleOrDefaultAsync(
+                item => item.Id == announcementId, cancellationToken)
+                ?? throw new InvalidOperationException("That announcement could not be found.");
+        }
+        else
+        {
+            announcement = new AnnouncementRecord { CreatedAtUtc = now };
+            db.Announcements.Add(announcement);
+        }
+
+        var wasPublished = announcement.IsPublished;
+        announcement.Title = title;
+        announcement.Body = body;
+        announcement.IsPublished = isPublished;
+        announcement.UpdatedAtUtc = now;
+        if (isPublished && !wasPublished)
+            announcement.PublishedAtUtc = now;
+
+        db.AdminActivityLogs.Add(new AdminActivityLogRecord
+        {
+            ActorProfileId = actor.Id,
+            ActorEmail = actor.Email!,
+            Action = isPublished ? "Announcement published or updated" : "Announcement saved as draft",
+            OccurredAtUtc = now
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
+    public async Task<string?> DeleteAnnouncementAsync(int id,
+        CancellationToken cancellationToken = default)
+    {
+        if (id <= 0)
+            return "Select a valid announcement.";
+
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var actor = await RequireAdminAsync(db, cancellationToken);
+        var announcement = await db.Announcements.SingleOrDefaultAsync(
+            item => item.Id == id, cancellationToken);
+        if (announcement is null)
+            return "That announcement could not be found.";
+
+        db.Announcements.Remove(announcement);
+        db.AdminActivityLogs.Add(new AdminActivityLogRecord
+        {
+            ActorProfileId = actor.Id,
+            ActorEmail = actor.Email!,
+            Action = "Announcement deleted",
+            OccurredAtUtc = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
     private async Task<UserProfileRecord> RequireAdminAsync(
         AwykenDbContext db, CancellationToken cancellationToken)
     {

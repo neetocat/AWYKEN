@@ -23,6 +23,11 @@ public interface IAwykenDataService
     Task<AppSettingsSnapshot> GetAppSettingsAsync(CancellationToken cancellationToken = default);
     Task<string?> UpdateAppSettingsAsync(string appName, bool signupsEnabled, bool maintenanceMode,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AnnouncementRecord>> GetPublishedAnnouncementsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AnnouncementRecord>> GetAnnouncementsAsync(CancellationToken cancellationToken = default);
+    Task<string?> SaveAnnouncementAsync(int? id, string title, string body, bool isPublished,
+        CancellationToken cancellationToken = default);
+    Task<string?> DeleteAnnouncementAsync(int id, CancellationToken cancellationToken = default);
     Task SignOutAsync(DateOnly refreshDate, CancellationToken cancellationToken = default);
     Task RefreshAsync(DateOnly date, CancellationToken cancellationToken = default);
     Task RefreshWeekAsync(DateOnly weekStart, CancellationToken cancellationToken = default);

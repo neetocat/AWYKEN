@@ -52,6 +52,8 @@ button {
     padding: max(24px, env(safe-area-inset-top)) 20px 28px;
 }
 
+.announcements-section{margin:0 0 26px}.announcements-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:12px}.announcements-heading .eyebrow{margin:0 0 5px;color:#9299a8}.announcements-heading h2{margin:0;color:var(--ink);font-size:20px;letter-spacing:-.3px}.announcement-count{padding-bottom:2px;color:var(--muted);font-size:12px}.announcement-cards{display:grid;gap:10px}.announcement-card,.announcement-empty{border:1px solid #dce3f0;border-radius:18px;background:#fff;box-shadow:0 5px 18px rgba(12,18,38,.035)}.announcement-card{position:relative;overflow:hidden;padding:17px 18px 18px 21px;border-left:3px solid #454c88}.announcement-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}.announcement-label{display:inline-flex;align-items:center;min-height:23px;padding:0 9px;border-radius:7px;background:#eef0f8;color:#454c88;font-size:9px;font-weight:800;letter-spacing:.9px}.announcement-card time{color:var(--muted);font-size:11px}.announcement-card h3{margin:0;color:var(--ink);font-size:16px;line-height:1.4;letter-spacing:-.15px}.announcement-card p{margin:6px 0 0;color:#58627a;font-size:13px;line-height:1.6;white-space:pre-line;overflow-wrap:anywhere}.announcement-empty{display:flex;align-items:center;gap:12px;padding:16px 18px;color:var(--muted)}.announcement-empty span{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#eef0f8;color:#454c88}.announcement-empty p{margin:0;font-size:13px}
+
 .topbar {
     display: flex;
     align-items: center;

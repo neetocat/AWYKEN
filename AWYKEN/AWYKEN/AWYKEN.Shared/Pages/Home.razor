@@ -3,6 +3,7 @@
 @inject AWYKEN.Shared.Data.IAwykenDataService Data
 @inject AWYKEN.Shared.Services.ICurrentWeatherService WeatherService
 @inject AWYKEN.Shared.Services.ICommuteMapService CommuteMapService
+@inject AWYKEN.Shared.Data.IAwykenDataService DataService
 @inject NavigationManager Navigation
 
 @* AWYKEN dashboard page.
@@ -93,6 +94,33 @@
                 </button>
             </section>
             }
+
+            <section class="announcements-section" aria-labelledby="announcements-heading">
+                <div class="announcements-heading">
+                    <div>
+                        <p class="eyebrow">FROM YOUR SCHOOL</p>
+                        <h2 id="announcements-heading">Announcements</h2>
+                    </div>
+                    <span class="announcement-count">@publishedAnnouncements.Count @(publishedAnnouncements.Count == 1 ? "update" : "updates")</span>
+                </div>
+                @if (publishedAnnouncements.Count == 0)
+                {
+                    <div class="announcement-empty"><span aria-hidden="true">▱</span><p>There are no announcements right now.</p></div>
+                }
+                else
+                {
+                    <div class="announcement-cards">
+                        @foreach (var announcement in publishedAnnouncements)
+                        {
+                            <article class="announcement-card" @key="announcement.Id">
+                                <div class="announcement-card-top"><span class="announcement-label">NOTICE</span><time>@(announcement.PublishedAtUtc?.ToLocalTime().ToString("MMM d, yyyy") ?? "Recently")</time></div>
+                                <h3>@announcement.Title</h3>
+                                <p>@announcement.Body</p>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
 
             <section class="schedule-section">
                 <div class="schedule-heading">
@@ -188,11 +216,20 @@
     private string ActiveTab { get; set; } = "Home";
     private string? MessageTitle { get; set; }
     private string? Message { get; set; }
+    private List<AWYKEN.Shared.Data.AnnouncementRecord> publishedAnnouncements = [];
 
     // Load the day's classes, then refresh weather and route timing from the saved home/campus coordinates.
     protected override async Task OnInitializedAsync()
     {
         await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+        try
+        {
+            publishedAnnouncements = (await DataService.GetPublishedAnnouncementsAsync()).ToList();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            publishedAnnouncements = [];
+        }
 
         var locations = State.CommuteLocations;
         Task<AWYKEN.Shared.Services.WeatherInfo>? weatherTask =

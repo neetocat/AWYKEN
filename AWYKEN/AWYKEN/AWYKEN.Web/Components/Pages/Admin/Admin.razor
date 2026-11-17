@@ -5,6 +5,7 @@
 @inject IDbContextFactory<AwykenDbContext> ContextFactory
 @inject AWYKEN.Shared.Data.IAwykenDataService DataService
 @inject NavigationManager Nav
+@inject Microsoft.JSInterop.IJSRuntime JS
 
 <PageTitle>@(appSettings?.AppName ?? "AWYKEN") Admin</PageTitle>
 <div class="admin-shell">
@@ -41,9 +42,51 @@
      <section class="feature-card activity-card"><div class="card-heading"><div><h2>Recent activity</h2><p>Latest student accounts in the database</p></div><span class="live-dot">LIVE DATA</span></div>
       @if (recentStudents.Count == 0) { <div class="empty-state compact"><strong>No registered students yet</strong><p>New student accounts will appear here.</p></div> } else { <div class="activity-list">@foreach (var student in recentStudents) { <div class="activity-row"><span class="activity-avatar">@Initial(student.DisplayName)</span><div><strong>@(student.DisplayName ?? student.FullName ?? "Student account")</strong><span>Student account in database</span></div><time>#@student.Id</time></div> }</div> }
      </section>
-     <section class="feature-card announcement-card"><div class="card-heading"><div><h2>Announcements</h2><p>School wide updates for students</p></div><span class="coming-tag">ANNOUNCEMENTS</span></div><div class="empty-state compact"><span class="empty-icon">▱</span><strong>Announcement storage is not configured</strong><p>No announcement records are stored in the current database.</p></div><button class="text-action" @onclick='() => Select("Announcements")'>Announcement management <span>→</span></button></section>
+     <section class="feature-card announcement-card"><div class="card-heading"><div><h2>Announcements</h2><p>School wide updates for students</p></div><span class="coming-tag">@announcements.Count TOTAL</span></div>@if (announcements.Count == 0) { <div class="empty-state compact"><span class="empty-icon">▱</span><strong>No announcements yet</strong><p>Create and publish an update for students from this section.</p></div> } else { <div class="activity-list">@foreach (var announcement in announcements.Take(3)) { <div class="activity-row"><span class="activity-avatar">▱</span><div><strong>@announcement.Title</strong><span>@(announcement.IsPublished ? "Published" : "Draft") · @announcement.UpdatedAtUtc.ToLocalTime().ToString("MMM d")</span></div></div> }</div> }<button class="text-action" @onclick='() => Select("Announcements")'>Manage announcements <span>→</span></button></section>
     </div>
     <section class="quick-actions"><div><h2>Quick actions</h2><p>Manage AWYKEN academic information</p></div><button @onclick='() => Select("School Calendar")'><span>＋</span> Add event</button><button @onclick='() => Select("Announcements")'><span>＋</span> Add announcement</button><button @onclick='() => Select("Academic Management")'><span>▦</span> Manage academics</button></section>
+   } else if (activeSection == "Announcements") {
+    <div class="announcement-management-view">
+     <section class="feature-card announcement-management">
+      <div class="card-heading">
+       <div><h2>@(editingAnnouncementId is null ? "Create an announcement" : "Edit announcement")</h2><p>Save a draft or publish an update to every user’s home page.</p></div>
+       <span class="live-dot">@announcements.Count MESSAGES</span>
+      </div>
+      @if (!string.IsNullOrWhiteSpace(announcementNotice))
+      {
+       <p class="admin-notice @(announcementError ? "announcement-error" : "")" role="status">@announcementNotice</p>
+      }
+      <label class="announcement-field">Title<input maxlength="160" @bind="announcementTitle" placeholder="e.g. Enrollment schedule update" /></label>
+      <label class="announcement-field">Message<textarea maxlength="10000" rows="6" @bind="announcementBody" placeholder="Write the details students need to know…"></textarea></label>
+      <div class="announcement-form-actions">
+       <label class="publish-toggle"><input type="checkbox" @bind="publishAnnouncement" /> Publish now</label>
+       <div><button class="outline-action" @onclick="ResetAnnouncement">Clear</button><button class="primary-action admin-save-settings" disabled="@loading" @onclick="SaveAnnouncement">@(publishAnnouncement ? "Publish announcement" : "Save draft")</button></div>
+      </div>
+     </section>
+     <section class="feature-card student-panel announcement-list-panel">
+      <div class="card-heading"><div><h2>All announcements</h2><p>Published messages appear on the student home page.</p></div></div>
+      @if (announcements.Count == 0)
+      {
+       <div class="empty-state compact"><strong>No announcements have been created.</strong></div>
+      }
+      else
+      {
+       <div class="announcement-list">
+        @foreach (var announcement in announcements)
+        {
+         <article class="announcement-admin-row" @key="announcement.Id">
+          <div class="announcement-admin-copy">
+           <div><strong>@announcement.Title</strong><span class="announcement-status @(announcement.IsPublished ? "published" : "draft")">@(announcement.IsPublished ? "Published" : "Draft")</span></div>
+           <p>@announcement.Body</p>
+           <small>Updated @announcement.UpdatedAtUtc.ToLocalTime().ToString("MMM d, yyyy h:mm tt")</small>
+          </div>
+          <div class="announcement-row-actions"><button class="outline-action" @onclick="() => EditAnnouncement(announcement)">Edit</button><button class="outline-action delete-announcement" @onclick="() => DeleteAnnouncement(announcement)">Delete</button></div>
+         </article>
+        }
+       </div>
+      }
+     </section>
+    </div>
    } else if (activeSection == "Student Management") {
     <StudentManagement />
     } else if (activeSection == "Academic Management") {
@@ -98,6 +141,10 @@
  private List<UserProfileRecord> students = [], recentStudents = [];
   private List<AdminUserSummary> adminUsers = [];
   private List<AdminActivityLogRecord> activityLogs = [];
+  private List<AnnouncementRecord> announcements = [];
+  private int? editingAnnouncementId;
+  private string announcementTitle = "", announcementBody = "", announcementNotice = "";
+  private bool publishAnnouncement, announcementError;
   private string? adminNotice;
    private AppSettingsSnapshot? appSettings;
    private string appNameInput = "AWYKEN";
@@ -121,9 +168,13 @@
   private async Task Select(string section) { activeSection = section; await RefreshData(); }
  private string IconFor(string section) => section switch { "Academic Management" => "▤", "School Calendar" => "▦", "Announcements" => "▱", "Administrators" => "♙", "Activity Logs" => "▤", _ => "⚙" };
  private static string Initial(string? name) => string.IsNullOrWhiteSpace(name) ? "S" : name.Trim()[0].ToString().ToUpperInvariant();
-  private async Task RefreshData() { loading = true; loadError = null; try { await DataService.InitializeAsync(); if (!await DataService.IsAdminAsync()) { Nav.NavigateTo("/settings", replace: true); return; } await using var db = await ContextFactory.CreateDbContextAsync(); students = await db.Profiles.AsNoTracking().Where(p => p.Email != null).OrderBy(p => p.DisplayName).Select(p => new UserProfileRecord { Id = p.Id, DisplayName = p.DisplayName, FullName = p.FullName, StudentNumber = p.StudentNumber, Email = p.Email, StudentEmail = p.StudentEmail, Program = p.Program, College = p.College, YearLevel = p.YearLevel, Section = p.Section, AccountStatus = p.AccountStatus }).ToListAsync(); registeredStudents = students.Count; activeStudents = students.Count(p => string.Equals(p.AccountStatus, "Active", StringComparison.OrdinalIgnoreCase)); classes = await db.Schedule.AsNoTracking().CountAsync(); subjects = await db.Schedule.AsNoTracking().Select(s => s.CourseCode).Distinct().CountAsync(); recentStudents = students.OrderByDescending(p => p.Id).Take(4).ToList(); if (activeSection == "Administrators") adminUsers = (await DataService.GetAdminUsersAsync()).ToList(); if (activeSection == "Activity Logs") activityLogs = (await DataService.GetAdminActivityLogsAsync()).ToList(); if (activeSection == "Settings") { appSettings = await DataService.GetAppSettingsAsync(); appNameInput = appSettings.AppName; signupsEnabled = appSettings.SignupsEnabled; maintenanceMode = appSettings.MaintenanceMode; } } catch (Exception ex) { loadError = ex.GetBaseException().Message; } finally { loading = false; } }
+  private async Task RefreshData() { loading = true; loadError = null; try { await DataService.InitializeAsync(); if (!await DataService.IsAdminAsync()) { Nav.NavigateTo("/settings", replace: true); return; } await using var db = await ContextFactory.CreateDbContextAsync(); students = await db.Profiles.AsNoTracking().Where(p => p.Email != null).OrderBy(p => p.DisplayName).Select(p => new UserProfileRecord { Id = p.Id, DisplayName = p.DisplayName, FullName = p.FullName, StudentNumber = p.StudentNumber, Email = p.Email, StudentEmail = p.StudentEmail, Program = p.Program, College = p.College, YearLevel = p.YearLevel, Section = p.Section, AccountStatus = p.AccountStatus }).ToListAsync(); registeredStudents = students.Count; activeStudents = students.Count(p => string.Equals(p.AccountStatus, "Active", StringComparison.OrdinalIgnoreCase)); classes = await db.Schedule.AsNoTracking().CountAsync(); subjects = await db.Schedule.AsNoTracking().Select(s => s.CourseCode).Distinct().CountAsync(); recentStudents = students.OrderByDescending(p => p.Id).Take(4).ToList(); if (activeSection is "Announcements" or "Dashboard") announcements = (await DataService.GetAnnouncementsAsync()).ToList(); if (activeSection == "Administrators") adminUsers = (await DataService.GetAdminUsersAsync()).ToList(); if (activeSection == "Activity Logs") activityLogs = (await DataService.GetAdminActivityLogsAsync()).ToList(); if (activeSection == "Settings") { appSettings = await DataService.GetAppSettingsAsync(); appNameInput = appSettings.AppName; signupsEnabled = appSettings.SignupsEnabled; maintenanceMode = appSettings.MaintenanceMode; } } catch (Exception ex) { loadError = ex.GetBaseException().Message; } finally { loading = false; } }
   private async Task ChangeAdminRole(AdminUserSummary account) { adminNotice = await DataService.SetAdminRoleAsync(account.Id, !account.IsAdmin); if (adminNotice is null) { adminNotice = $"Administrator access {(account.IsAdmin ? "removed from" : "granted to")} {account.Email}."; await RefreshData(); } }
   private async Task ChangeAccountStatus(AdminUserSummary account) { adminNotice = await DataService.SetAccountDisabledAsync(account.Id, !account.IsDisabled); if (adminNotice is null) { adminNotice = $"Account {(account.IsDisabled ? "enabled" : "disabled")}: {account.Email}."; await RefreshData(); } }
   private async Task SaveSettings() { adminNotice = await DataService.UpdateAppSettingsAsync(appNameInput, signupsEnabled, maintenanceMode); if (adminNotice is null) { appSettings = await DataService.GetAppSettingsAsync(); adminNotice = "Application settings saved."; } }
+  private void EditAnnouncement(AnnouncementRecord item) { editingAnnouncementId = item.Id; announcementTitle = item.Title; announcementBody = item.Body; publishAnnouncement = item.IsPublished; announcementNotice = ""; announcementError = false; }
+  private void ResetAnnouncement() { editingAnnouncementId = null; announcementTitle = ""; announcementBody = ""; publishAnnouncement = false; announcementNotice = ""; announcementError = false; }
+  private async Task SaveAnnouncement() { var wasPublished = publishAnnouncement; announcementNotice = await DataService.SaveAnnouncementAsync(editingAnnouncementId, announcementTitle, announcementBody, wasPublished) ?? (wasPublished ? "Announcement published." : "Draft saved."); announcementError = announcementNotice is not ("Announcement published." or "Draft saved."); if (!announcementError) { ResetAnnouncement(); await RefreshData(); announcementNotice = wasPublished ? "Announcement published." : "Draft saved."; } }
+  private async Task DeleteAnnouncement(AnnouncementRecord item) { if (!await JS.InvokeAsync<bool>("confirm", $"Delete ‘{item.Title}’? This cannot be undone.")) return; announcementNotice = await DataService.DeleteAnnouncementAsync(item.Id) ?? "Announcement deleted."; announcementError = announcementNotice != "Announcement deleted."; if (!announcementError) await RefreshData(); }
   private async Task LogOut() { await DataService.SignOutAsync(DateOnly.FromDateTime(DateTime.Today)); Nav.NavigateTo("/settings", replace: true); }
 }
