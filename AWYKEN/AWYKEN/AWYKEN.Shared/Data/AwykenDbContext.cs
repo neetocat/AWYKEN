@@ -16,6 +16,8 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
     public DbSet<StudentIncentiveRecord> StudentIncentives => Set<StudentIncentiveRecord>();
     public DbSet<AdminActivityLogRecord> AdminActivityLogs => Set<AdminActivityLogRecord>();
     public DbSet<AppSettingsRecord> AppSettings => Set<AppSettingsRecord>();
+    public DbSet<CalendarFeedRecord> CalendarFeeds => Set<CalendarFeedRecord>();
+    public DbSet<CalendarEventRecord> CalendarEvents => Set<CalendarEventRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -136,6 +138,25 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(item => item.SignupsEnabled).HasDefaultValue(true);
             entity.Property(item => item.MaintenanceMode).HasDefaultValue(false);
             entity.Property(item => item.UpdatedByEmail).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<CalendarFeedRecord>(entity =>
+        {
+            entity.ToTable("CalendarFeeds");
+            entity.Property(feed => feed.Name).HasMaxLength(120).IsRequired();
+            entity.Property(feed => feed.Url).HasMaxLength(500).IsRequired();
+            entity.Property(feed => feed.LastSyncMessage).HasMaxLength(300);
+        });
+
+        modelBuilder.Entity<CalendarEventRecord>(entity =>
+        {
+            entity.ToTable("CalendarEvents");
+            entity.Property(item => item.Title).HasMaxLength(200).IsRequired();
+            entity.Property(item => item.Kind).HasMaxLength(30).IsRequired();
+            entity.HasIndex(item => new { item.StartDate, item.EndDate });
+            entity.HasIndex(item => new { item.FeedId, item.StartDate });
+            entity.HasOne<CalendarFeedRecord>().WithMany().HasForeignKey(item => item.FeedId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

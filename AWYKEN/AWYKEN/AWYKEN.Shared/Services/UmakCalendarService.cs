@@ -9,7 +9,7 @@ using Ical.Net.DataTypes;
 namespace AWYKEN.Shared.Services;
 
 /// <summary>Where the events currently being shown came from.</summary>
-public enum UmakCalendarSource { Live, Cache, Bundled }
+public enum UmakCalendarSource { Live, Cache, Bundled, Database }
 
 /// <param name="Source">Live feed, the last saved copy of the feed, or the built-in sample JSON.</param>
 /// <param name="RetrievedAt">When the data was downloaded (Live/Cache). Null for the bundled sample.</param>
@@ -201,6 +201,9 @@ public sealed class UmakCalendarService : IUmakCalendarService
             // Failing to save the offline copy must never break showing the live data.
         }
     }
+
+    public static Task<IReadOnlyList<UmakEvent>> LoadBundledEventsAsync(CancellationToken ct = default) =>
+        LoadBundledAsync(ct);
 
     private static async Task<IReadOnlyList<UmakEvent>> LoadBundledAsync(CancellationToken ct)
     {
