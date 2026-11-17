@@ -35,6 +35,7 @@ public static class AwykenDataServiceCollectionExtensions
         services.AddSingleton(settings);
         services.AddScoped<IAwykenDataService, SqlServerAwykenDataService>();
         services.AddScoped<ISchoolCalendarService, SchoolCalendarService>();
+        services.AddScoped<IAcademicCatalogService, AcademicCatalogService>();
         return services;
     }
 }

@@ -46,6 +46,8 @@
     <section class="quick-actions"><div><h2>Quick actions</h2><p>Manage AWYKEN academic information</p></div><button @onclick='() => Select("School Calendar")'><span>＋</span> Add event</button><button @onclick='() => Select("Announcements")'><span>＋</span> Add announcement</button><button @onclick='() => Select("Academic Management")'><span>▦</span> Manage academics</button></section>
    } else if (activeSection == "Student Management") {
     <StudentManagement />
+    } else if (activeSection == "Academic Management") {
+     <AcademicManagementPanel />
     } else if (activeSection == "School Calendar") {
      <SchoolCalendarPanel />
     } else if (activeSection == "Administrators") {

@@ -18,6 +18,9 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
     public DbSet<AppSettingsRecord> AppSettings => Set<AppSettingsRecord>();
     public DbSet<CalendarFeedRecord> CalendarFeeds => Set<CalendarFeedRecord>();
     public DbSet<CalendarEventRecord> CalendarEvents => Set<CalendarEventRecord>();
+    public DbSet<AcademicTermRecord> AcademicTerms => Set<AcademicTermRecord>();
+    public DbSet<SubjectRecord> Subjects => Set<SubjectRecord>();
+    public DbSet<ClassOfferingRecord> ClassOfferings => Set<ClassOfferingRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -74,12 +77,48 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(item => item.AttendanceStatus).HasMaxLength(20);
             // Units are credit units such as 3.00; a fixed decimal avoids float rounding.
             entity.Property(item => item.Units).HasPrecision(5, 2);
+            entity.HasIndex(item => item.TermId);
+            entity.HasIndex(item => item.ClassOfferingId);
             entity.HasIndex(item => item.StartsAt);
             entity.HasIndex(item => new { item.ProfileId, item.StartsAt });
             entity.HasOne<UserProfileRecord>()
                 .WithMany()
                 .HasForeignKey(item => item.ProfileId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<AcademicTermRecord>().WithMany().HasForeignKey(item => item.TermId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<ClassOfferingRecord>().WithMany().HasForeignKey(item => item.ClassOfferingId).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<AcademicTermRecord>(entity =>
+        {
+            entity.ToTable("AcademicTerms");
+            entity.Property(item => item.SchoolYear).HasMaxLength(20).IsRequired();
+            entity.Property(item => item.Semester).HasMaxLength(20).IsRequired();
+            entity.HasIndex(item => item.IsCurrent).IsUnique().HasFilter("[IsCurrent] = 1");
+            entity.HasIndex(item => new { item.SchoolYear, item.Semester }).IsUnique();
+        });
+        modelBuilder.Entity<SubjectRecord>(entity =>
+        {
+            entity.ToTable("Subjects");
+            entity.Property(item => item.Code).HasMaxLength(40).IsRequired();
+            entity.Property(item => item.Title).HasMaxLength(180).IsRequired();
+            entity.Property(item => item.Units).HasPrecision(5, 2);
+            entity.Property(item => item.College).HasMaxLength(120);
+            entity.HasIndex(item => item.Code).IsUnique();
+        });
+        modelBuilder.Entity<ClassOfferingRecord>(entity =>
+        {
+            entity.ToTable("ClassOfferings");
+            entity.Property(item => item.SectionCode).HasMaxLength(40).IsRequired();
+            entity.Property(item => item.Instructor).HasMaxLength(120).IsRequired();
+            entity.Property(item => item.Room).HasMaxLength(120).IsRequired();
+            entity.Property(item => item.Days).HasMaxLength(40).IsRequired();
+            entity.Property(item => item.Status).HasMaxLength(20).IsRequired();
+            entity.HasIndex(item => item.SubjectId);
+            entity.HasIndex(item => new { item.TermId, item.Days });
+            entity.HasIndex(item => new { item.TermId, item.SubjectId, item.SectionCode }).IsUnique();
+            entity.HasOne<AcademicTermRecord>().WithMany().HasForeignKey(item => item.TermId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne<SubjectRecord>().WithMany().HasForeignKey(item => item.SubjectId).OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<CourseNoteRecord>(entity =>

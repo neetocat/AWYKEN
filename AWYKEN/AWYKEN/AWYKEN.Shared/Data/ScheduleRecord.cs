@@ -25,4 +25,7 @@ public sealed class ScheduleRecord
     public string? MeetingTimes { get; set; }
     public string? Notes { get; set; }
     public string? AttendanceStatus { get; set; }
+    public int? TermId { get; set; }
+    public int? ClassOfferingId { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 }
