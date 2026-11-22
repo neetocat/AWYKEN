@@ -58,13 +58,27 @@
                 @foreach (var day in WeekDays)
                 {
                     var active = day == SelectedDate;
+                    var isToday = day == DateOnly.FromDateTime(DateTime.Today);
 
-                    <button class="schedule-date @(active ? "active" : "")"
-                            aria-pressed="@active"
-                            @onclick="() => SelectDateAsync(day)">
-                        <span>@day.ToString("ddd")[..1]</span>
-                        <strong>@day.Day</strong>
-                    </button>
+                    @if (ViewMode == "Day")
+                    {
+                        <button type="button"
+                                class="schedule-date @(active ? "active" : "")"
+                                aria-label="@day.ToString("dddd, MMMM d")"
+                                aria-pressed="@active"
+                                @onclick="() => SelectDateAsync(day)">
+                            <span>@day.ToString("ddd")[..1]</span>
+                            <strong>@day.Day</strong>
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="schedule-date week-date @(isToday ? "active" : "")"
+                             aria-label="@day.ToString("dddd, MMMM d")" aria-current="@(isToday ? "date" : null)">
+                            <span>@day.ToString("ddd")[..1]</span>
+                            <strong>@day.Day</strong>
+                        </div>
+                    }
                 }
             </div>
             }
@@ -297,7 +311,7 @@
     private ClassDraft Draft = new();
 
     private IEnumerable<DateOnly> WeekDays =>
-        Enumerable.Range(0, 5).Select(offset => WeekStart.AddDays(offset));
+        Enumerable.Range(0, 7).Select(offset => WeekStart.AddDays(offset));
 
     private static readonly string[] MonthWeekdays = ["M", "T", "W", "T", "F", "S", "S"];
     private int MonthLeadingDays => ((int)DisplayedMonth.DayOfWeek + 6) % 7;
