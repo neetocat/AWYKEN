@@ -55,24 +55,26 @@ namespace AWYKEN
         }
 
         /// <summary>
-        /// Reads a <c>.env</c> shipped as a MAUI raw asset (<c>Resources/Raw/.env</c>) so a
-        /// developer can run on an emulator or phone without shell access to the repository.
-        /// A <c>.env</c> in the app-data folder takes precedence over the packaged copy.
+        /// Reads the Debug-only MAUI asset. AWYKEN.Shared targets plain net10.0, so its
+        /// platform conditional cannot read Android assets itself; the MAUI host supplies
+        /// those values to the shared settings resolver.
         /// </summary>
         private static IReadOnlyDictionary<string, string> LoadPackagedDotEnv()
         {
             try
             {
-                using var stream = FileSystem.OpenAppPackageFileAsync(DotEnv.FileName).GetAwaiter().GetResult();
+                using var stream = FileSystem.OpenAppPackageFileAsync("awyken-config.env")
+                    .GetAwaiter().GetResult();
                 using var reader = new StreamReader(stream);
                 return DotEnv.Parse(reader.ReadToEnd());
             }
-            catch (Exception exception) when (exception is FileNotFoundException
-                or DirectoryNotFoundException or IOException or NotSupportedException or ArgumentException)
+            catch (Exception)
             {
-                // No packaged .env is the normal case; the repository or app-data file wins.
+                // The packaged asset is optional; the settings resolver reports a clear
+                // missing-configuration message if no other source supplied the keys.
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
         }
+
     }
 }
