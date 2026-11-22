@@ -72,8 +72,8 @@
                                 <div class="course-note-editor">
                                     <label>Notes</label>
                                     <textarea @bind="EditText" rows="5"></textarea>
-                                    <label>News</label>
-                                    <textarea @bind="EditNews" rows="3" placeholder="News for this class date"></textarea>
+                                    <label>Topic(s)</label>
+                                    <textarea @bind="EditNews" rows="3" placeholder="Topic(s) for this class date"></textarea>
                                     <fieldset>
                                         <legend>Attendance</legend>
                                         @foreach (var status in AttendanceStatuses)
@@ -107,7 +107,7 @@
                                 }
                                 @if (!string.IsNullOrWhiteSpace(note.News))
                                 {
-                                    <section class="course-note-news"><h3>News</h3><p>@note.News</p></section>
+                                    <section class="course-note-news"><h3>Topic(s)</h3><p>@note.News</p></section>
                                 }
                                 @if (note.ImageData is not null && !string.IsNullOrWhiteSpace(note.ImageContentType))
                                 {
