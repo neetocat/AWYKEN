@@ -629,6 +629,7 @@ public sealed class SqlServerAwykenDataService(
         var allRows = await db.Schedule.AsNoTracking()
             .Where(item => item.ProfileId == profileId)
             .ToListAsync(cancellationToken);
+        await ApplyAcademicCatalogAsync(db, allRows, cancellationToken);
         var day = date.DayOfWeek.ToString()[..3];
         var rows = allRows
             .Where(item => item.Days is null
@@ -661,6 +662,7 @@ public sealed class SqlServerAwykenDataService(
         var allRows = await db.Schedule.AsNoTracking()
             .Where(item => item.ProfileId == profileId)
             .ToListAsync(cancellationToken);
+        await ApplyAcademicCatalogAsync(db, allRows, cancellationToken);
         var rows = allRows
             .Where(item => item.Days is null
                 ? item.StartsAt >= weekStartDateTime && item.StartsAt < weekEnd
@@ -689,6 +691,7 @@ public sealed class SqlServerAwykenDataService(
         var allRows = await db.Schedule.AsNoTracking()
             .Where(item => item.ProfileId == profileId)
             .ToListAsync(cancellationToken);
+        await ApplyAcademicCatalogAsync(db, allRows, cancellationToken);
         // Load all recurring rows plus one-time rows falling inside this month.
         var rows = allRows
             .Where(item => item.Days is not null || (item.StartsAt >= start && item.StartsAt < end))
@@ -696,6 +699,56 @@ public sealed class SqlServerAwykenDataService(
             .ToList();
 
         ApplyToSharedState(profile, rows);
+    }
+
+    private static async Task ApplyAcademicCatalogAsync(
+        AwykenDbContext db, List<ScheduleRecord> rows, CancellationToken cancellationToken)
+    {
+        var linkedIds = rows
+            .Where(row => row.ClassOfferingId is not null)
+            .Select(row => row.ClassOfferingId!.Value)
+            .Distinct()
+            .ToList();
+        if (linkedIds.Count == 0)
+            return;
+
+        var catalogRows = await (
+                from offering in db.ClassOfferings.AsNoTracking()
+                join subject in db.Subjects.AsNoTracking() on offering.SubjectId equals subject.Id
+                where linkedIds.Contains(offering.Id)
+                select new
+                {
+                    offering.Id,
+                    offering.SectionCode,
+                    offering.Instructor,
+                    offering.Room,
+                    offering.Days,
+                    offering.StartTime,
+                    offering.EndTime,
+                    offering.TermId,
+                    subject.Code,
+                    subject.Title,
+                    subject.Units
+                })
+            .ToDictionaryAsync(item => item.Id, cancellationToken);
+
+        foreach (var row in rows)
+        {
+            if (row.ClassOfferingId is not int offeringId || !catalogRows.TryGetValue(offeringId, out var catalog))
+                continue;
+
+            row.CourseCode = catalog.Code;
+            row.Title = catalog.Title;
+            row.Section = catalog.SectionCode;
+            row.Instructor = catalog.Instructor;
+            row.Location = catalog.Room;
+            row.Days = catalog.Days;
+            row.MeetingTimes = $"{DateTime.Today.Add(catalog.StartTime.ToTimeSpan()):h:mm tt} – {DateTime.Today.Add(catalog.EndTime.ToTimeSpan()):h:mm tt}";
+            row.Units = catalog.Units;
+            row.TermId = catalog.TermId;
+            row.StartsAt = row.StartsAt.Date + catalog.StartTime.ToTimeSpan();
+            row.EndsAt = row.EndsAt.Date + catalog.EndTime.ToTimeSpan();
+        }
     }
 
     private void ApplyToSharedState(UserProfileRecord? profile, IEnumerable<ScheduleRecord> rows)
