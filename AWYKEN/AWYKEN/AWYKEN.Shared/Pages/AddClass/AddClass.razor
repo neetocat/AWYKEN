@@ -31,11 +31,6 @@
             {
                 <p class="add-class__form-message add-class__form-message--error" role="alert">@ErrorMessage</p>
             }
-            @if (!string.IsNullOrWhiteSpace(SuccessMessage))
-            {
-                <p class="add-class__form-message add-class__form-message--success" role="status">@SuccessMessage</p>
-            }
-
             <section class="add-class__section" aria-labelledby="class-details-heading">
                 <h2 class="add-class__subtitle" id="class-details-heading">Class Details</h2>
 
@@ -133,6 +128,35 @@
     </main>
 </div>
 
+@if (IsSaving)
+{
+    <div class="add-class__result-backdrop" role="presentation">
+        <section class="add-class__result-card" role="status" aria-live="polite" aria-busy="true">
+            <span class="add-class__spinner" aria-hidden="true"></span>
+            <h2>Saving your class</h2>
+            <p>Please wait while we add it to your schedule.</p>
+        </section>
+    </div>
+}
+else if (ShowResult)
+{
+    <div class="add-class__result-backdrop">
+        <section class="add-class__result-card" role="@(SaveSucceeded ? "dialog" : "alertdialog")" aria-modal="true" aria-labelledby="add-class-result-title" aria-describedby="add-class-result-message">
+            <span class="add-class__result-icon @(SaveSucceeded ? "add-class__result-icon--success" : "add-class__result-icon--error")" aria-hidden="true">@(SaveSucceeded ? "✓" : "!")</span>
+            <h2 id="add-class-result-title">@(SaveSucceeded ? "Class added" : "Couldn’t add class")</h2>
+            <p id="add-class-result-message">@(SaveSucceeded ? "Your class is now on your schedule." : "Something went wrong while saving. Please try again.")</p>
+            @if (SaveSucceeded)
+            {
+                <button class="add-class__result-button" type="button" @onclick='() => Navigation.NavigateTo("/schedule")'>View schedule</button>
+            }
+            else
+            {
+                <button class="add-class__result-button" type="button" @onclick="DismissResult">Return to form</button>
+            }
+        </section>
+    </div>
+}
+
 @code {
     private static readonly DayOfWeek[] WeekDays =
     [
@@ -154,7 +178,8 @@
     private bool ReminderEnabled = true;
     private bool IsSaving;
     private string? ErrorMessage;
-    private string? SuccessMessage;
+    private bool ShowResult;
+    private bool SaveSucceeded;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -211,13 +236,11 @@
         if (!SelectedDays.Add(day))
             SelectedDays.Remove(day);
         ErrorMessage = null;
-        SuccessMessage = null;
     }
 
     private void SelectMode(string mode)
     {
         Mode = mode;
-        SuccessMessage = null;
     }
 
     private void ToggleReminder() => ReminderEnabled = !ReminderEnabled;
@@ -225,7 +248,6 @@
     private async Task SaveClassAsync()
     {
         ErrorMessage = null;
-        SuccessMessage = null;
 
         if (string.IsNullOrWhiteSpace(Title) || string.IsNullOrWhiteSpace(CourseCode))
         {
@@ -271,18 +293,22 @@
             Days: days);
 
         IsSaving = true;
+        ShowResult = false;
         try
         {
             await Data.SaveScheduleItemAsync(item, DateOnly.FromDateTime(DateTime.Today));
-            SuccessMessage = "Class added to your schedule.";
+            SaveSucceeded = true;
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            ErrorMessage = $"Could not save the class: {exception.Message}";
+            SaveSucceeded = false;
         }
         finally
         {
             IsSaving = false;
+            ShowResult = true;
         }
     }
+
+    private void DismissResult() => ShowResult = false;
 }
