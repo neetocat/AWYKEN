@@ -67,6 +67,11 @@
 
     <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
     <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+
+    <!-- The repository .env is outside this project folder. Package it only for local
+         Debug device runs; never put database credentials in a Release APK. -->
+    <MauiAsset Include=".env" LogicalName="awyken-config.env"
+               Condition="'$(Configuration)' == 'Debug' And Exists('.env')" />
   </ItemGroup>
 
   <ItemGroup>
@@ -86,5 +91,12 @@
   <ItemGroup>
     <ProjectReference Include="..\AWYKEN.Shared\AWYKEN.Shared.csproj" />
   </ItemGroup>
+
+  <Target Name="RefreshDebugDotEnv" BeforeTargets="PrepareForBuild"
+          Condition="'$(Configuration)' == 'Debug' And Exists('..\..\..\.env')">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\..\..\.env"
+          DestinationFiles="$(MSBuildProjectDirectory)\.env"
+          SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>
