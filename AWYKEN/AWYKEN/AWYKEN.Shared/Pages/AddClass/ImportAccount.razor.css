@@ -5,6 +5,12 @@
 .import-account-field { display: grid; gap: 7px; margin: 16px 0; color: #15172a; font-size: 14px; font-weight: 700; }
 .import-account-field input { min-width: 0; padding: 13px 14px; border: 1px solid #dce2ec; border-radius: 12px; background: #fff; color: #15172a; font: inherit; font-weight: 400; }
 .import-account-field input[readonly] { background: #f6f8fc; }
+.password-input-wrap { position: relative; display: flex; align-items: center; }
+.password-input-wrap input { padding-right: 46px; }
+.password-visibility-toggle { position: absolute; right: 5px; display: grid; width: 36px; height: 36px; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #687086; cursor: pointer; }
+.password-visibility-toggle:hover { background: #f0f2f7; color: #080d3d; }
+.password-visibility-toggle:focus-visible { outline: 2px solid #858dc6; outline-offset: 1px; }
+.password-visibility-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .import-account-hint { display: block; margin: -7px 0 14px; color: #687086; }
 .import-account-error { color: #c92a2a !important; font-weight: 700; }
 .import-account-screen .primary-action { width: 100%; margin-top: 14px; }

@@ -48,13 +48,23 @@
                     }
                     <label class="import-account-field">
                         Password
-                        <input type="password" @bind="Password" autocomplete="@(AccountExists ? "current-password" : "new-password")" />
+                        <span class="password-input-wrap">
+                            <input type="@(ShowPassword ? "text" : "password")" @bind="Password" autocomplete="@(AccountExists ? "current-password" : "new-password")" />
+                            <button type="button" class="password-visibility-toggle" aria-label="@(ShowPassword ? "Hide password" : "Show password")" aria-pressed="@ShowPassword" @onclick="() => ShowPassword = !ShowPassword">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />@if (ShowPassword) { <path d="m4 4 16 16" /> }</svg>
+                            </button>
+                        </span>
                     </label>
                     @if (!AccountExists)
                     {
                         <label class="import-account-field">
                             Confirm password
-                            <input type="password" @bind="ConfirmPassword" autocomplete="new-password" />
+                            <span class="password-input-wrap">
+                                <input type="@(ShowConfirmPassword ? "text" : "password")" @bind="ConfirmPassword" autocomplete="new-password" />
+                                <button type="button" class="password-visibility-toggle" aria-label="@(ShowConfirmPassword ? "Hide confirm password" : "Show confirm password")" aria-pressed="@ShowConfirmPassword" @onclick="() => ShowConfirmPassword = !ShowConfirmPassword">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />@if (ShowConfirmPassword) { <path d="m4 4 16 16" /> }</svg>
+                                </button>
+                            </span>
                         </label>
                         <small class="import-account-hint">Use at least 8 characters. This password is not part of your COR.</small>
                     }
@@ -76,6 +86,8 @@
     private bool Loading = true;
     private bool AccountExists;
     private bool Working;
+    private bool ShowPassword;
+    private bool ShowConfirmPassword;
     private string Password = "";
     private string ConfirmPassword = "";
     private string? Error;

@@ -30,10 +30,24 @@
                         <label class="import-auth-field">Name<input @bind="DisplayName" autocomplete="name" maxlength="100" /></label>
                     }
                     <label class="import-auth-field">Email<input type="email" @bind="Email" autocomplete="email" /></label>
-                    <label class="import-auth-field">Password<input type="password" @bind="Password" autocomplete="@(CreateAccount ? "new-password" : "current-password")" /></label>
+                    <label class="import-auth-field">Password
+                        <span class="password-input-wrap">
+                            <input type="@(ShowPassword ? "text" : "password")" @bind="Password" autocomplete="@(CreateAccount ? "new-password" : "current-password")" />
+                            <button type="button" class="password-visibility-toggle" aria-label="@(ShowPassword ? "Hide password" : "Show password")" aria-pressed="@ShowPassword" @onclick="() => ShowPassword = !ShowPassword">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />@if (ShowPassword) { <path d="m4 4 16 16" /> }</svg>
+                            </button>
+                        </span>
+                    </label>
                     @if (CreateAccount)
                     {
-                        <label class="import-auth-field">Confirm password<input type="password" @bind="ConfirmPassword" autocomplete="new-password" /></label>
+                        <label class="import-auth-field">Confirm password
+                            <span class="password-input-wrap">
+                                <input type="@(ShowConfirmPassword ? "text" : "password")" @bind="ConfirmPassword" autocomplete="new-password" />
+                                <button type="button" class="password-visibility-toggle" aria-label="@(ShowConfirmPassword ? "Hide confirm password" : "Show confirm password")" aria-pressed="@ShowConfirmPassword" @onclick="() => ShowConfirmPassword = !ShowConfirmPassword">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />@if (ShowConfirmPassword) { <path d="m4 4 16 16" /> }</svg>
+                                </button>
+                            </span>
+                        </label>
                     }
                     @if (!string.IsNullOrWhiteSpace(status)) { <p class="import-account-error" role="alert">@status</p> }
                     <button class="import-auth-submit" disabled="@Working" @onclick="Authenticate">@(Working ? "Please wait…" : CreateAccount ? "Create account and continue" : "Log in and continue")</button>
@@ -71,6 +85,8 @@
     private string? status;
     private bool CreateAccount;
     private bool Working;
+    private bool ShowPassword;
+    private bool ShowConfirmPassword;
     private string Email = "";
     private string Password = "";
     private string ConfirmPassword = "";
