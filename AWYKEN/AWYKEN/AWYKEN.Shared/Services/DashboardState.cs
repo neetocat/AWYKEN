@@ -40,6 +40,23 @@ public sealed class DashboardState
 
     public void SetEstimatedTravelMinutes(int? minutes) => EstimatedTravelMinutes = minutes;
 
+    /// <summary>Applies a server response to this device's display state.</summary>
+    public void ReplaceFromApiSnapshot(AWYKEN.Shared.Data.ApiDashboardSnapshot snapshot)
+    {
+        User = snapshot.User;
+        Student = snapshot.Student;
+        CommuteLocations = snapshot.CommuteLocations;
+        Weather = snapshot.Weather;
+        EstimatedTravelMinutes = snapshot.EstimatedTravelMinutes;
+        Schedule = snapshot.Schedule.ToList();
+        ImportPreview = snapshot.ImportPreview.ToList();
+        ImportProfilePreview = snapshot.ImportProfilePreview;
+        Notifications = Schedule.Select(item => new AppNotification(
+            $"class-{item.Id}", "Today", item.Title, $"{item.CourseCode} starts at {item.StartTime}.",
+            item.StartTime, item.Mode == "Online" ? "online" : "clock", true,
+            item.Mode == "Online" ? "Join meeting" : null)).ToList();
+    }
+
     /// <summary>Replace the shared profile and schedule after reading the database.</summary>
     public void ReplaceFromDatabase(
         string? displayName, string? email, IEnumerable<ScheduleItem> schedule,

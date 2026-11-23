@@ -234,8 +234,9 @@ public sealed class SqlServerAwykenDataService(
                 ? normalizedEmail[..normalizedEmail.IndexOf('@')]
                 : displayName.Trim(),
             Email = normalizedEmail,
-            // Signing up with an address from AWYKEN_ADMIN_EMAILS creates an admin directly.
-            IsAdmin = IsConfiguredAdmin(normalizedEmail),
+            // Public sign-up cannot grant administrator access based on an unverified email.
+            // An existing administrator promotes accounts through the protected admin panel.
+            IsAdmin = false,
             PasswordHash = await Task.Run(() => LocalPasswordHasher.Hash(password), cancellationToken),
             AccountStatus = "Active",
             RegisteredAt = DateTime.UtcNow,
@@ -559,9 +560,6 @@ public sealed class SqlServerAwykenDataService(
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
-
-    private bool IsConfiguredAdmin(string normalizedEmail) =>
-        settings.AdminEmails.Contains(normalizedEmail, StringComparer.OrdinalIgnoreCase);
 
     public async Task SignOutAsync(DateOnly refreshDate, CancellationToken cancellationToken = default)
     {
