@@ -49,6 +49,7 @@ namespace AWYKEN
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();
             builder.Logging.AddDebug();
+            builder.Logging.SetMinimumLevel(LogLevel.Information);
 #endif
 
             return builder.Build();
