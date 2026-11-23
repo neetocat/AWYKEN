@@ -1,9 +1,13 @@
 # Visual Studio local state
 **/.vs/
+**/.vscode/
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
+*.csproj.user
+*.vbproj.user
+*.sln.user
 
 # .NET build output
 **/bin/
@@ -28,3 +32,13 @@ Thumbs.db
 *.db
 *.db-shm
 *.db-wal
+
+# Hot Reload and debugging artifacts
+*.hotreload
+*.binlog
+.vspx
+diagnostics.etl
+
+# Local project settings
+appsettings.local.json
+appsettings.Development.local.json
