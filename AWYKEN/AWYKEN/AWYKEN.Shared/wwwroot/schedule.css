@@ -82,7 +82,7 @@
 .month-day-events { display: flex; min-width: 0; flex-direction: column; align-items: stretch; gap: 3px; }
 .month-class-chip { min-width: 0; padding: 3px 3px; overflow: hidden; border: 0; border-left: 2px solid var(--event-accent, #5268ca); border-radius: 4px; background: color-mix(in srgb, var(--event-accent, #5268ca) 15%, white); color: var(--event-accent, #5268ca); text-align: left; text-overflow: ellipsis; font-size: 7px; font-weight: 800; white-space: nowrap; cursor: pointer; }
 .month-more { color: #68748d; font-size: 7px; }
-.schedule-bottom-nav { position: relative; z-index: 2; display: flex; flex: 0 0 auto; align-items: center; justify-content: space-around; padding: 10px 6px 60px; border-top: 1px solid var(--line); background: white; }
+.schedule-bottom-nav { position: relative; z-index: 2; display: flex; flex: 0 0 auto; align-items: center; justify-content: space-around; padding: var(--bottom-nav-padding); border-top: 1px solid var(--line); background: white; }
 .schedule-bottom-nav button { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 9px; }
 .schedule-bottom-nav button.current { color: var(--navy); font-weight: 800; }
 .bottom-icon { height: 25px; font-size: 22px; line-height: 25px; }
