@@ -1,0 +1,44 @@
+/* Awyken splash - cross-platform (Android / iOS / Windows / macOS WebView)
+   Timeline (ms): body 0-450 | panel 150-550 | clock 200-550 | road 250-620
+                  hands 450-1100 | hub 500-700 | dashes 550-950 | wordmark 850-1350
+   Exit: 320 ms fade + 6% scale-up (js/splash.js adds .ak-exit)               */
+
+#awyken-splash { display: none; }
+.awyken-splash-enabled #awyken-splash {
+  position: fixed; inset: 0; z-index: 99999;
+  display: flex;
+  display: flex; align-items: center; justify-content: center;
+  background: #FFFFFF;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  transition: opacity .32s cubic-bezier(.4, 0, 1, 1);
+}
+.awyken-splash-enabled #awyken-splash.ak-exit { opacity: 0; pointer-events: none; }
+.awyken-splash-enabled #awyken-splash.ak-exit .ak-logo { transform: scale(1.06); }
+
+.ak-logo {
+  width: min(62vw, 300px); height: auto; overflow: visible;
+  transition: transform .32s cubic-bezier(.4, 0, 1, 1);
+}
+.ak-logo * { transform-box: view-box; } /* origins below are in SVG user units */
+
+/* Default (and reduced-motion) state = final, fully-formed logo. */
+@media (prefers-reduced-motion: no-preference) {
+  .ak-body-g  { transform-origin: 50px 78px;     animation: ak-pop    .45s cubic-bezier(.34,1.56,.64,1) both; }
+  .ak-panel-g { animation: ak-slide  .40s cubic-bezier(.22,1,.36,1)    .15s both; }
+  .ak-clock-g { transform-origin: 51px 30px;     animation: ak-pop0   .35s cubic-bezier(.34,1.56,.64,1) .20s both; }
+  .ak-road-g  { animation: ak-rise   .37s cubic-bezier(.22,1,.36,1)    .25s both; }
+  .ak-min     { transform-origin: 50.5px 33.5px; animation: ak-min    .65s cubic-bezier(.22,1,.36,1)    .45s both; }
+  .ak-hour    { transform-origin: 50.5px 33.5px; animation: ak-hour   .65s cubic-bezier(.22,1,.36,1)    .45s both; }
+  .ak-hub     { transform-origin: 50.5px 33.5px; animation: ak-pop0   .20s cubic-bezier(.34,1.56,.64,1) .50s both; }
+  .ak-dash    { animation: ak-fade   .12s ease-out calc(.55s + var(--i) * .07s) both; }
+  .ak-word    { animation: ak-word   .50s cubic-bezier(.22,1,.36,1)    .85s both; }
+}
+
+@keyframes ak-pop   { from { transform: scale(.72); opacity: 0; } 40% { opacity: 1; } to { transform: scale(1); opacity: 1; } }
+@keyframes ak-pop0  { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes ak-slide { from { transform: translateX(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ak-rise  { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ak-min   { from { transform: rotate(-360deg); } to { transform: rotate(0); } }
+@keyframes ak-hour  { from { transform: rotate(-30deg); }  to { transform: rotate(0); } }
+@keyframes ak-fade  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ak-word  { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
