@@ -14,7 +14,7 @@ public sealed class UserProfileRecord
     public string? Email { get; set; }
     public string? PasswordHash { get; set; }
     public string? TeacherPinHash { get; set; }
-    // Administrators see /admin. Granted by listing the email in AWYKEN_ADMIN_EMAILS.
+    // Administrators see /admin. New public sign-ups always start without this role.
     public bool IsAdmin { get; set; }
     public bool IsDisabled { get; set; }
     public string? FullName { get; set; }

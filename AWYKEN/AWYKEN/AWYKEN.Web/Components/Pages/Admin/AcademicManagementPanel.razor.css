@@ -95,6 +95,72 @@
     background: #fafbff;
 }
 
+.acad-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgb(8 13 63 / 45%);
+}
+
+.acad-modal-card {
+    width: min(760px, 100%);
+    max-height: min(90vh, 900px);
+    overflow: auto;
+    padding: 20px;
+    border: 1px solid #dce2ee;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgb(8 13 63 / 24%);
+}
+
+.acad-modal-card .acad-form {
+    margin: 0;
+}
+
+.acad-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.acad-modal-head h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.acad-modal-head button {
+    border: 0;
+    background: transparent;
+    color: #4a5570;
+    font-size: 26px;
+    cursor: pointer;
+}
+
+.acad-delete-card {
+    width: min(440px, 100%);
+}
+
+.acad-delete-card p {
+    color: #4a5570;
+    font-size: 13px;
+}
+
+.acad-danger {
+    border: 0;
+    border-radius: 10px;
+    background: #a32b2b;
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 16px;
+    cursor: pointer;
+}
+
 .acad-form label {
     display: flex;
     flex-direction: column;

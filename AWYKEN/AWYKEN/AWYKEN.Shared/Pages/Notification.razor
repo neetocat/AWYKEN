@@ -3,6 +3,7 @@
 @inject AWYKEN.Shared.Services.DashboardState State
 @inject IAwykenDataService Data
 @inject NavigationManager Navigation
+@inject AWYKEN.Shared.Services.IPhoneNotificationService PhoneNotifications
 
 <PageTitle>AWYKEN</PageTitle>
 
@@ -20,9 +21,22 @@
                 <button class="mark-all-read" @onclick="MarkAllRead" disabled="@(State.UnreadNotificationCount == 0)">Mark all read</button>
             </header>
 
+            @if (PhoneNotifications.IsSupported && !NotificationsAllowed)
+            {
+                <section class="phone-notification-prompt">
+                    <div>
+                        <strong>Get alerts on your phone</strong>
+                        <span>Allow notifications so class alerts and reminders appear outside AWYKEN.</span>
+                    </div>
+                    <button type="button" @onclick="EnablePhoneNotificationsAsync">
+                        @(OpenNotificationSettings ? "Open settings" : "Allow notifications")
+                    </button>
+                </section>
+            }
+
             @if (State.Notifications.Count == 0)
             {
-                <p class="notification-group-title">No classes are scheduled for today. Notifications appear for today’s saved classes.</p>
+                <p class="notification-group-title">No class alerts or reminders for today.</p>
             }
 
             @foreach (var group in new[] { "Today", "Yesterday" })
@@ -40,6 +54,7 @@
                                         @if (item.Kind == "clock") { <span>◷</span> }
                                         else if (item.Kind == "route") { <span>⌁</span> }
                                         else if (item.Kind == "online") { <span>▣</span> }
+                                        else if (item.Kind == "reminder") { <span>♧</span> }
                                         else { <span>✓</span> }
                                     </div>
                                     <div class="notification-content">
@@ -95,9 +110,33 @@
     private string? MessageTitle;
     private string? Message;
 
-    // Notifications are derived from today's stored schedule, not demo entries.
-    protected override Task OnInitializedAsync() =>
-        Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+    private bool NotificationsAllowed;
+    private bool OpenNotificationSettings;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+        if (!PhoneNotifications.IsSupported)
+            return;
+
+        NotificationsAllowed = await PhoneNotifications.IsPermissionGrantedAsync();
+        if (NotificationsAllowed)
+            await PhoneNotifications.NotifyAsync(State.Notifications);
+    }
+
+    private async Task EnablePhoneNotificationsAsync()
+    {
+        if (OpenNotificationSettings)
+        {
+            await PhoneNotifications.OpenSettingsAsync();
+            return;
+        }
+
+        NotificationsAllowed = await PhoneNotifications.RequestPermissionAsync();
+        OpenNotificationSettings = !NotificationsAllowed;
+        if (NotificationsAllowed)
+            await PhoneNotifications.NotifyAsync(State.Notifications);
+    }
 
     private void MarkAllRead() => State.MarkAllNotificationsRead();
 

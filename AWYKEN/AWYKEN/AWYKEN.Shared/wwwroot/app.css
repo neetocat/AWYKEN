@@ -509,6 +509,38 @@ svg.add-class__field-icon {
     color: var(--success);
 }
 
+.add-class__result-backdrop {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgb(12 18 38 / 48%);
+}
+
+.add-class__result-card {
+    display: flex;
+    width: min(100%, 360px);
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 24px 24px;
+    border-radius: 20px;
+    background: var(--surface);
+    box-shadow: 0 20px 60px rgb(0 0 0 / 22%);
+    text-align: center;
+}
+
+.add-class__result-card h2 { margin: 14px 0 7px; color: var(--text-primary); font-size: 19px; }
+.add-class__result-card p { margin: 0 0 20px; color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+.add-class__spinner { width: 38px; height: 38px; border: 4px solid #e5e9f2; border-top-color: var(--primary); border-radius: 50%; animation: add-class-spin .8s linear infinite; }
+.add-class__result-icon { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 50%; font-size: 25px; font-weight: 700; }
+.add-class__result-icon--success { background: var(--success-soft); color: var(--success); }
+.add-class__result-icon--error { background: var(--error-soft); color: var(--error); }
+.add-class__result-button { width: 100%; min-height: 44px; border: 0; border-radius: 10px; background: var(--primary); color: var(--surface); font: inherit; font-weight: 700; cursor: pointer; }
+@keyframes add-class-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .add-class__spinner { animation-duration: 2s; } }
+
 .add-class__button--add-schedule {
     display: flex;
     width: 100%;

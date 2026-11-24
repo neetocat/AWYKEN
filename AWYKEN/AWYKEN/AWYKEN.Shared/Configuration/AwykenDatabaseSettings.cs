@@ -25,8 +25,6 @@ public sealed record AwykenDatabaseSettings
     public const string ConnectTimeoutKey = "AZURE_SQL_CONNECT_TIMEOUT";
     public const string CommandTimeoutKey = "AZURE_SQL_COMMAND_TIMEOUT";
     public const string ApplyMigrationsKey = "AWYKEN_APPLY_MIGRATIONS_ON_START";
-    // Comma-separated list of emails that are promoted to administrator on sign-in.
-    public const string AdminEmailsKey = "AWYKEN_ADMIN_EMAILS";
     // Optional shared administrator that the app creates on startup if it does not exist.
     public const string DefaultAdminEmailKey = "AWYKEN_DEFAULT_ADMIN_EMAIL";
     public const string DefaultAdminPasswordKey = "AWYKEN_DEFAULT_ADMIN_PASSWORD";
@@ -40,13 +38,6 @@ public sealed record AwykenDatabaseSettings
 
     /// <summary>Database name from the connection string, safe to log.</summary>
     public required string InitialCatalog { get; init; }
-
-    /// <summary>
-    /// Emails that become administrators when they sign in, read from
-    /// <c>AWYKEN_ADMIN_EMAILS</c>. Only someone who can edit the server's <c>.env</c>
-    /// can grant the admin role, and no manual SQL is needed.
-    /// </summary>
-    public IReadOnlyList<string> AdminEmails { get; init; } = [];
 
     /// <summary>
     /// A shared administrator account seeded on startup when
@@ -149,24 +140,11 @@ public sealed record AwykenDatabaseSettings
             InitialCatalog = builder.InitialCatalog,
             CommandTimeoutSeconds = ReadSeconds(Get(CommandTimeoutKey), CommandTimeoutKey) ?? 60,
             ApplyMigrationsOnStartup = ReadBool(Get(ApplyMigrationsKey), ApplyMigrationsKey) ?? true,
-            AdminEmails = ReadEmailList(Get(AdminEmailsKey)),
             DefaultAdminEmail = defaultAdminEmail,
             DefaultAdminPassword = defaultAdminPassword,
             DefaultAdminName = Get(DefaultAdminNameKey),
             DotEnvFile = dotEnvFile
         };
-    }
-
-    private static IReadOnlyList<string> ReadEmailList(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return [];
-
-        return value
-            .Split([',', ';', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(email => email.ToLowerInvariant())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
     }
 
     private static SqlConnectionStringBuilder BuildFromDiscreteKeys(

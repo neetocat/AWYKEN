@@ -23,6 +23,7 @@ public interface IAcademicCatalogService
     Task<string?> SaveOfferingAsync(ClassOfferingRecord offering, bool applyToLinkedStudents = false,
         CancellationToken cancellationToken = default);
     Task<string?> ArchiveOfferingAsync(int offeringId, bool archived, CancellationToken cancellationToken = default);
+    Task<string?> DeleteOfferingAsync(int offeringId, CancellationToken cancellationToken = default);
 
     /// <summary>How many student rows are linked to this offering, and how many already differ.</summary>
     Task<(int Linked, int Diverged)> GetOfferingImpactAsync(int offeringId,

@@ -234,8 +234,9 @@ public sealed class SqlServerAwykenDataService(
                 ? normalizedEmail[..normalizedEmail.IndexOf('@')]
                 : displayName.Trim(),
             Email = normalizedEmail,
-            // Signing up with an address from AWYKEN_ADMIN_EMAILS creates an admin directly.
-            IsAdmin = IsConfiguredAdmin(normalizedEmail),
+            // Public sign-up cannot grant administrator access based on an unverified email.
+            // An existing administrator promotes accounts through the protected admin panel.
+            IsAdmin = false,
             PasswordHash = await Task.Run(() => LocalPasswordHasher.Hash(password), cancellationToken),
             AccountStatus = "Active",
             RegisteredAt = DateTime.UtcNow,
@@ -560,9 +561,6 @@ public sealed class SqlServerAwykenDataService(
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 
-    private bool IsConfiguredAdmin(string normalizedEmail) =>
-        settings.AdminEmails.Contains(normalizedEmail, StringComparer.OrdinalIgnoreCase);
-
     public async Task SignOutAsync(DateOnly refreshDate, CancellationToken cancellationToken = default)
     {
         accountSession.SignOut();
@@ -628,9 +626,10 @@ public sealed class SqlServerAwykenDataService(
 
         var startOfDay = date.ToDateTime(TimeOnly.MinValue);
         var startOfNextDay = date.AddDays(1).ToDateTime(TimeOnly.MinValue);
-        var allRows = await db.Schedule.AsNoTracking()
+        var allRows = await db.Schedule
             .Where(item => item.ProfileId == profileId)
             .ToListAsync(cancellationToken);
+        await ApplyAcademicCatalogAsync(db, profileId, profile, allRows, cancellationToken);
         var day = date.DayOfWeek.ToString()[..3];
         var rows = allRows
             .Where(item => item.Days is null
@@ -640,6 +639,7 @@ public sealed class SqlServerAwykenDataService(
             .ToList();
 
         ApplyToSharedState(profile, rows);
+        await ApplyReminderAlertsAsync(db, profileId, cancellationToken);
     }
 
     public async Task RefreshWeekAsync(DateOnly weekStart, CancellationToken cancellationToken = default)
@@ -660,9 +660,10 @@ public sealed class SqlServerAwykenDataService(
         var weekDays = Enumerable.Range(0, 7)
             .Select(offset => weekStart.AddDays(offset).DayOfWeek.ToString()[..3])
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var allRows = await db.Schedule.AsNoTracking()
+        var allRows = await db.Schedule
             .Where(item => item.ProfileId == profileId)
             .ToListAsync(cancellationToken);
+        await ApplyAcademicCatalogAsync(db, profileId, profile, allRows, cancellationToken);
         var rows = allRows
             .Where(item => item.Days is null
                 ? item.StartsAt >= weekStartDateTime && item.StartsAt < weekEnd
@@ -671,6 +672,7 @@ public sealed class SqlServerAwykenDataService(
             .ToList();
 
         ApplyToSharedState(profile, rows);
+        await ApplyReminderAlertsAsync(db, profileId, cancellationToken);
     }
 
     public async Task RefreshMonthAsync(DateOnly monthStart, CancellationToken cancellationToken = default)
@@ -688,9 +690,10 @@ public sealed class SqlServerAwykenDataService(
 
         var start = monthStart.ToDateTime(TimeOnly.MinValue);
         var end = monthStart.AddMonths(1).ToDateTime(TimeOnly.MinValue);
-        var allRows = await db.Schedule.AsNoTracking()
+        var allRows = await db.Schedule
             .Where(item => item.ProfileId == profileId)
             .ToListAsync(cancellationToken);
+        await ApplyAcademicCatalogAsync(db, profileId, profile, allRows, cancellationToken);
         // Load all recurring rows plus one-time rows falling inside this month.
         var rows = allRows
             .Where(item => item.Days is not null || (item.StartsAt >= start && item.StartsAt < end))
@@ -698,7 +701,187 @@ public sealed class SqlServerAwykenDataService(
             .ToList();
 
         ApplyToSharedState(profile, rows);
+        await ApplyReminderAlertsAsync(db, profileId, cancellationToken);
     }
+
+    private static async Task ApplyAcademicCatalogAsync(
+        AwykenDbContext db, int profileId, UserProfileRecord? profile,
+        List<ScheduleRecord> rows, CancellationToken cancellationToken)
+    {
+        var linkedIds = rows
+            .Where(row => row.ClassOfferingId is not null)
+            .Select(row => row.ClassOfferingId!.Value)
+            .Distinct()
+            .ToList();
+        var catalogRows = linkedIds.Count == 0
+            ? new Dictionary<int, AcademicCatalogScheduleData>()
+            : await (
+                from offering in db.ClassOfferings.AsNoTracking()
+                join subject in db.Subjects.AsNoTracking() on offering.SubjectId equals subject.Id
+                where linkedIds.Contains(offering.Id)
+                    && offering.Status == ClassOfferingStatuses.Published
+                    && !offering.IsArchived
+                    && !subject.IsArchived
+                select new AcademicCatalogScheduleData(
+                    offering.Id,
+                    offering.SectionCode,
+                    offering.Instructor,
+                    offering.Room,
+                    offering.Days,
+                    offering.StartTime,
+                    offering.EndTime,
+                    offering.TermId,
+                    offering.Status,
+                    subject.Code,
+                    subject.Title,
+                    subject.Units))
+            .ToDictionaryAsync(item => item.Id, cancellationToken);
+
+        var changed = false;
+        foreach (var row in rows)
+        {
+            if (row.ClassOfferingId is not int offeringId
+                || !catalogRows.TryGetValue(offeringId, out var catalog))
+                continue;
+
+            changed |= CopyPublishedCatalogToStudentRow(row, catalog);
+        }
+
+        var sections = rows.Select(row => row.Section)
+            .Append(profile?.Section)
+            .Where(section => !string.IsNullOrWhiteSpace(section))
+            .Select(NormalizeAcademicKey)
+            .Where(section => section.Length > 0)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (sections.Count == 0)
+        {
+            if (changed)
+                await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        var terms = await db.AcademicTerms.AsNoTracking()
+            .Where(term => !term.IsArchived)
+            .Select(term => new { term.Id, term.SchoolYear, term.Semester, term.IsCurrent })
+            .ToListAsync(cancellationToken);
+        var assignedTerm = NormalizeAcademicKey(profile?.AcademicTerm);
+        var term = terms
+            .Where(item => assignedTerm.Length > 0
+                && assignedTerm.Contains(NormalizeAcademicKey(item.SchoolYear), StringComparison.Ordinal)
+                && assignedTerm.Contains(NormalizeAcademicKey(item.Semester), StringComparison.Ordinal))
+            .OrderByDescending(item => item.IsCurrent)
+            .FirstOrDefault()
+            ?? terms.FirstOrDefault(item => item.IsCurrent)
+            ?? terms.FirstOrDefault(item => rows.Any(row => row.TermId == item.Id))
+            ?? terms.OrderByDescending(item => item.SchoolYear)
+                .ThenByDescending(item => item.Semester)
+                .FirstOrDefault();
+        if (term is null)
+        {
+            if (changed)
+                await db.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        var publishedClasses = await (
+                from offering in db.ClassOfferings.AsNoTracking()
+                join subject in db.Subjects.AsNoTracking() on offering.SubjectId equals subject.Id
+                where offering.TermId == term.Id
+                    && offering.Status == ClassOfferingStatuses.Published
+                    && !offering.IsArchived
+                    && !subject.IsArchived
+                select new
+                {
+                    offering.Id,
+                    offering.TermId,
+                    offering.SectionCode,
+                    offering.Instructor,
+                    offering.Room,
+                    offering.Days,
+                    offering.StartTime,
+                    offering.EndTime,
+                    subject.Code,
+                    subject.Title,
+                    subject.Units
+                })
+            .ToListAsync(cancellationToken);
+        publishedClasses = publishedClasses
+            .Where(item => sections.Contains(NormalizeAcademicKey(item.SectionCode)))
+            .ToList();
+
+        var existingOfferingIds = rows
+            .Where(row => row.ClassOfferingId is not null)
+            .Select(row => row.ClassOfferingId!.Value)
+            .ToHashSet();
+        var today = DateTime.Today;
+        foreach (var catalog in publishedClasses.Where(item => !existingOfferingIds.Contains(item.Id)))
+        {
+            var row = new ScheduleRecord
+            {
+                ProfileId = profileId,
+                CourseCode = catalog.Code,
+                Title = catalog.Title,
+                Section = catalog.SectionCode,
+                Instructor = catalog.Instructor,
+                Location = catalog.Room,
+                Days = catalog.Days,
+                MeetingTimes = $"{DateTime.Today.Add(catalog.StartTime.ToTimeSpan()):h:mm tt} – {DateTime.Today.Add(catalog.EndTime.ToTimeSpan()):h:mm tt}",
+                StartsAt = today + catalog.StartTime.ToTimeSpan(),
+                EndsAt = today + catalog.EndTime.ToTimeSpan(),
+                Units = catalog.Units,
+                TermId = catalog.TermId,
+                ClassOfferingId = catalog.Id,
+                Mode = "In person",
+                ColorCode = ScheduleColorPalette.ForRecordId(catalog.Id),
+                UpdatedAt = DateTime.UtcNow
+            };
+            db.Schedule.Add(row);
+            rows.Add(row);
+            changed = true;
+        }
+
+        if (changed)
+            await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static bool CopyPublishedCatalogToStudentRow(
+        ScheduleRecord row, AcademicCatalogScheduleData catalog)
+    {
+        var meetingTimes = $"{DateTime.Today.Add(catalog.StartTime.ToTimeSpan()):h:mm tt} – {DateTime.Today.Add(catalog.EndTime.ToTimeSpan()):h:mm tt}";
+        var startsAt = row.StartsAt.Date + catalog.StartTime.ToTimeSpan();
+        var endsAt = row.EndsAt.Date + catalog.EndTime.ToTimeSpan();
+        var changed = row.CourseCode != catalog.Code
+            || row.Title != catalog.Title
+            || row.Section != catalog.SectionCode
+            || row.Instructor != catalog.Instructor
+            || row.Location != catalog.Room
+            || row.Days != catalog.Days
+            || row.MeetingTimes != meetingTimes
+            || row.Units != catalog.Units
+            || row.TermId != catalog.TermId
+            || row.StartsAt != startsAt
+            || row.EndsAt != endsAt;
+        if (!changed)
+            return false;
+
+        row.CourseCode = catalog.Code;
+        row.Title = catalog.Title;
+        row.Section = catalog.SectionCode;
+        row.Instructor = catalog.Instructor;
+        row.Location = catalog.Room;
+        row.Days = catalog.Days;
+        row.MeetingTimes = meetingTimes;
+        row.Units = catalog.Units;
+        row.TermId = catalog.TermId;
+        row.StartsAt = startsAt;
+        row.EndsAt = endsAt;
+        row.UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
+    private static string NormalizeAcademicKey(string? value) => string.IsNullOrWhiteSpace(value)
+        ? ""
+        : new string(value.Where(char.IsLetterOrDigit).Select(char.ToUpperInvariant).ToArray());
 
     private void ApplyToSharedState(UserProfileRecord? profile, IEnumerable<ScheduleRecord> rows)
     {
@@ -715,6 +898,50 @@ public sealed class SqlServerAwykenDataService(
                 profile.SchoolAddress, profile.SchoolLatitude, profile.SchoolLongitude);
         state.ReplaceFromDatabase(profile?.DisplayName, profile?.Email, rows.Select(ToScheduleItem), student, commute);
     }
+
+    private async Task ApplyReminderAlertsAsync(
+        AwykenDbContext db, int profileId, CancellationToken cancellationToken)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var start = today.ToDateTime(TimeOnly.MinValue);
+        var end = today.AddDays(2).ToDateTime(TimeOnly.MinValue);
+        var reminders = await db.Courses.AsNoTracking()
+            .Where(note => note.ProfileId == profileId && note.RemindMe
+                && note.Reminder != null && note.Reminder != ""
+                && note.ClassDate >= start && note.ClassDate < end)
+            .OrderBy(note => note.ClassDate)
+            .ThenBy(note => note.ClassTimeText)
+            .Select(note => new
+            {
+                note.Id,
+                note.ClassDate,
+                note.CourseCode,
+                note.CourseTitle,
+                note.ClassTimeText,
+                note.Reminder
+            })
+            .ToListAsync(cancellationToken);
+
+        state.AppendNotifications(reminders.Select(note =>
+        {
+            var classDate = DateOnly.FromDateTime(note.ClassDate);
+            var isToday = classDate == today;
+            return new AppNotification(
+                $"reminder-{note.Id}-{today:yyyyMMdd}",
+                "Today",
+                $"{note.CourseCode} reminder",
+                $"{(isToday ? "Today" : "Tomorrow")}: {note.Reminder}",
+                $"{(isToday ? "Today" : "Tomorrow")} · {note.ClassTimeText}",
+                "reminder",
+                true,
+                null);
+        }));
+    }
+
+    private sealed record AcademicCatalogScheduleData(
+        int Id, string SectionCode, string Instructor, string Room, string Days,
+        TimeOnly StartTime, TimeOnly EndTime, int TermId, string Status,
+        string Code, string Title, decimal Units);
 
     public async Task SaveCommuteLocationsAsync(
         CommuteLocationSettings locations, DateOnly refreshDate, CancellationToken cancellationToken = default)
@@ -891,7 +1118,7 @@ public sealed class SqlServerAwykenDataService(
         await RefreshAsync(date, cancellationToken);
     }
 
-    public async Task SaveCourseNoteAsync(string scheduleId, DateOnly classDate, string text, string? news,
+    public async Task SaveCourseNoteAsync(string scheduleId, DateOnly classDate, string text, string? reminder, bool remindMe,
         string createdAtText, string? attendanceStatus, byte[]? imageData, string? imageContentType,
         CancellationToken cancellationToken = default)
     {
@@ -907,7 +1134,7 @@ public sealed class SqlServerAwykenDataService(
             row.ProfileId == profileId && row.ScheduleRecordId == parsedId
             && row.ClassDate == classDate.ToDateTime(TimeOnly.MinValue), cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(news)
+        if (string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(reminder) && !remindMe
             && string.IsNullOrWhiteSpace(attendanceStatus) && imageData is null)
         {
             if (note is not null)
@@ -934,7 +1161,8 @@ public sealed class SqlServerAwykenDataService(
         }
 
         note.Text = text;
-        note.News = news;
+        note.Reminder = reminder;
+        note.RemindMe = remindMe;
         note.CreatedAtText = createdAtText;
         note.ClassTimeText = $"{schedule.StartsAt.ToString("h:mm tt", CultureInfo.InvariantCulture)} – {schedule.EndsAt.ToString("h:mm tt", CultureInfo.InvariantCulture)}";
         note.AttendanceStatus = attendanceStatus;
@@ -981,7 +1209,7 @@ public sealed class SqlServerAwykenDataService(
             && note.ClassDate == classDate.ToDateTime(TimeOnly.MinValue), cancellationToken);
     }
 
-    public async Task UpdateCourseNoteAsync(int noteId, string text, string? news, string createdAtText,
+    public async Task UpdateCourseNoteAsync(int noteId, string text, string? reminder, bool remindMe, string createdAtText,
         string? attendanceStatus, byte[]? imageData, string? imageContentType,
         CancellationToken cancellationToken = default)
     {
@@ -994,7 +1222,8 @@ public sealed class SqlServerAwykenDataService(
 
         // Update this occurrence row only; its course, date, and scheduled time remain attached.
         note.Text = text;
-        note.News = news;
+        note.Reminder = reminder;
+        note.RemindMe = remindMe;
         note.CreatedAtText = createdAtText;
         note.AttendanceStatus = attendanceStatus;
         note.ImageData = imageData;

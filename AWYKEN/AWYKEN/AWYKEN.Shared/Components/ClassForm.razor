@@ -71,10 +71,14 @@
                 <textarea id="classNotes" @bind="Draft.Notes" rows="5"
                           placeholder="Write notes for this class..."></textarea>
 
-                <section class="class-news" aria-label="Class news">
-                    <h3>News</h3>
-                    <textarea id="classNews" @bind="Draft.News" rows="3"
-                              placeholder="Add news for this class date..."></textarea>
+                <section class="class-reminder" aria-label="Class reminder">
+                    <h3>Reminder</h3>
+                    <textarea id="classReminder" @bind="Draft.Reminder" rows="3"
+                              placeholder="Add a reminder for this class date..."></textarea>
+                    <label class="remind-me-toggle">
+                        <input type="checkbox" @bind="Draft.RemindMe" />
+                        Remind me the day before and on this day
+                    </label>
                 </section>
 
                 <fieldset class="attendance-options">
@@ -195,7 +199,7 @@
     .class-note-image { display: block; max-width: 100%; max-height: 180px; margin-top: 10px; border-radius: 10px; object-fit: contain; }
     .class-note-remove-image { margin-top: 8px; border: 0; color: #a00000; background: transparent; cursor: pointer; }
 
-    .class-news {
+    .class-reminder {
         min-height: 58px;
         margin-top: 16px;
         padding: 12px;
@@ -203,7 +207,9 @@
         border-radius: 10px;
     }
 
-    .class-news h3 { margin: 0 0 8px; font-size: 14px; }
+    .class-reminder h3 { margin: 0 0 8px; font-size: 14px; }
+    .class-reminder .remind-me-toggle { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; }
+    .class-form .remind-me-toggle input { width: auto; margin: 0; }
 
     .attendance-options {
         display: flex;

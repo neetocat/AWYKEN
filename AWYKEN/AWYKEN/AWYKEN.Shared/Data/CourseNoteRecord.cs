@@ -11,7 +11,8 @@ public sealed class CourseNoteRecord
     // Kept as editable text because the user asked to be able to adjust the displayed timestamp.
     public required string CreatedAtText { get; set; }
     public string Text { get; set; } = "";
-    public string? News { get; set; }
+    public string? Reminder { get; set; }
+    public bool RemindMe { get; set; }
     public string? AttendanceStatus { get; set; }
     public byte[]? ImageData { get; set; }
     public string? ImageContentType { get; set; }

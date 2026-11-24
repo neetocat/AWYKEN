@@ -1,0 +1,38 @@
+@implements IDisposable
+@using Microsoft.Extensions.Logging
+@inject AWYKEN.Shared.Services.DashboardState State
+@inject AWYKEN.Shared.Services.IPhoneNotificationService PhoneNotifications
+@inject ILogger<PhoneAlertNotificationBridge> Logger
+
+@code {
+    protected override void OnInitialized()
+    {
+        State.NotificationsChanged += HandleNotificationsChanged;
+    }
+
+    private void HandleNotificationsChanged()
+    {
+        _ = InvokeAsync(SynchronizeAsync);
+    }
+
+    private async Task SynchronizeAsync()
+    {
+        if (!PhoneNotifications.IsSupported)
+            return;
+
+        try
+        {
+            if (await PhoneNotifications.IsPermissionGrantedAsync())
+                await PhoneNotifications.NotifyAsync(State.Notifications);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogWarning(exception, "Phone alert notification sync failed.");
+        }
+    }
+
+    public void Dispose()
+    {
+        State.NotificationsChanged -= HandleNotificationsChanged;
+    }
+}
