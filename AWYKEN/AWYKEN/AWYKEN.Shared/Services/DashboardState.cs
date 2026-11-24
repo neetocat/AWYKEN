@@ -35,6 +35,7 @@ public sealed class DashboardState
     public List<AppNotification> Notifications { get; private set; } = [];
 
     public int UnreadNotificationCount => Notifications.Count(item => item.IsUnread);
+    public event Action? NotificationsChanged;
 
     public void SetWeather(WeatherInfo weather) => Weather = weather;
 
@@ -57,6 +58,7 @@ public sealed class DashboardState
             $"class-{item.Id}", "Today", item.Title, $"{item.CourseCode} starts at {item.StartTime}.",
             item.StartTime, item.Mode == "Online" ? "online" : "clock", true,
             item.Mode == "Online" ? "Join meeting" : null)).ToList();
+        NotificationsChanged?.Invoke();
     }
 
     /// <summary>Replace the shared profile and schedule after reading the database.</summary>
@@ -79,6 +81,7 @@ public sealed class DashboardState
             item.Mode == "Online" ? "online" : "clock",
             true,
             item.Mode == "Online" ? "Join meeting" : null)).ToList();
+        NotificationsChanged?.Invoke();
     }
 
     public void SetImportPreview(IEnumerable<ScheduleItem> classes, StudentProfile? profile = null)
@@ -91,6 +94,7 @@ public sealed class DashboardState
     {
         var existingIds = Notifications.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
         Notifications.AddRange(notifications.Where(item => existingIds.Add(item.Id)));
+        NotificationsChanged?.Invoke();
     }
 
     public void SaveImportPreview()

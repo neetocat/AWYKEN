@@ -20,6 +20,7 @@ namespace AWYKEN
             // Add device-specific services used by the AWYKEN.Shared project
             builder.Services.AddSingleton<IFormFactor, FormFactor>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.DashboardState>();
+            builder.Services.AddSingleton<AWYKEN.Shared.Services.IPhoneNotificationService, PhoneNotificationService>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.LocalAccountSession>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.CorScheduleImporter>();
             // Identify AWYKEN when calling public OpenStreetMap services, as their policies require.

@@ -25,6 +25,7 @@ builder.Services.AddRateLimiter(options => options.AddPolicy("auth", context =>
 
 builder.Services.AddSingleton<IFormFactor, FormFactor>();
 builder.Services.AddScoped<AWYKEN.Shared.Services.DashboardState>();
+builder.Services.AddScoped<IPhoneNotificationService, NullPhoneNotificationService>();
 builder.Services.AddScoped<AWYKEN.Shared.Services.LocalAccountSession>();
 builder.Services.AddScoped<AWYKEN.Shared.Services.CorScheduleImporter>();
 // Identify AWYKEN when calling public OpenStreetMap services, as their policies require.
