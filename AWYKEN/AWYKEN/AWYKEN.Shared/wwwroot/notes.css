@@ -30,8 +30,8 @@
 .note-edit-link { margin-top: 12px; padding: 6px 0; border: 0; background: transparent; color: #304db5; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .course-note-editor { display: grid; gap: 8px; margin-top: 14px; }
 .course-note-editor > label, .course-note-editor legend { color: #4e5b75; font-size: 12px; font-weight: 700; }
-.course-note-editor > .notes-remind-toggle { display:flex; align-items:center; gap:8px; font-weight:600; }
-.course-note-editor > .notes-remind-toggle input { width:auto; }
+.course-note-editor > .notes-remind-toggle { display:flex; align-items:center; font-weight:600; }
+.course-note-editor > .notes-remind-toggle input { width:fit-content !important; }
 .course-note-editor textarea, .course-note-editor input:not([type=radio]) { box-sizing: border-box; width: 100%; padding: 10px; border: 1px solid #d5dbea; border-radius: 9px; background: white; color: #101936; font: inherit; }
 .course-note-editor textarea { resize: vertical; }
 .course-note-editor fieldset { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; border: 0; }
