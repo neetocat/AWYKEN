@@ -35,8 +35,11 @@ namespace AWYKEN
 
             // The mobile app has no database connection or SQL credentials. All reads and
             // writes go to the server over HTTPS; only this public endpoint URL ships in the APK.
-            var apiBaseUrl = LoadApiBaseUrl();
-            var apiHttpClient = new HttpClient { BaseAddress = new Uri(apiBaseUrl, UriKind.Absolute) };
+            var apiConfiguration = LoadApiConfiguration();
+            builder.Services.AddSingleton(apiConfiguration);
+            var apiHttpClient = new HttpClient();
+            if (apiConfiguration.BaseUrl is not null)
+                apiHttpClient.BaseAddress = new Uri(apiConfiguration.BaseUrl, UriKind.Absolute);
             apiHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("AWYKEN-Mobile/1.0");
             builder.Services.AddSingleton(new MauiApiHttpClient(apiHttpClient));
             builder.Services.AddSingleton<IApiTokenStore, MauiApiTokenStore>();
@@ -59,23 +62,32 @@ namespace AWYKEN
             return builder.Build();
         }
 
-        private static string LoadApiBaseUrl()
+        private static MobileApiConfiguration LoadApiConfiguration()
         {
             var value = Environment.GetEnvironmentVariable("AWYKEN_API_BASE_URL");
-            if (!string.IsNullOrWhiteSpace(value))
-                return ValidateApiBaseUrl(value);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                try
+                {
+                    using var stream = FileSystem.OpenAppPackageFileAsync("api-base-url.txt")
+                        .GetAwaiter().GetResult();
+                    using var reader = new StreamReader(stream);
+                    value = reader.ReadToEnd().Trim();
+                }
+                catch (Exception)
+                {
+                    return new MobileApiConfiguration(null,
+                        "Set AWYKEN/Resources/Raw/api-base-url.txt to the deployed AWYKEN.Web HTTPS address, then rebuild the app.");
+                }
+            }
 
             try
             {
-                using var stream = FileSystem.OpenAppPackageFileAsync("api-base-url.txt")
-                    .GetAwaiter().GetResult();
-                using var reader = new StreamReader(stream);
-                return ValidateApiBaseUrl(reader.ReadToEnd().Trim());
+                return new MobileApiConfiguration(ValidateApiBaseUrl(value ?? string.Empty), null);
             }
-            catch (Exception)
+            catch (InvalidOperationException exception)
             {
-                throw new InvalidOperationException(
-                    "AWYKEN_API_BASE_URL is not configured. Set it to the deployed AWYKEN.Web HTTPS address in Resources/Raw/api-base-url.txt.");
+                return new MobileApiConfiguration(null, exception.Message);
             }
         }
 

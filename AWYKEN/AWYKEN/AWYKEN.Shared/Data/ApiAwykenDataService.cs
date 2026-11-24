@@ -10,7 +10,7 @@ namespace AWYKEN.Shared.Data;
 /// HTTP-backed implementation of the existing data-service contract. It lets the MAUI
 /// screens keep their current API while all database work moves to AWYKEN.Web.
 /// </summary>
-public sealed class ApiAwykenDataService : DispatchProxy
+public class ApiAwykenDataService : DispatchProxy
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private HttpClient _http = null!;
