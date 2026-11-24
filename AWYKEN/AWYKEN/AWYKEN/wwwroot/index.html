@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>AWYKEN</title>
     <base href="/" />
+    <script>
+        document.documentElement.classList.add('awyken-splash-enabled');
+    </script>
+    <link rel="stylesheet" href="_content/AWYKEN.Shared/splash.css" />
     <link rel="stylesheet" href="_content/AWYKEN.Shared/app.css" />
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="AWYKEN.styles.css" />
@@ -19,10 +23,26 @@
 
 <body>
 
+    <div id="awyken-splash" aria-hidden="true">
+        <svg class="ak-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" focusable="false">
+            <defs>
+                <linearGradient id="ak-g-body" gradientUnits="userSpaceOnUse" x1="20" y1="0" x2="90" y2="35"><stop offset="0" stop-color="#1F7BFF"/><stop offset=".5" stop-color="#0A35B8"/><stop offset="1" stop-color="#061A78"/></linearGradient>
+                <linearGradient id="ak-g-panel" gradientUnits="userSpaceOnUse" x1="70" y1="35" x2="95" y2="72"><stop offset="0" stop-color="#F2F7FF"/><stop offset="1" stop-color="#3B7BFF"/></linearGradient>
+                <linearGradient id="ak-g-edge" gradientUnits="userSpaceOnUse" x1="60" y1="50" x2="84" y2="78"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#9CC2FF"/></linearGradient>
+            </defs>
+            <g class="ak-body-g"><path fill="url(#ak-g-body)" d="M36,9 C42,0 60,0 66,9 L97,63 C101,70 100,75 94,77.5 C90,79 85,78 82,76 L16,76 C11,79 6,79 3,75 C0,72 0,67 3,62 Z"/><path fill="#0F5BEA" d="M34,37 L48,43 C50,46 46,49 40,52 C30,58 22,66 18,76 L15,76 Z"/></g>
+            <g class="ak-panel-g"><path fill="url(#ak-g-panel)" d="M77,30.5 L97,63 L94,76 L88,76 L70,50 L58,45 C68,43 74,38 77,30.5 Z"/></g>
+            <g class="ak-clock-g"><circle cx="51" cy="30" r="13.7" fill="#FFFFFF"/><circle cx="50.5" cy="35.5" r="6.3" fill="#060B3D"/><g class="ak-hour"><path d="M50.5,33.5 L43,36.5" stroke="#1E7BFF" stroke-width="2" stroke-linecap="round" fill="none"/></g><g class="ak-min"><path d="M50.5,33.5 L57.2,22.3" stroke="#1E7BFF" stroke-width="2" stroke-linecap="round" fill="none"/></g><circle class="ak-hub" cx="50.5" cy="33.5" r="2.2" fill="#2A8CFF"/></g>
+            <g class="ak-road-g"><path fill="#060B3D" d="M19,78.5 C17,76 15.5,75 16.5,73 C24,61 36,52 48,45 C56,45 63,47 67,51.5 L84.5,78.5 Z"/><path fill="url(#ak-g-edge)" d="M58,46 C66,48 71,53 72,59 C72,64 66,66 68,70 C70,73 76,76 84.5,78.5 C74,77 64,74 58,70 C52,66 56,62 60,59 C63,56 63,52 58,46 Z"/><g stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" fill="none"><path class="ak-dash" style="--i:4" d="M52.5,46.5 L53,48.5"/><path class="ak-dash" style="--i:3" d="M52,51 L50,53.5"/><path class="ak-dash" style="--i:2" d="M47.5,57 L44.5,60"/><path class="ak-dash" style="--i:1" d="M42.5,64 L41,68"/><path class="ak-dash" style="--i:0" d="M41.5,73 L45,77.5"/></g></g>
+            <text class="ak-word" x="1" y="97.5" textLength="98" lengthAdjust="spacing" font-family="'Montserrat','Segoe UI','Helvetica Neue',Arial,sans-serif" font-weight="800" font-size="15" fill="#060B3D">AWYKEN</text>
+        </svg>
+    </div>
+
     <div class="status-bar-safe-area"></div>
 
     <div id="app">Loading...</div>
 
+    <script src="_content/AWYKEN.Shared/splash.js"></script>
     <script src="_framework/blazor.webview.js" autostart="false"></script>
     <script src="_content/AWYKEN.Shared/notification.js"></script>
     <script src="_content/AWYKEN.Shared/commuteMap.js"></script>

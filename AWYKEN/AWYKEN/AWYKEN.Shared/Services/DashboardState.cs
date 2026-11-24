@@ -35,10 +35,31 @@ public sealed class DashboardState
     public List<AppNotification> Notifications { get; private set; } = [];
 
     public int UnreadNotificationCount => Notifications.Count(item => item.IsUnread);
+    public event Action? NotificationsChanged;
 
     public void SetWeather(WeatherInfo weather) => Weather = weather;
 
     public void SetEstimatedTravelMinutes(int? minutes) => EstimatedTravelMinutes = minutes;
+
+    /// <summary>Applies a server response to this device's display state.</summary>
+    public void ReplaceFromApiSnapshot(AWYKEN.Shared.Data.ApiDashboardSnapshot snapshot)
+    {
+        User = snapshot.User;
+        Student = snapshot.Student;
+        CommuteLocations = snapshot.CommuteLocations;
+        Weather = snapshot.Weather;
+        EstimatedTravelMinutes = snapshot.EstimatedTravelMinutes;
+        Schedule = snapshot.Schedule.ToList();
+        ImportPreview = snapshot.ImportPreview.ToList();
+        ImportProfilePreview = snapshot.ImportProfilePreview;
+        Notifications = snapshot.Notifications.Count > 0
+            ? snapshot.Notifications.ToList()
+            : Schedule.Select(item => new AppNotification(
+            $"class-{item.Id}", "Today", item.Title, $"{item.CourseCode} starts at {item.StartTime}.",
+            item.StartTime, item.Mode == "Online" ? "online" : "clock", true,
+            item.Mode == "Online" ? "Join meeting" : null)).ToList();
+        NotificationsChanged?.Invoke();
+    }
 
     /// <summary>Replace the shared profile and schedule after reading the database.</summary>
     public void ReplaceFromDatabase(
@@ -60,12 +81,20 @@ public sealed class DashboardState
             item.Mode == "Online" ? "online" : "clock",
             true,
             item.Mode == "Online" ? "Join meeting" : null)).ToList();
+        NotificationsChanged?.Invoke();
     }
 
     public void SetImportPreview(IEnumerable<ScheduleItem> classes, StudentProfile? profile = null)
     {
         ImportPreview = classes.ToList();
         ImportProfilePreview = profile;
+    }
+
+    public void AppendNotifications(IEnumerable<AppNotification> notifications)
+    {
+        var existingIds = Notifications.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+        Notifications.AddRange(notifications.Where(item => existingIds.Add(item.Id)));
+        NotificationsChanged?.Invoke();
     }
 
     public void SaveImportPreview()

@@ -255,6 +255,9 @@
 
             @if (OfferingForm is not null)
             {
+                <div class="acad-modal" role="presentation">
+                <section class="acad-modal-card" role="dialog" aria-modal="true" aria-labelledby="offering-form-title">
+                <header class="acad-modal-head"><h2 id="offering-form-title">@(OfferingForm.Id == 0 ? "Add class" : "Edit class")</h2><button type="button" @onclick="CancelOffering" aria-label="Close">×</button></header>
                 <div class="acad-form">
                     <label>
                         Term
@@ -339,6 +342,20 @@
                         <p class="acad-form-error">@FormError</p>
                     }
                 </div>
+                </section>
+                </div>
+            }
+
+            @if (DeleteOffering is not null)
+            {
+                <div class="acad-modal" role="presentation">
+                    <section class="acad-modal-card acad-delete-card" role="dialog" aria-modal="true" aria-labelledby="delete-offering-title">
+                        <header class="acad-modal-head"><h2 id="delete-offering-title">Delete class?</h2><button type="button" @onclick="CancelDeleteOffering" aria-label="Close">×</button></header>
+                        <p>Student schedules linked to this class will keep their saved details and be unlinked.</p>
+                        @if (DeleteError is not null) { <p class="acad-form-error">@DeleteError</p> }
+                        <div class="acad-form-actions"><button type="button" class="acad-danger" disabled="@Busy" @onclick="ConfirmDeleteOfferingAsync">Delete class</button><button type="button" disabled="@Busy" @onclick="CancelDeleteOffering">Cancel</button></div>
+                    </section>
+                </div>
             }
 
             @if (Offerings.Count == 0)
@@ -381,9 +398,10 @@
                                     </td>
                                     <td class="acad-actions">
                                         <button type="button" @onclick='() => EditOfferingAsync(offering)'>Edit</button>
-                                        <button type="button" @onclick='() => ToggleArchivedAsync(offering)'>
+                                        <button type="button" disabled="@Busy" @onclick='() => ToggleArchivedAsync(offering)'>
                                             @(offering.IsArchived ? "Restore" : "Archive")
                                         </button>
+                                        <button type="button" disabled="@Busy" @onclick='() => BeginDeleteOffering(offering)'>Delete</button>
                                     </td>
                                 </tr>
                             }
@@ -532,6 +550,8 @@
     private readonly bool[] DayChecks = new bool[7];
     private (int Linked, int Diverged) OfferingImpact;
     private bool ApplyToLinked = true;
+    private ClassOfferingView? DeleteOffering;
+    private string? DeleteError;
 
     private bool CanAddClass => TermOptions.Count > 0 && SubjectOptions.Count > 0;
 
@@ -836,6 +856,33 @@
     private async Task ToggleArchivedAsync(ClassOfferingView offering)
     {
         Error = await Catalog.ArchiveOfferingAsync(offering.Id, !offering.IsArchived);
+        await ReloadAsync();
+    }
+
+    private void BeginDeleteOffering(ClassOfferingView offering)
+    {
+        DeleteOffering = offering;
+        DeleteError = null;
+    }
+
+    private void CancelDeleteOffering()
+    {
+        DeleteOffering = null;
+        DeleteError = null;
+    }
+
+    private async Task ConfirmDeleteOfferingAsync()
+    {
+        if (DeleteOffering is null)
+            return;
+
+        Busy = true;
+        DeleteError = await Catalog.DeleteOfferingAsync(DeleteOffering.Id);
+        Busy = false;
+        if (DeleteError is not null)
+            return;
+
+        DeleteOffering = null;
         await ReloadAsync();
     }
 

@@ -542,7 +542,8 @@
         if (note is not null)
         {
             Draft.Notes = note.Text;
-            Draft.News = note.News ?? "";
+            Draft.Reminder = note.Reminder ?? "";
+            Draft.RemindMe = note.RemindMe;
             Draft.AttendanceStatus = note.AttendanceStatus;
             Draft.CreatedAtText = note.CreatedAtText;
             Draft.ImageData = note.ImageData;
@@ -561,7 +562,7 @@
             // was originally imported as a one-time schedule record.
             var classDate = EditingOccurrenceDate;
             await Data.SaveCourseNoteAsync(EditingItem.Id, classDate, Draft.Notes,
-                Draft.News, Draft.CreatedAtText, Draft.AttendanceStatus, Draft.ImageData, Draft.ImageContentType);
+                Draft.Reminder, Draft.RemindMe, Draft.CreatedAtText, Draft.AttendanceStatus, Draft.ImageData, Draft.ImageContentType);
             await RefreshSelectedViewAsync();
             CloseForm();
             ShowMessage("Notes saved", "Your notes and attendance were saved for this date.");

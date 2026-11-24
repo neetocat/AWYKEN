@@ -11,7 +11,8 @@ public sealed class ClassDraft
     public string Mode { get; set; } = "Face-to-face";
     // These fields are edited from the class form's Notes tab and saved with the class.
     public string Notes { get; set; } = "";
-    public string News { get; set; } = "";
+    public string Reminder { get; set; } = "";
+    public bool RemindMe { get; set; }
     public string? AttendanceStatus { get; set; }
     public string CreatedAtText { get; set; } = "";
     public byte[]? ImageData { get; set; }

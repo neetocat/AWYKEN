@@ -1,0 +1,16 @@
+@inject AWYKEN.MobileApiConfiguration ApiConfiguration
+
+@if (ApiConfiguration.IsConfigured)
+{
+    <AWYKEN.Shared.Routes />
+}
+else
+{
+    <main style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#f3f5fa;color:#10133f;font-family:Arial,sans-serif;">
+        <section style="width:min(100%,480px);padding:28px;border:1px solid #d9deec;border-radius:18px;background:white;box-shadow:0 12px 36px #10133f14;">
+            <h1 style="margin:0 0 12px;font-size:24px;">AWYKEN needs its server address</h1>
+            <p style="margin:0 0 12px;line-height:1.6;">This app build does not have a valid HTTPS address for the AWYKEN server, so student data cannot load.</p>
+            <p style="margin:0;color:#58627f;line-height:1.6;">@ApiConfiguration.ErrorMessage</p>
+        </section>
+    </main>
+}

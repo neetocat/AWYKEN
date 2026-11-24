@@ -334,6 +334,29 @@ public sealed class AcademicCatalogService(
         return null;
     }
 
+    public async Task<string?> DeleteOfferingAsync(
+        int offeringId, CancellationToken cancellationToken = default)
+    {
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        if (!await IsAdminAsync(db, cancellationToken))
+            return NotAnAdmin;
+
+        var offering = await db.ClassOfferings.SingleOrDefaultAsync(
+            item => item.Id == offeringId, cancellationToken);
+        if (offering is null)
+            return "That class no longer exists.";
+
+        var linkedRows = await db.Schedule
+            .Where(item => item.ClassOfferingId == offeringId)
+            .ToListAsync(cancellationToken);
+        foreach (var row in linkedRows)
+            row.ClassOfferingId = null;
+
+        db.ClassOfferings.Remove(offering);
+        await db.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
     // ----------------------------------------------------------- student harvest
 
     public async Task<IReadOnlyList<CollectedCourseView>> GetCollectedCoursesAsync(

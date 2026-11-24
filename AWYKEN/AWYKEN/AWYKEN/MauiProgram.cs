@@ -1,5 +1,4 @@
 using AWYKEN.Services;
-using AWYKEN.Shared.Configuration;
 using AWYKEN.Shared.Data;
 using AWYKEN.Shared.Services;
 using Microsoft.Extensions.Logging;
@@ -21,6 +20,7 @@ namespace AWYKEN
             // Add device-specific services used by the AWYKEN.Shared project
             builder.Services.AddSingleton<IFormFactor, FormFactor>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.DashboardState>();
+            builder.Services.AddSingleton<AWYKEN.Shared.Services.IPhoneNotificationService, PhoneNotificationService>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.LocalAccountSession>();
             builder.Services.AddScoped<AWYKEN.Shared.Services.CorScheduleImporter>();
             // Identify AWYKEN when calling public OpenStreetMap services, as their policies require.
@@ -32,17 +32,24 @@ namespace AWYKEN
             });
             builder.Services.AddSingleton<ICommuteMapService, OpenStreetMapCommuteService>();
             builder.Services.AddSingleton<ICurrentWeatherService, OpenMeteoWeatherService>();
-            builder.Services.AddSingleton<IUmakCalendarService, UmakCalendarService>();
 
-            // Azure SQL Database replaces the old on-device SQLite file. The Azure keys live
-            // in a .env file that Git ignores, found in this order: the repository root (or
-            // any parent of the build output), this app's private app-data folder, then a
-            // .env packaged as a raw asset for device testing.
-            var databaseSettings = AwykenDatabaseSettings.Load(
-                hostConfiguration: null,
-                extraValues: LoadPackagedDotEnv(),
-                additionalRoots: FileSystem.AppDataDirectory);
-            builder.Services.AddAwykenData(databaseSettings);
+            // The mobile app has no database connection or SQL credentials. All reads and
+            // writes go to the server over HTTPS; only this public endpoint URL ships in the APK.
+            var apiConfiguration = LoadApiConfiguration();
+            builder.Services.AddSingleton(apiConfiguration);
+            var apiHttpClient = new HttpClient();
+            if (apiConfiguration.BaseUrl is not null)
+                apiHttpClient.BaseAddress = new Uri(apiConfiguration.BaseUrl, UriKind.Absolute);
+            apiHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd("AWYKEN-Mobile/1.0");
+            builder.Services.AddSingleton(new MauiApiHttpClient(apiHttpClient));
+            builder.Services.AddSingleton<IApiTokenStore, MauiApiTokenStore>();
+            builder.Services.AddScoped<IAwykenDataService>(services => ApiAwykenDataService.Create(
+                services.GetRequiredService<MauiApiHttpClient>().Client,
+                services.GetRequiredService<IApiTokenStore>(),
+                services.GetRequiredService<AWYKEN.Shared.Services.LocalAccountSession>(),
+                services.GetRequiredService<AWYKEN.Shared.Services.DashboardState>()));
+            builder.Services.AddScoped<IUmakCalendarService>(services => new ApiUmakCalendarService(
+                services.GetRequiredService<MauiApiHttpClient>().Client));
 
             builder.Services.AddMauiBlazorWebView();
 
@@ -55,26 +62,43 @@ namespace AWYKEN
             return builder.Build();
         }
 
-        /// <summary>
-        /// Reads the Debug-only MAUI asset. AWYKEN.Shared targets plain net10.0, so its
-        /// platform conditional cannot read Android assets itself; the MAUI host supplies
-        /// those values to the shared settings resolver.
-        /// </summary>
-        private static IReadOnlyDictionary<string, string> LoadPackagedDotEnv()
+        private static MobileApiConfiguration LoadApiConfiguration()
         {
+            var value = Environment.GetEnvironmentVariable("AWYKEN_API_BASE_URL");
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                try
+                {
+                    using var stream = FileSystem.OpenAppPackageFileAsync("api-base-url.txt")
+                        .GetAwaiter().GetResult();
+                    using var reader = new StreamReader(stream);
+                    value = reader.ReadToEnd().Trim();
+                }
+                catch (Exception)
+                {
+                    return new MobileApiConfiguration(null,
+                        "Set AWYKEN/Resources/Raw/api-base-url.txt to the deployed AWYKEN.Web HTTPS address, then rebuild the app.");
+                }
+            }
+
             try
             {
-                using var stream = FileSystem.OpenAppPackageFileAsync("awyken-config.env")
-                    .GetAwaiter().GetResult();
-                using var reader = new StreamReader(stream);
-                return DotEnv.Parse(reader.ReadToEnd());
+                return new MobileApiConfiguration(ValidateApiBaseUrl(value ?? string.Empty), null);
             }
-            catch (Exception)
+            catch (InvalidOperationException exception)
             {
-                // The packaged asset is optional; the settings resolver reports a clear
-                // missing-configuration message if no other source supplied the keys.
-                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                return new MobileApiConfiguration(null, exception.Message);
             }
+        }
+
+        private static string ValidateApiBaseUrl(string value)
+        {
+            if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
+                || uri.Scheme != Uri.UriSchemeHttps
+                || uri.Host.Contains("YOUR-AWYKEN-WEB-APP", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    "Set Resources/Raw/api-base-url.txt to the deployed AWYKEN.Web HTTPS address before building the mobile app.");
+            return uri.AbsoluteUri.EndsWith('/') ? uri.AbsoluteUri : uri.AbsoluteUri + "/";
         }
 
     }
