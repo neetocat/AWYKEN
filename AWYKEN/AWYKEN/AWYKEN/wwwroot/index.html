@@ -6,17 +6,7 @@
     <title>AWYKEN</title>
     <base href="/" />
     <script>
-        (function () {
-            try {
-                var key = 'awyken-splash-seen-v1';
-                if (!localStorage.getItem(key)) {
-                    document.documentElement.classList.add('awyken-splash-enabled');
-                    localStorage.setItem(key, '1');
-                }
-            } catch (_) {
-                document.documentElement.classList.add('awyken-splash-enabled');
-            }
-        })();
+        document.documentElement.classList.add('awyken-splash-enabled');
     </script>
     <link rel="stylesheet" href="_content/AWYKEN.Shared/splash.css" />
     <link rel="stylesheet" href="_content/AWYKEN.Shared/app.css" />
