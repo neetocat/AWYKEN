@@ -7,6 +7,7 @@ public sealed class AnnouncementRecord
     public string Title { get; set; } = "";
     public string Body { get; set; } = "";
     public bool IsPublished { get; set; }
+    public bool IsArchived { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
     public DateTime? PublishedAtUtc { get; set; }

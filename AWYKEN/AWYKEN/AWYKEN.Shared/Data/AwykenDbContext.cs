@@ -204,6 +204,7 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.ToTable("Announcements");
             entity.Property(item => item.Title).HasMaxLength(160).IsRequired();
             entity.Property(item => item.Body).HasColumnType("nvarchar(max)").IsRequired();
+            entity.Property(item => item.IsArchived).HasDefaultValue(false);
             entity.HasIndex(item => new { item.IsPublished, item.PublishedAtUtc });
         });
     }
