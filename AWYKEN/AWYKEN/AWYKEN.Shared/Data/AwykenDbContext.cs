@@ -130,7 +130,8 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(note => note.ClassTimeText).HasMaxLength(80).IsRequired();
             // Long free text maps to nvarchar(max): SQL Server caps nvarchar(n) at 4000.
             entity.Property(note => note.Text).HasColumnType("nvarchar(max)").IsRequired();
-            entity.Property(note => note.News).HasColumnType("nvarchar(max)");
+            entity.Property(note => note.Reminder).HasColumnType("nvarchar(max)");
+            entity.Property(note => note.RemindMe).HasDefaultValue(false);
             entity.Property(note => note.AttendanceStatus).HasMaxLength(20);
             entity.Property(note => note.ImageContentType).HasMaxLength(100);
             entity.Property(note => note.CourseCode).HasMaxLength(40).IsRequired();

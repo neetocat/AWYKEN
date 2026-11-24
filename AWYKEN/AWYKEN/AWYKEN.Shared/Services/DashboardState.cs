@@ -51,7 +51,9 @@ public sealed class DashboardState
         Schedule = snapshot.Schedule.ToList();
         ImportPreview = snapshot.ImportPreview.ToList();
         ImportProfilePreview = snapshot.ImportProfilePreview;
-        Notifications = Schedule.Select(item => new AppNotification(
+        Notifications = snapshot.Notifications.Count > 0
+            ? snapshot.Notifications.ToList()
+            : Schedule.Select(item => new AppNotification(
             $"class-{item.Id}", "Today", item.Title, $"{item.CourseCode} starts at {item.StartTime}.",
             item.StartTime, item.Mode == "Online" ? "online" : "clock", true,
             item.Mode == "Online" ? "Join meeting" : null)).ToList();
@@ -83,6 +85,12 @@ public sealed class DashboardState
     {
         ImportPreview = classes.ToList();
         ImportProfilePreview = profile;
+    }
+
+    public void AppendNotifications(IEnumerable<AppNotification> notifications)
+    {
+        var existingIds = Notifications.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
+        Notifications.AddRange(notifications.Where(item => existingIds.Add(item.Id)));
     }
 
     public void SaveImportPreview()

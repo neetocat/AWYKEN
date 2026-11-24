@@ -22,7 +22,7 @@
 
             @if (State.Notifications.Count == 0)
             {
-                <p class="notification-group-title">No classes are scheduled for today. Notifications appear for today’s saved classes.</p>
+                <p class="notification-group-title">No class alerts or reminders for today.</p>
             }
 
             @foreach (var group in new[] { "Today", "Yesterday" })
@@ -40,6 +40,7 @@
                                         @if (item.Kind == "clock") { <span>◷</span> }
                                         else if (item.Kind == "route") { <span>⌁</span> }
                                         else if (item.Kind == "online") { <span>▣</span> }
+                                        else if (item.Kind == "reminder") { <span>♧</span> }
                                         else { <span>✓</span> }
                                     </div>
                                     <div class="notification-content">

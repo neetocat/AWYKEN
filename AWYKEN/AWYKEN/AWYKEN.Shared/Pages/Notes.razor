@@ -72,8 +72,12 @@
                                 <div class="course-note-editor">
                                     <label>Notes</label>
                                     <textarea @bind="EditText" rows="5"></textarea>
-                                    <label>Topic(s)</label>
-                                    <textarea @bind="EditNews" rows="3" placeholder="Topic(s) for this class date"></textarea>
+                                    <label>Reminder</label>
+                                    <textarea @bind="EditReminder" rows="3" placeholder="Reminder for this class date"></textarea>
+                                    <label class="notes-remind-toggle">
+                                        <input type="checkbox" @bind="EditRemindMe" />
+                                        Remind me the day before and on this day
+                                    </label>
                                     <fieldset>
                                         <legend>Attendance</legend>
                                         @foreach (var status in AttendanceStatuses)
@@ -105,9 +109,9 @@
                                 {
                                     <p class="course-note-text">@note.Text</p>
                                 }
-                                @if (!string.IsNullOrWhiteSpace(note.News))
+                                @if (!string.IsNullOrWhiteSpace(note.Reminder))
                                 {
-                                    <section class="course-note-news"><h3>Topic(s)</h3><p>@note.News</p></section>
+                                    <section class="course-note-reminder"><h3>Reminder</h3><p>@note.Reminder</p></section>
                                 }
                                 @if (note.ImageData is not null && !string.IsNullOrWhiteSpace(note.ImageContentType))
                                 {
@@ -143,7 +147,8 @@
         .Where(note => note.CourseCode == SelectedCourseCode && note.CourseTitle == SelectedCourseTitle)
         .OrderByDescending(note => note.ClassDate);
     private string EditText = "";
-    private string EditNews = "";
+    private string EditReminder = "";
+    private bool EditRemindMe;
     private string EditCreatedAt = "";
     private string? EditAttendance;
     private byte[]? EditImageData;
@@ -156,7 +161,8 @@
 
     private async Task LoadCourseNotesAsync() => CourseNotes = (await Data.GetCourseNotesAsync())
         .Where(note => !string.IsNullOrWhiteSpace(note.Text)
-            || !string.IsNullOrWhiteSpace(note.News)
+            || !string.IsNullOrWhiteSpace(note.Reminder)
+            || note.RemindMe
             || note.ImageData is not null)
         .ToList();
 
@@ -184,7 +190,8 @@
     {
         EditingNoteId = note.Id;
         EditText = note.Text;
-        EditNews = note.News ?? "";
+        EditReminder = note.Reminder ?? "";
+        EditRemindMe = note.RemindMe;
         EditCreatedAt = note.CreatedAtText;
         EditAttendance = note.AttendanceStatus;
         EditImageData = note.ImageData;
@@ -196,7 +203,7 @@
     {
         try
         {
-            await Data.UpdateCourseNoteAsync(noteId, EditText, EditNews, EditCreatedAt,
+            await Data.UpdateCourseNoteAsync(noteId, EditText, EditReminder, EditRemindMe, EditCreatedAt,
                 EditAttendance, EditImageData, EditImageContentType);
             await LoadCourseNotesAsync();
             if (SelectedCourseCode is not null && !SelectedCourseNotes.Any())

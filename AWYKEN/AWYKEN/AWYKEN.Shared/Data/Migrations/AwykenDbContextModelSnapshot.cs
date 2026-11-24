@@ -105,6 +105,42 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.ToTable("AdminActivityLogs", (string)null);
                 });
 
+            modelBuilder.Entity("AWYKEN.Shared.Data.AnnouncementRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("PublishedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsPublished", "PublishedAtUtc");
+
+                    b.ToTable("Announcements", (string)null);
+                });
+
             modelBuilder.Entity("AWYKEN.Shared.Data.AppSettingsRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -180,42 +216,6 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.HasIndex("StartDate", "EndDate");
 
                     b.ToTable("CalendarEvents", (string)null);
-                });
-
-            modelBuilder.Entity("AWYKEN.Shared.Data.AnnouncementRecord", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsPublished")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("PublishedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsPublished", "PublishedAtUtc");
-
-                    b.ToTable("Announcements", (string)null);
                 });
 
             modelBuilder.Entity("AWYKEN.Shared.Data.CalendarFeedRecord", b =>
@@ -362,11 +362,16 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.Property<byte[]>("ImageData")
                         .HasColumnType("varbinary(max)");
 
-                    b.Property<string>("News")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("ProfileId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("RemindMe")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Reminder")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ScheduleRecordId")
                         .HasColumnType("int");

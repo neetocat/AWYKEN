@@ -33,6 +33,7 @@
 .notification-kind.route { background: #e9eaf2; color: var(--navy); }
 .notification-kind.online { background: #eaf1ff; color: #2863dc; font-size: 18px; }
 .notification-kind.imported { background: #e5f5ef; color: #159365; font-size: 18px; }
+.notification-kind.reminder { background: #eee9ff; color: #7043b8; font-size: 18px; }
 .notification-content { flex: 1; min-width: 0; padding-top: 2px; }
 .notification-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .notification-title-row h3 { min-width: 0; margin: 0; color: var(--ink); font-size: 10px; font-weight: 800; line-height: 1.3; }

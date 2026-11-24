@@ -25,10 +25,15 @@ public sealed record ApiDashboardSnapshot(
     IReadOnlyList<ScheduleItem> ImportPreview,
     StudentProfile? ImportProfilePreview)
 {
+    public IReadOnlyList<AppNotification> Notifications { get; init; } = [];
+
     public static ApiDashboardSnapshot From(DashboardState state) => new(
         state.User, state.Student, state.CommuteLocations, state.Weather,
         state.EstimatedTravelMinutes, state.Schedule, state.ImportPreview,
-        state.ImportProfilePreview);
+        state.ImportProfilePreview)
+    {
+        Notifications = state.Notifications.ToList()
+    };
 }
 
 /// <summary>Platform storage for the short-lived user token; the token is never an app secret.</summary>
