@@ -29,6 +29,7 @@ public sealed class UserProfileRecord
     public string? Guardian { get; set; }
     public string? Gender { get; set; }
     public string? DateOfBirth { get; set; }
+    public string? Phone { get; set; }
     // Store both user-entered addresses and resolved coordinates to avoid repeat lookups.
     public string? HomeAddress { get; set; }
     public double? HomeLatitude { get; set; }

@@ -227,17 +227,73 @@
                     <span class="row-chevron">@Icon("chevron")</span>
                 </button>
 
-                <!-- ABOUT AWYKEN -->
+            </section>
 
-                <button class="settings-row"
-                        @onclick="OpenAbout">
+            <section class="settings-section">
+                <h2>PERMISSIONS AND TRACKING</h2>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/settings/location-access")'>
+                    <span class="row-icon">@Icon("pin")</span>
+                    <span class="row-copy"><strong>Location Access</strong><small>Choose when AWYKEN can use your location</small></span>
+                    <span class="row-chevron">@Icon("chevron")</span>
+                </button>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/settings/notifications-reminders")'>
+                    <span class="row-icon">@Icon("bell")</span>
+                    <span class="row-copy"><strong>Notifications &amp; Reminders</strong><small>Manage departure alerts and class reminders</small></span>
+                    <span class="row-chevron">@Icon("chevron")</span>
+                </button>
+            </section>
+
+            <section class="settings-section">
+                <h2>PRIVACY &amp; DATA</h2>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/settings/location-commute-history")'>
+                    <span class="row-icon">@Icon("route")</span>
+                    <span class="row-copy"><strong>Location &amp; Commute History</strong><small>Review location and route data options</small></span>
+                    <span class="row-chevron">@Icon("chevron")</span>
+                </button>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/settings/clear-my-data")'>
                     <span class="row-icon">@Icon("info")</span>
+                    <span class="row-copy"><strong>Clear My Data</strong><small>Reset saved schedules and destinations</small></span>
+                    <span class="row-chevron">@Icon("chevron")</span>
+                </button>
+                @if (Data.IsAuthenticated)
+                {
+                    <button class="settings-row" @onclick='() => Navigation.NavigateTo("/settings/delete-account")'>
+                        <span class="row-icon">@Icon("user")</span>
+                        <span class="row-copy"><strong>Delete Account</strong><small>Permanently remove your profile and stored data</small></span>
+                        <span class="row-chevron">@Icon("chevron")</span>
+                    </button>
+                }
+            </section>
 
-                    <span class="row-copy">
-                        <strong>About AWYKEN</strong>
-                        <small>Version 1.0.0 · App information</small>
-                    </span>
+            <section class="settings-section">
+                <h2>LEGAL &amp; POLICIES</h2>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/settings/privacy-policy")'>
+                    <span class="row-icon">@Icon("info")</span>
+                    <span class="row-copy"><strong>Privacy Policy</strong><small>Data collection and protection</small></span>
+                    <span class="row-chevron">@Icon("chevron")</span>
+                </button>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/settings/terms-of-use")'>
+                    <span class="row-icon">@Icon("info")</span>
+                    <span class="row-copy"><strong>Terms of Use</strong><small>Terms and commute estimate disclaimer</small></span>
+                    <span class="row-chevron">@Icon("chevron")</span>
+                </button>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/settings/third-party-map-credits")'>
+                    <span class="row-icon">@Icon("route")</span>
+                    <span class="row-copy"><strong>Third-Party &amp; Map Credits</strong><small>Maps, routing services, and open-source libraries</small></span>
+                    <span class="row-chevron">@Icon("chevron")</span>
+                </button>
+            </section>
 
+            <section class="settings-section">
+                <h2>ABOUT &amp; SUPPORT</h2>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/settings/about")'>
+                    <span class="row-icon">@Icon("info")</span>
+                    <span class="row-copy"><strong>About this App</strong><small>App information</small></span>
+                    <span class="row-chevron">@Icon("chevron")</span>
+                </button>
+                <button class="settings-row" @onclick='() => Navigation.NavigateTo("/settings/help")'>
+                    <span class="row-icon">@Icon("info")</span>
+                    <span class="row-copy"><strong>Help / Report an Issue</strong><small>Get help or send feedback</small></span>
                     <span class="row-chevron">@Icon("chevron")</span>
                 </button>
             </section>
@@ -321,72 +377,6 @@
     </div>
 }
 
-<!-- ABOUT AWYKEN DIALOG -->
-@if (ShowAboutDialog)
-{
-    <div class="account-modal-backdrop"
-         @onclick="CloseAbout">
-
-        <section class="account-modal"
-                 role="dialog"
-                 aria-modal="true"
-                 aria-labelledby="about-awyken-title"
-                 @onclick:stopPropagation="true">
-
-            <button class="account-modal-close"
-                    aria-label="Close"
-                    @onclick="CloseAbout">
-                ×
-            </button>
-
-            <div style="text-align: center; margin-bottom: 20px;">
-
-                <img src="_content/AWYKEN.Shared/images/icon/awyken-logo-transparent-cut.png"
-                     alt="AWYKEN logo"
-                     style="width: 90px; height: 90px; object-fit: contain;" />
-
-                <h2 id="about-awyken-title">About AWYKEN</h2>
-
-                <p class="account-modal-subtitle">
-                    Your student schedule companion.
-                </p>
-
-            </div>
-
-            <hr />
-
-            <p>
-                <strong>Application:</strong> AWYKEN
-            </p>
-
-            <p>
-                <strong>Version:</strong> 1.0.0
-            </p>
-
-            <p>
-                <strong>Purpose:</strong>
-            </p>
-
-            <p>
-                AWYKEN helps students manage their class schedules,
-                organize their school day, and plan their commute.
-            </p>
-
-            <p>
-                Keep your classes organized and make your daily
-                school routine easier with AWYKEN.
-            </p>
-
-            <button class="account-submit"
-                    style="margin-top: 20px;"
-                    @onclick="CloseAbout">
-                Done
-            </button>
-
-        </section>
-    </div>
-}
-
 <!-- ACCOUNT LOGIN / SIGNUP DIALOG -->
 @if (ShowAccountCard && !Data.IsAuthenticated)
 {
@@ -437,9 +427,10 @@
             @if (AccountMode == "SignUp")
             {
                 <label class="account-field">
-                    Name <span>(optional)</span>
+                    Name <span>(required)</span>
                     <input @bind="DisplayNameInput"
-                           autocomplete="name"
+                           autocomplete="off"
+                           required
                            maxlength="100" />
                 </label>
             }
@@ -448,25 +439,44 @@
                 Email
                 <input type="email"
                        @bind="EmailInput"
-                       autocomplete="email" />
+                       autocomplete="@(AccountMode == "SignUp" ? "off" : "email")"
+                       required />
             </label>
 
             <label class="account-field">
                 Password
-                <input type="password"
-                       @bind="PasswordInput"
-                       autocomplete="@(AccountMode == "Login"
-                           ? "current-password"
-                           : "new-password")" />
+                <div class="password-input-wrap">
+                    <input type="@(ShowAccountPassword ? "text" : "password")"
+                           @bind="PasswordInput"
+                           autocomplete="@(AccountMode == "Login"
+                               ? "current-password"
+                               : "new-password")" />
+                    <button type="button"
+                            class="password-visibility-toggle"
+                            aria-label="@(ShowAccountPassword ? "Hide password" : "Show password")"
+                            aria-pressed="@ShowAccountPassword"
+                            @onclick="() => ShowAccountPassword = !ShowAccountPassword">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />@if (ShowAccountPassword) { <path d="m4 4 16 16" /> }</svg>
+                    </button>
+                </div>
             </label>
 
             @if (AccountMode == "SignUp")
             {
                 <label class="account-field">
                     Confirm password
-                    <input type="password"
-                           @bind="ConfirmPasswordInput"
-                           autocomplete="new-password" />
+                    <div class="password-input-wrap">
+                        <input type="@(ShowConfirmAccountPassword ? "text" : "password")"
+                               @bind="ConfirmPasswordInput"
+                               autocomplete="new-password" />
+                        <button type="button"
+                                class="password-visibility-toggle"
+                                aria-label="@(ShowConfirmAccountPassword ? "Hide confirm password" : "Show confirm password")"
+                                aria-pressed="@ShowConfirmAccountPassword"
+                                @onclick="() => ShowConfirmAccountPassword = !ShowConfirmAccountPassword">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />@if (ShowConfirmAccountPassword) { <path d="m4 4 16 16" /> }</svg>
+                        </button>
+                    </div>
                 </label>
 
                 <p class="account-password-hint">
@@ -548,7 +558,6 @@
     private bool ShowAccountCard;
     private bool ShowLogoutPrompt;
     private bool ShowTimeFormatDialog;
-    private bool ShowAboutDialog;
 
     private bool Working;
 
@@ -560,6 +569,8 @@
     private string EmailInput = "";
     private string PasswordInput = "";
     private string ConfirmPasswordInput = "";
+    private bool ShowAccountPassword;
+    private bool ShowConfirmAccountPassword;
 
     // Shows the ADMIN settings row for accounts flagged as administrators.
     private bool IsAdminUser;
@@ -712,18 +723,6 @@
         ShowTimeFormatDialog = false;
     }
 
-    // ABOUT AWYKEN
-
-    private void OpenAbout()
-    {
-        ShowAboutDialog = true;
-    }
-
-    private void CloseAbout()
-    {
-        ShowAboutDialog = false;
-    }
-
     // PROFILE
 
     private string ProfileInitials =>
@@ -748,6 +747,8 @@
 
     private void OpenLoginCard()
     {
+        if (AccountMode == "SignUp")
+            ClearSignUpInputs();
         ShowAccountCard = true;
         AccountError = null;
     }
@@ -755,14 +756,33 @@
     private void CloseAccountCard()
     {
         ShowAccountCard = false;
+        HideAccountPasswords();
     }
 
     private void SetAccountMode(string mode)
     {
         if (mode == "SignUp" && !SignupsEnabled)
             return;
+        if (mode == "SignUp")
+            ClearSignUpInputs();
         AccountMode = mode;
         AccountError = null;
+        HideAccountPasswords();
+    }
+
+    private void ClearSignUpInputs()
+    {
+        DisplayNameInput = "";
+        EmailInput = "";
+        PasswordInput = "";
+        ConfirmPasswordInput = "";
+        HideAccountPasswords();
+    }
+
+    private void HideAccountPasswords()
+    {
+        ShowAccountPassword = false;
+        ShowConfirmAccountPassword = false;
     }
 
     private void HandleProfileKeyDown(KeyboardEventArgs args)
@@ -806,6 +826,13 @@
         }
 
         if (AccountMode == "SignUp" &&
+            string.IsNullOrWhiteSpace(DisplayNameInput))
+        {
+            AccountError = "Enter your name to create an account.";
+            return;
+        }
+
+        if (AccountMode == "SignUp" &&
             PasswordInput != ConfirmPasswordInput)
         {
             AccountError = "The passwords do not match.";
@@ -827,7 +854,7 @@
 
             if (AccountError is null)
             {
-                ShowAccountCard = false;
+                CloseAccountCard();
 
                 DisplayNameInput = "";
                 EmailInput = "";

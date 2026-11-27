@@ -9,7 +9,7 @@ public sealed class DashboardState
     // A null display name means the person has not set a profile name; show Guest.
     public UserInfo User { get; private set; } = new(null, null);
 
-    // Student details (student number, program, year level...) read from the COR.
+    // Student details (student number, program, year level...) for the signed-in profile.
     public StudentProfile Student { get; private set; } = StudentProfile.Empty;
 
     // Home and campus endpoints are loaded from the current profile's database row.

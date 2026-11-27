@@ -1,4 +1,5 @@
 @page "/notes"
+@using System.Text.Json
 @using AWYKEN.Shared.Data
 @using AWYKEN.Shared.Services
 @inject IAwykenDataService Data
@@ -89,12 +90,20 @@
                                             </label>
                         }
                                     </fieldset>
-                                    <label>Image</label>
-                                    <Microsoft.AspNetCore.Components.Forms.InputFile accept="image/*" OnChange="LoadEditImageAsync" />
-                                    @if (EditImageData is not null && EditImageContentType is not null)
+                                    <label>Photos</label>
+                                    <Microsoft.AspNetCore.Components.Forms.InputFile accept="image/*" multiple OnChange="LoadEditImagesAsync" />
+                                    @if (EditImages.Count > 0)
                                     {
-                                        <img class="course-note-image" src="@EditImagePreview" alt="Attached note" />
-                                        <button type="button" class="note-edit-link" @onclick="RemoveEditImage">Remove image</button>
+                                        <div class="course-note-photo-grid">
+                                            @for (var photoIndex = 0; photoIndex < EditImages.Count; photoIndex++)
+                                            {
+                                                var photo = EditImages[photoIndex];
+                                                <div class="course-note-photo" @key="photo.Id">
+                                                    <img src="@PhotoPreview(photo)" alt="Attached note photo @(photoIndex + 1)" />
+                                                    <button type="button" aria-label="Remove photo @(photoIndex + 1)" @onclick="() => RemoveEditPhoto(photo.Id)">×</button>
+                                                </div>
+                                            }
+                                        </div>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(EditError)) { <p class="note-edit-error">@EditError</p> }
                                     <div class="course-note-edit-actions">
@@ -113,11 +122,14 @@
                                 {
                                     <section class="course-note-reminder"><h3>Reminder</h3><p>@note.Reminder</p></section>
                                 }
-                                @if (note.ImageData is not null && !string.IsNullOrWhiteSpace(note.ImageContentType))
+                                @if (GetNotePhotos(note).Count > 0)
                                 {
-                                    <img class="course-note-image"
-                                         src="@($"data:{note.ImageContentType};base64,{Convert.ToBase64String(note.ImageData)}")"
-                                         alt="Image attached to course note" />
+                                    <div class="course-note-photo-grid">
+                                        @foreach (var photo in GetNotePhotos(note))
+                                        {
+                                            <img class="course-note-image" src="@PhotoPreview(photo)" alt="Photo attached to course note" />
+                                        }
+                                    </div>
                                 }
                                 <button type="button" class="note-edit-link" @onclick="() => OpenEdit(note)">Edit this day</button>
                             }
@@ -151,11 +163,11 @@
     private bool EditRemindMe;
     private string EditCreatedAt = "";
     private string? EditAttendance;
-    private byte[]? EditImageData;
-    private string? EditImageContentType;
+    private const string PhotoCollectionContentType = "application/vnd.awyken.photo-collection+json";
+    private const int MaxPhotoSize = 5 * 1024 * 1024;
+    private const int MaxPhotoCollectionSize = 15 * 1024 * 1024;
+    private readonly List<NotePhoto> EditImages = [];
     private string? EditError;
-    private string? EditImagePreview => EditImageData is not null && EditImageContentType is not null
-        ? $"data:{EditImageContentType};base64,{Convert.ToBase64String(EditImageData)}" : null;
 
     protected override async Task OnInitializedAsync() => await LoadCourseNotesAsync();
 
@@ -194,8 +206,8 @@
         EditRemindMe = note.RemindMe;
         EditCreatedAt = note.CreatedAtText;
         EditAttendance = note.AttendanceStatus;
-        EditImageData = note.ImageData;
-        EditImageContentType = note.ImageContentType;
+        EditImages.Clear();
+        EditImages.AddRange(GetNotePhotos(note));
         EditError = null;
     }
 
@@ -203,8 +215,9 @@
     {
         try
         {
+            var photoBytes = EditImages.Count == 0 ? null : JsonSerializer.SerializeToUtf8Bytes(EditImages);
             await Data.UpdateCourseNoteAsync(noteId, EditText, EditReminder, EditRemindMe, EditCreatedAt,
-                EditAttendance, EditImageData, EditImageContentType);
+                EditAttendance, photoBytes, photoBytes is null ? null : PhotoCollectionContentType);
             await LoadCourseNotesAsync();
             if (SelectedCourseCode is not null && !SelectedCourseNotes.Any())
                 ClearSelectedCourse();
@@ -215,21 +228,52 @@
 
     private void CancelEdit() => EditingNoteId = null;
 
-    private async Task LoadEditImageAsync(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs args)
+    private async Task LoadEditImagesAsync(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs args)
     {
-        var file = args.File;
-        if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) || file.Size > 5 * 1024 * 1024)
+        if (args.FileCount + EditImages.Count > 10)
         {
-            EditError = "Choose an image no larger than 5 MB.";
+            EditError = "A note can contain up to 10 photos.";
             return;
         }
-        await using var input = file.OpenReadStream(5 * 1024 * 1024);
-        using var output = new MemoryStream();
-        await input.CopyToAsync(output);
-        EditImageData = output.ToArray();
-        EditImageContentType = file.ContentType;
+        var files = args.GetMultipleFiles(10);
+        var totalSize = EditImages.Sum(photo => photo.Data.Length);
+        foreach (var file in files)
+        {
+            if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) || file.Size == 0 || file.Size > MaxPhotoSize)
+            {
+                EditError = "Each photo must be an image no larger than 5 MB.";
+                return;
+            }
+            if (EditImages.Count >= 10 || totalSize + file.Size > MaxPhotoCollectionSize)
+            {
+                EditError = "A note can contain up to 10 photos and 15 MB total.";
+                return;
+            }
+            await using var input = file.OpenReadStream(MaxPhotoSize);
+            using var output = new MemoryStream();
+            await input.CopyToAsync(output);
+            var data = output.ToArray();
+            EditImages.Add(new NotePhoto(Guid.NewGuid().ToString("N"), file.ContentType, data));
+            totalSize += data.Length;
+        }
         EditError = null;
     }
 
-    private void RemoveEditImage() { EditImageData = null; EditImageContentType = null; }
+    private void RemoveEditPhoto(string id) => EditImages.RemoveAll(photo => photo.Id == id);
+
+    private static string PhotoPreview(NotePhoto photo) =>
+        $"data:{photo.ContentType};base64,{Convert.ToBase64String(photo.Data)}";
+
+    private static List<NotePhoto> GetNotePhotos(CourseNoteRecord note)
+    {
+        if (note.ImageData is null || string.IsNullOrWhiteSpace(note.ImageContentType)) return [];
+        if (note.ImageContentType == PhotoCollectionContentType)
+        {
+            try { return JsonSerializer.Deserialize<List<NotePhoto>>(note.ImageData) ?? []; }
+            catch (JsonException) { return []; }
+        }
+        return [new NotePhoto($"legacy-{note.Id}", note.ImageContentType, note.ImageData)];
+    }
+
+    private sealed record NotePhoto(string Id, string ContentType, byte[] Data);
 }

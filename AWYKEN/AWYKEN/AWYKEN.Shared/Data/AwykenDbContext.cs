@@ -53,6 +53,7 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(profile => profile.Guardian).HasMaxLength(150);
             entity.Property(profile => profile.Gender).HasMaxLength(40);
             entity.Property(profile => profile.DateOfBirth).HasMaxLength(40);
+            entity.Property(profile => profile.Phone).HasMaxLength(40);
             entity.Property(profile => profile.HomeAddress).HasMaxLength(300);
             entity.Property(profile => profile.SchoolAddress).HasMaxLength(300);
             // One row per email, while the anonymous Guest profile keeps a null email.
