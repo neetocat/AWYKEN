@@ -1,5 +1,7 @@
 /* VARIABLES */
 :root {
+    /* Shared bottom navigation spacing. Adjust this one value for all pages. */
+    --bottom-nav-padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px));
     --primary: #000435;
     --primary-700: #161a55;
     --primary-500: #44477a;
