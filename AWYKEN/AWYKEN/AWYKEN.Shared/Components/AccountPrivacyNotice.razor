@@ -1,8 +1,8 @@
 <div class="account-privacy-consent">
     <label>
-        <input type="checkbox" @bind="IsChecked" />
+        <input type="checkbox" checked="@IsChecked" @onchange="HandleConsentChanged" />
         <span>I agree to the <button type="button" class="account-privacy-link" aria-expanded="@ShowNotice"
-                @onclick="() => ShowNotice = !ShowNotice" @onclick:stopPropagation="true">Data Privacy Act notice</button> (Republic Act No. 10173).</span>
+                @onclick="ToggleNotice" @onclick:stopPropagation="true">Data Privacy Act notice</button> (Republic Act No. 10173).</span>
     </label>
     @if (ShowNotice)
     {
@@ -20,4 +20,12 @@
     public EventCallback<bool> IsCheckedChanged { get; set; }
 
     private bool ShowNotice;
+
+    private async Task HandleConsentChanged(ChangeEventArgs args)
+    {
+        IsChecked = args.Value is bool checkedValue && checkedValue;
+        await IsCheckedChanged.InvokeAsync(IsChecked);
+    }
+
+    private void ToggleNotice() => ShowNotice = !ShowNotice;
 }
