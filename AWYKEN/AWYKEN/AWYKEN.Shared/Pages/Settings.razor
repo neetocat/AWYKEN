@@ -437,9 +437,10 @@
             @if (AccountMode == "SignUp")
             {
                 <label class="account-field">
-                    Name <span>(optional)</span>
+                    Name <span>(required)</span>
                     <input @bind="DisplayNameInput"
-                           autocomplete="name"
+                           autocomplete="off"
+                           required
                            maxlength="100" />
                 </label>
             }
@@ -448,25 +449,44 @@
                 Email
                 <input type="email"
                        @bind="EmailInput"
-                       autocomplete="email" />
+                       autocomplete="@(AccountMode == "SignUp" ? "off" : "email")"
+                       required />
             </label>
 
             <label class="account-field">
                 Password
-                <input type="password"
-                       @bind="PasswordInput"
-                       autocomplete="@(AccountMode == "Login"
-                           ? "current-password"
-                           : "new-password")" />
+                <div class="password-input-wrap">
+                    <input type="@(ShowAccountPassword ? "text" : "password")"
+                           @bind="PasswordInput"
+                           autocomplete="@(AccountMode == "Login"
+                               ? "current-password"
+                               : "new-password")" />
+                    <button type="button"
+                            class="password-visibility-toggle"
+                            aria-label="@(ShowAccountPassword ? "Hide password" : "Show password")"
+                            aria-pressed="@ShowAccountPassword"
+                            @onclick="() => ShowAccountPassword = !ShowAccountPassword">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />@if (ShowAccountPassword) { <path d="m4 4 16 16" /> }</svg>
+                    </button>
+                </div>
             </label>
 
             @if (AccountMode == "SignUp")
             {
                 <label class="account-field">
                     Confirm password
-                    <input type="password"
-                           @bind="ConfirmPasswordInput"
-                           autocomplete="new-password" />
+                    <div class="password-input-wrap">
+                        <input type="@(ShowConfirmAccountPassword ? "text" : "password")"
+                               @bind="ConfirmPasswordInput"
+                               autocomplete="new-password" />
+                        <button type="button"
+                                class="password-visibility-toggle"
+                                aria-label="@(ShowConfirmAccountPassword ? "Hide confirm password" : "Show confirm password")"
+                                aria-pressed="@ShowConfirmAccountPassword"
+                                @onclick="() => ShowConfirmAccountPassword = !ShowConfirmAccountPassword">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />@if (ShowConfirmAccountPassword) { <path d="m4 4 16 16" /> }</svg>
+                        </button>
+                    </div>
                 </label>
 
                 <p class="account-password-hint">
@@ -560,6 +580,8 @@
     private string EmailInput = "";
     private string PasswordInput = "";
     private string ConfirmPasswordInput = "";
+    private bool ShowAccountPassword;
+    private bool ShowConfirmAccountPassword;
 
     // Shows the ADMIN settings row for accounts flagged as administrators.
     private bool IsAdminUser;
@@ -748,6 +770,8 @@
 
     private void OpenLoginCard()
     {
+        if (AccountMode == "SignUp")
+            ClearSignUpInputs();
         ShowAccountCard = true;
         AccountError = null;
     }
@@ -761,8 +785,20 @@
     {
         if (mode == "SignUp" && !SignupsEnabled)
             return;
+        if (mode == "SignUp")
+            ClearSignUpInputs();
         AccountMode = mode;
         AccountError = null;
+    }
+
+    private void ClearSignUpInputs()
+    {
+        DisplayNameInput = "";
+        EmailInput = "";
+        PasswordInput = "";
+        ConfirmPasswordInput = "";
+        ShowAccountPassword = false;
+        ShowConfirmAccountPassword = false;
     }
 
     private void HandleProfileKeyDown(KeyboardEventArgs args)
@@ -802,6 +838,13 @@
             string.IsNullOrWhiteSpace(PasswordInput))
         {
             AccountError = "Enter your email and password.";
+            return;
+        }
+
+        if (AccountMode == "SignUp" &&
+            string.IsNullOrWhiteSpace(DisplayNameInput))
+        {
+            AccountError = "Enter your name to create an account.";
             return;
         }
 
