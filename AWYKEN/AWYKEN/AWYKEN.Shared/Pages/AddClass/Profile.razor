@@ -1,7 +1,9 @@
 @page "/profile"
 @using AWYKEN.Shared.Components
 @using AWYKEN.Shared.Services
+@using AWYKEN.Shared.Data
 @inject AWYKEN.Shared.Services.DashboardState State
+@inject IAwykenDataService Data
 @inject NavigationManager Navigation
 
 <PageTitle>My profile - AWYKEN</PageTitle>
@@ -13,8 +15,17 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
             </button>
             <h1>My profile</h1>
-            <button class="topbar-button" aria-label="Edit profile" @onclick='() => Navigation.NavigateTo("/settings")'>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 4 4M4 20l4.2-.8L19 8.4a2.1 2.1 0 0 0-3-3L5.2 16.2 4 20Z" /></svg>
+            <button class="topbar-button" aria-label="@(IsEditing ? "Cancel editing" : "Edit profile")" @onclick="ToggleEditing" disabled="@IsSaving">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    @if (IsEditing)
+                    {
+                        <path d="m6 6 12 12M18 6 6 18" />
+                    }
+                    else
+                    {
+                        <path d="m15 5 4 4M4 20l4.2-.8L19 8.4a2.1 2.1 0 0 0-3-3L5.2 16.2 4 20Z" />
+                    }
+                </svg>
             </button>
         </header>
 
@@ -28,28 +39,78 @@
             </div>
         </section>
 
-        <ProfileGroup Title="Personal information">
-            <ProfileRow Icon="person" Label="Full name" Value="@DisplayName" />
-            <ProfileRow Icon="mail" Label="School email" Value="@Email" />
-            <ProfileRow Icon="pin" Label="Address" Value="@Show(Student.Address, "[Add address]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.Address)" />
-            <ProfileRow Icon="person" Label="Guardian" Value="@Show(Student.Guardian, "[Add guardian]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.Guardian)" />
-            <ProfileRow Icon="person" Label="Gender" Value="@Show(Student.Gender, "[Add gender]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.Gender)" />
-            <ProfileRow Icon="year" Label="Date of birth" Value="@Show(Student.DateOfBirth, "[Add date of birth]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.DateOfBirth)" />
-            <ProfileRow Icon="phone" Label="Mobile number" Value="[Add mobile number]" IsPlaceholder="true" />
-        </ProfileGroup>
+        @if (!IsEditing && !string.IsNullOrWhiteSpace(EditMessage))
+        {
+            <p class="profile-edit-message" role="status">@EditMessage</p>
+        }
 
-        <ProfileGroup Title="Academic information">
-            <ProfileRow Icon="id" Label="Student number" Value="@Show(Student.StudentNumber, "[Add student number]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.StudentNumber)" />
-            <ProfileRow Icon="school" Label="College" Value="@Show(Student.College, "[Add college]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.College)" />
-            <ProfileRow Icon="school" Label="Program" Value="@Show(Student.Program, "[Add program]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.Program)" />
-            <ProfileRow Icon="year" Label="Year level" Value="@Show(Student.YearLevel, "[Add year level]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.YearLevel)" />
-            <ProfileRow Icon="year" Label="Academic year &amp; semester" Value="@Show(Student.AcademicTerm, "[Add academic year and semester]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.AcademicTerm)" />
-        </ProfileGroup>
+        @if (IsEditing)
+        {
+            <form class="profile-edit-form" @onsubmit="SaveProfile" @onsubmit:preventDefault="true">
+                <ProfileGroup Title="Personal information">
+                    <label class="profile-edit-field">Full name<input @bind="FullNameInput" autocomplete="name" maxlength="150" required /></label>
+                    <label class="profile-edit-field">School email<input type="email" @bind="EmailInput" autocomplete="email" maxlength="200" /></label>
+                    <label class="profile-edit-field">Address<input @bind="AddressInput" autocomplete="street-address" maxlength="300" /></label>
+                    <label class="profile-edit-field">Guardian<input @bind="GuardianInput" maxlength="150" /></label>
+                    <label class="profile-edit-field">Gender<input @bind="GenderInput" maxlength="40" /></label>
+                    <label class="profile-edit-field">Date of birth<input type="date" @bind="DateOfBirthInput" /></label>
+                    <label class="profile-edit-field">Mobile number<input type="tel" @bind="PhoneInput" autocomplete="tel" maxlength="40" /></label>
+                </ProfileGroup>
 
-        <ProfileGroup Title="Locations">
-            <ProfileRow Icon="pin" Label="Home location" Value="@HomeLocation" IsPlaceholder="@string.IsNullOrWhiteSpace(State.CommuteLocations.HomeAddress)" />
-            <ProfileRow Icon="school" Label="Campus" Value="@Campus" />
-        </ProfileGroup>
+                <ProfileGroup Title="Academic information">
+                    <label class="profile-edit-field">Student number<input @bind="StudentNumberInput" maxlength="30" /></label>
+                    <label class="profile-edit-field">College<input @bind="CollegeInput" maxlength="200" /></label>
+                    <label class="profile-edit-field">Program<input @bind="ProgramInput" maxlength="200" /></label>
+                    <label class="profile-edit-field">Year level<input @bind="YearLevelInput" maxlength="40" /></label>
+                    <label class="profile-edit-field">Academic year &amp; semester<input @bind="AcademicTermInput" maxlength="80" /></label>
+                </ProfileGroup>
+
+                <ProfileGroup Title="Locations">
+                    <label class="profile-edit-field">Home location<input @bind="HomeAddressInput" autocomplete="street-address" maxlength="300" /></label>
+                    <label class="profile-edit-field">Campus<input @bind="SchoolAddressInput" maxlength="300" /></label>
+                    <p class="profile-edit-hint">If you change an address, update the route from the Commute page to refresh its map coordinates.</p>
+                </ProfileGroup>
+
+                @if (!string.IsNullOrWhiteSpace(EditError))
+                {
+                    <p class="profile-edit-message error" role="alert">@EditError</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(EditMessage))
+                {
+                    <p class="profile-edit-message" role="status">@EditMessage</p>
+                }
+
+                <div class="profile-edit-actions">
+                    <button type="button" class="profile-cancel-button" @onclick="CancelEditing" disabled="@IsSaving">Cancel</button>
+                    <button type="submit" class="profile-save-button" disabled="@IsSaving">@(IsSaving ? "Saving…" : "Save profile")</button>
+                </div>
+            </form>
+        }
+        else
+        {
+            <ProfileGroup Title="Personal information">
+                <ProfileRow Icon="person" Label="Full name" Value="@DisplayName" />
+                <ProfileRow Icon="mail" Label="School email" Value="@Email" />
+                <ProfileRow Icon="pin" Label="Address" Value="@Show(Student.Address, "[Add address]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.Address)" />
+                <ProfileRow Icon="person" Label="Guardian" Value="@Show(Student.Guardian, "[Add guardian]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.Guardian)" />
+                <ProfileRow Icon="person" Label="Gender" Value="@Show(Student.Gender, "[Add gender]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.Gender)" />
+                <ProfileRow Icon="year" Label="Date of birth" Value="@Show(Student.DateOfBirth, "[Add date of birth]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.DateOfBirth)" />
+                <ProfileRow Icon="phone" Label="Mobile number" Value="@Show(Student.Phone, "[Add mobile number]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.Phone)" />
+            </ProfileGroup>
+
+            <ProfileGroup Title="Academic information">
+                <ProfileRow Icon="id" Label="Student number" Value="@Show(Student.StudentNumber, "[Add student number]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.StudentNumber)" />
+                <ProfileRow Icon="school" Label="College" Value="@Show(Student.College, "[Add college]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.College)" />
+                <ProfileRow Icon="school" Label="Program" Value="@Show(Student.Program, "[Add program]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.Program)" />
+                <ProfileRow Icon="year" Label="Year level" Value="@Show(Student.YearLevel, "[Add year level]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.YearLevel)" />
+                <ProfileRow Icon="year" Label="Academic year &amp; semester" Value="@Show(Student.AcademicTerm, "[Add academic year and semester]")" IsPlaceholder="@string.IsNullOrWhiteSpace(Student.AcademicTerm)" />
+            </ProfileGroup>
+
+            <ProfileGroup Title="Locations">
+                <ProfileRow Icon="pin" Label="Home location" Value="@HomeLocation" IsPlaceholder="@string.IsNullOrWhiteSpace(State.CommuteLocations.HomeAddress)" />
+                <ProfileRow Icon="school" Label="Campus" Value="@Campus" />
+            </ProfileGroup>
+        }
 
         <ProfileGroup Title="Account &amp; security">
             <ProfileRow Icon="lock" Label="Change password" Value="Last updated: not available" IsAction="true" />
@@ -67,6 +128,24 @@
 
 @code {
     private StudentProfile Student => State.Student;
+    private bool IsEditing;
+    private bool IsSaving;
+    private string? EditError;
+    private string? EditMessage;
+    private string FullNameInput = "";
+    private string EmailInput = "";
+    private string AddressInput = "";
+    private string GuardianInput = "";
+    private string GenderInput = "";
+    private DateOnly? DateOfBirthInput;
+    private string PhoneInput = "";
+    private string StudentNumberInput = "";
+    private string CollegeInput = "";
+    private string ProgramInput = "";
+    private string YearLevelInput = "";
+    private string AcademicTermInput = "";
+    private string HomeAddressInput = "";
+    private string SchoolAddressInput = "";
     private string DisplayName => Student.FullName ?? State.User.DisplayName;
     private string Email => !string.IsNullOrWhiteSpace(Student.Email) ? Student.Email
         : string.IsNullOrWhiteSpace(State.User.Email) ? "No email saved" : State.User.Email;
@@ -74,6 +153,111 @@
         ? "Not set · tap Edit to add" : State.CommuteLocations.HomeAddress;
     private string Campus => string.IsNullOrWhiteSpace(State.CommuteLocations.SchoolAddress)
         ? "University of Makati" : State.CommuteLocations.SchoolAddress;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+        if (!Data.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/settings");
+            return;
+        }
+        PopulateEditFields();
+    }
+
+    private void ToggleEditing()
+    {
+        if (IsEditing)
+        {
+            CancelEditing();
+            return;
+        }
+        PopulateEditFields();
+        EditError = null;
+        EditMessage = null;
+        IsEditing = true;
+    }
+
+    private void PopulateEditFields()
+    {
+        FullNameInput = Student.FullName ?? State.User.DisplayName ?? "";
+        EmailInput = Student.Email ?? "";
+        AddressInput = Student.Address ?? "";
+        GuardianInput = Student.Guardian ?? "";
+        GenderInput = Student.Gender ?? "";
+        DateOfBirthInput = ParseDateForInput(Student.DateOfBirth);
+        PhoneInput = Student.Phone ?? "";
+        StudentNumberInput = Student.StudentNumber ?? "";
+        CollegeInput = Student.College ?? "";
+        ProgramInput = Student.Program ?? "";
+        YearLevelInput = Student.YearLevel ?? "";
+        AcademicTermInput = Student.AcademicTerm ?? "";
+        HomeAddressInput = State.CommuteLocations.HomeAddress ?? "";
+        SchoolAddressInput = State.CommuteLocations.SchoolAddress ?? "";
+    }
+
+    private void CancelEditing()
+    {
+        PopulateEditFields();
+        IsEditing = false;
+        EditError = null;
+    }
+
+    private async Task SaveProfile()
+    {
+        EditError = null;
+        EditMessage = null;
+        if (string.IsNullOrWhiteSpace(FullNameInput))
+        {
+            EditError = "Enter your full name.";
+            return;
+        }
+        if (!string.IsNullOrWhiteSpace(EmailInput) && !System.Net.Mail.MailAddress.TryCreate(EmailInput.Trim(), out _))
+        {
+            EditError = "Enter a valid school email address.";
+            return;
+        }
+
+        IsSaving = true;
+        try
+        {
+            var trimmedName = FullNameInput.Trim();
+            var firstName = trimmedName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            var student = new StudentProfile(
+                trimmedName, firstName, Optional(EmailInput), Optional(StudentNumberInput),
+                Optional(CollegeInput), Optional(ProgramInput), Optional(YearLevelInput),
+                Student.Section, Optional(AcademicTermInput), Optional(AddressInput),
+                Optional(GuardianInput), Optional(GenderInput),
+                DateOfBirthInput?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), Optional(PhoneInput));
+            var locations = new CommuteLocationSettings(
+                Optional(HomeAddressInput), null, null, Optional(SchoolAddressInput), null, null);
+
+            await Data.SaveProfileAsync(student, locations, DateOnly.FromDateTime(DateTime.Today));
+            await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+            IsEditing = false;
+            EditMessage = "Profile saved.";
+        }
+        catch (Exception)
+        {
+            EditError = "We couldn't save your profile. Please try again.";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private static string? Optional(string value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static DateOnly? ParseDateForInput(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        return DateOnly.TryParse(value, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var date)
+            ? date
+            : null;
+    }
 
     private string ProfileInitials
     {
