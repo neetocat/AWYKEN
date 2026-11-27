@@ -891,7 +891,7 @@ public sealed class SqlServerAwykenDataService(
             : new StudentProfile(profile.FullName, profile.DisplayName, profile.StudentEmail,
                 profile.StudentNumber, profile.College, profile.Program, profile.YearLevel,
                 profile.Section, profile.AcademicTerm, profile.StudentAddress, profile.Guardian,
-                profile.Gender, profile.DateOfBirth);
+                profile.Gender, profile.DateOfBirth, profile.Phone);
         var commute = profile is null
             ? CommuteLocationSettings.Empty
             : new CommuteLocationSettings(profile.HomeAddress, profile.HomeLatitude, profile.HomeLongitude,
@@ -989,6 +989,47 @@ public sealed class SqlServerAwykenDataService(
             profile.DisplayName = student.FirstName ?? student.FullName;
 
         await db.SaveChangesAsync(cancellationToken);
+        await RefreshAsync(referenceDate, cancellationToken);
+    }
+
+    public async Task SaveProfileAsync(
+        StudentProfile student, CommuteLocationSettings locations, DateOnly referenceDate,
+        CancellationToken cancellationToken = default)
+    {
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var profile = await db.Profiles.SingleAsync(item => item.Id == profileId, cancellationToken);
+
+        profile.FullName = student.FullName;
+        profile.DisplayName = student.FirstName;
+        profile.StudentEmail = student.Email;
+        profile.StudentNumber = student.StudentNumber;
+        profile.College = student.College;
+        profile.Program = student.Program;
+        profile.YearLevel = student.YearLevel;
+        profile.AcademicTerm = student.AcademicTerm;
+        profile.StudentAddress = student.Address;
+        profile.Guardian = student.Guardian;
+        profile.Gender = student.Gender;
+        profile.DateOfBirth = student.DateOfBirth;
+        profile.Phone = student.Phone;
+
+        if (!string.Equals(profile.HomeAddress, locations.HomeAddress, StringComparison.Ordinal))
+        {
+            profile.HomeLatitude = null;
+            profile.HomeLongitude = null;
+        }
+        if (!string.Equals(profile.SchoolAddress, locations.SchoolAddress, StringComparison.Ordinal))
+        {
+            profile.SchoolLatitude = null;
+            profile.SchoolLongitude = null;
+        }
+        profile.HomeAddress = locations.HomeAddress;
+        profile.SchoolAddress = locations.SchoolAddress;
+
+        await db.SaveChangesAsync(cancellationToken);
+        state.SetEstimatedTravelMinutes(null);
         await RefreshAsync(referenceDate, cancellationToken);
     }
 
