@@ -779,6 +779,7 @@
     private void CloseAccountCard()
     {
         ShowAccountCard = false;
+        HideAccountPasswords();
     }
 
     private void SetAccountMode(string mode)
@@ -789,6 +790,7 @@
             ClearSignUpInputs();
         AccountMode = mode;
         AccountError = null;
+        HideAccountPasswords();
     }
 
     private void ClearSignUpInputs()
@@ -797,6 +799,11 @@
         EmailInput = "";
         PasswordInput = "";
         ConfirmPasswordInput = "";
+        HideAccountPasswords();
+    }
+
+    private void HideAccountPasswords()
+    {
         ShowAccountPassword = false;
         ShowConfirmAccountPassword = false;
     }
@@ -870,7 +877,7 @@
 
             if (AccountError is null)
             {
-                ShowAccountCard = false;
+                CloseAccountCard();
 
                 DisplayNameInput = "";
                 EmailInput = "";
