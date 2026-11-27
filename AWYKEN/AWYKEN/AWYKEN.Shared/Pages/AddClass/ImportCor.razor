@@ -1,10 +1,12 @@
 @page "/import-cor"
 @using AWYKEN.Shared.Services
 @using AWYKEN.Shared.Components
+@using Microsoft.Extensions.Logging
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject IFormFactor FormFactor
 @inject DashboardState State
+@inject ILogger<ImportCor> Logger
 @inject CorScheduleImporter Importer
 @inject AWYKEN.Shared.Data.IAwykenDataService Data
 
@@ -21,7 +23,11 @@
 
             <div class="stepper" aria-label="Import progress"><span class="@(Data.IsAuthenticated ? "complete" : "current")"></span><i></i><span class="@(Data.IsAuthenticated ? "current" : "")"></span><i></i><span></span></div>
 
-            @if (!Data.IsAuthenticated)
+            @if (InitializationFailed)
+            {
+                <p class="flow-status" role="alert">@status</p>
+            }
+            else if (!Data.IsAuthenticated)
             {
                 <section class="import-auth-card">
                     <div class="scan-icon">✉</div>
@@ -70,7 +76,7 @@
                 <div class="upload-icon">⇧</div>
                 <h2>Upload your registration form</h2>
                 <p>PDF, JPG, PNG, BMP or TIFF · Max 10 MB</p>
-                <InputFile OnChange="SelectFile" />
+                <InputFile OnChange="SelectFile" disabled="@Importing" />
             </section>
 
             <aside class="tip-card"><strong>ⓘ</strong><div><b>For the best result</b><p>Use a clear, well-lit image with all four corners visible.</p></div></aside>
@@ -89,6 +95,8 @@
     private string? status;
     private bool CreateAccount;
     private bool Working;
+    private bool Importing;
+    private bool InitializationFailed;
     private bool ShowPassword;
     private bool ShowConfirmPassword;
     private bool ConsentGiven;
@@ -98,7 +106,19 @@
     private string DisplayName = "";
     private readonly string[] AllowedExtensions = { ".pdf", ".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff" };
 
-    protected override async Task OnInitializedAsync() => await Data.InitializeAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await Data.InitializeAsync();
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Failed to initialize the COR import page.");
+            InitializationFailed = true;
+            status = "We couldn't load your account or schedule data. Please try again later.";
+        }
+    }
 
     private async Task Authenticate()
     {
@@ -153,6 +173,27 @@
 
     private async Task SelectFile(InputFileChangeEventArgs args)
     {
+        if (Importing)
+            return;
+
+        Importing = true;
+        try
+        {
+            await ImportFileAsync(args);
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Unexpected error while handling uploaded COR file.");
+            status = "The COR could not be imported. Please try again or enter your classes manually.";
+        }
+        finally
+        {
+            Importing = false;
+        }
+    }
+
+    private async Task ImportFileAsync(InputFileChangeEventArgs args)
+    {
         if (!Data.IsAuthenticated)
         {
             status = "Log in before importing your COR.";
@@ -181,14 +222,16 @@
         }
 
         status = "Scanning your COR...";
+        await InvokeAsync(StateHasChanged);
         CorImportResult result;
         try
         {
             result = await Importer.ImportAsync(file);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            status = "The file could not be scanned. Try a clearer PDF or image.";
+            Logger.LogError(exception, "Failed while processing uploaded COR file {FileName}.", file.Name);
+            status = "The COR could not be imported. Please try again or enter your classes manually.";
             return;
         }
         if (!result.IsSuccess)
@@ -197,18 +240,25 @@
             return;
         }
 
-        // Keep the COR parsing and preview behavior intact, then attach the COR profile
-        // to the account that signed in before upload.
-        State.SetImportPreview(result.Classes, result.Profile);
         try
         {
+            // Keep the COR parsing and preview behavior intact, then attach the COR profile
+            // to the account that signed in before upload.
+            Logger.LogInformation("COR import succeeded for {FileName} with {ClassCount} classes; profile detected: {HasProfile}.",
+                file.Name, result.Classes.Count, result.Profile is not null);
+            State.SetImportPreview(result.Classes, result.Profile);
             if (result.Profile is not null)
+            {
+                Logger.LogInformation("Saving imported COR profile for {FileName}.", file.Name);
                 await Data.SaveImportedProfileAsync(result.Profile, DateOnly.FromDateTime(DateTime.Today));
+            }
+            Logger.LogInformation("COR profile save finished for {FileName}; navigating to schedule review.", file.Name);
             Navigation.NavigateTo("/verify-schedule");
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            status = "We couldn't save your COR details. Please try again.";
+            Logger.LogError(exception, "Failed while saving imported COR details for the signed-in profile.");
+            status = "The COR could not be imported. Please try again or enter your classes manually.";
         }
     }
     private void EnterManually() => Navigation.NavigateTo("/add-class");

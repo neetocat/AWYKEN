@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/AWYKEN/">
+    <Project Path="AWYKEN/AWYKEN.OcrWorker/AWYKEN.OcrWorker.csproj" />
+  </Folder>
   <Project Path="AWYKEN/AWYKEN.Shared/AWYKEN.Shared.csproj" />
   <Project Path="AWYKEN/AWYKEN.Web/AWYKEN.Web.csproj" />
 </Solution>

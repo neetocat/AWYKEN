@@ -1,9 +1,11 @@
 @page "/verify-schedule"
 @using AWYKEN.Shared.Services
 @using AWYKEN.Shared.Data
+@using Microsoft.Extensions.Logging
 @inject AWYKEN.Shared.Services.DashboardState State
 @inject NavigationManager Navigation
 @inject IAwykenDataService Data
+@inject ILogger<VerifySchedule> Logger
 
 <PageTitle>AWYKEN</PageTitle>
 
@@ -189,11 +191,13 @@
                 await Data.SaveImportedProfileAsync(student, DateOnly.FromDateTime(DateTime.Today));
 
             await Data.SaveImportedScheduleAsync(Preview, DateOnly.FromDateTime(DateTime.Today));
+            Logger.LogInformation("COR schedule save finished with {ClassCount} classes.", Preview.Count);
             State.ClearImportPreview();
             Navigation.NavigateTo("/schedule");
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            Logger.LogError(exception, "Failed to save the imported schedule.");
             SaveError = "We couldn't save the schedule. Your reviewed classes are still here; please try again.";
         }
         finally { Saving = false; }

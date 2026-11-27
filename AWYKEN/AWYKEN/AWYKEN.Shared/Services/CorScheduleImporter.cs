@@ -1,13 +1,16 @@
+using System.Diagnostics;
 using System.Globalization;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Components.Forms;
-using Tesseract;
+using Microsoft.Extensions.Logging;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
+using UglyToad.PdfPig.Exceptions;
 
 namespace AWYKEN.Shared.Services;
 
-public sealed class CorScheduleImporter
+public sealed class CorScheduleImporter(ILogger<CorScheduleImporter> logger)
 {
     private const long MaxFileSize = 10 * 1024 * 1024;
     private static readonly Regex CfnPattern = new(@"\b(?<cfn>[A-Z]\d{6,})\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -15,295 +18,246 @@ public sealed class CorScheduleImporter
         @"\b(?<start>\d{1,2}:?\d{2}\s*(?:AM|PM))\s*(?:-|–|to)\s*(?<end>\d{1,2}:?\d{2}\s*(?:AM|PM))\b",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
     private static readonly Regex CourseCodePattern = new(@"^[A-Z]{2,10}(?:\s*\d{1,3})?\b", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly JsonSerializerOptions WorkerJsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly TimeSpan OcrTimeout = TimeSpan.FromSeconds(60);
+    private const int MaxPdfPages = 20;
+    private const long MaxOcrImagePixels = 20_000_000;
 
     public async Task<CorImportResult> ImportAsync(IBrowserFile file, CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("COR upload received: {FileName}.", file.Name);
         if (file.Size == 0)
             return CorImportResult.Failure("The selected file is empty.");
         if (file.Size > MaxFileSize)
             return CorImportResult.Failure("The file is larger than the 10 MB limit.");
 
         var extension = Path.GetExtension(file.Name);
+        logger.LogInformation("COR upload type {FileType}, size {FileSize} bytes for {FileName}.", extension, file.Size, file.Name);
         if (!new[] { ".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff" }
                 .Contains(extension, StringComparer.OrdinalIgnoreCase))
             return CorImportResult.Failure("Choose a PDF, PNG, JPG, BMP, or TIFF file.");
 
-        await using var input = file.OpenReadStream(MaxFileSize, cancellationToken);
-        await using var buffer = new MemoryStream();
-        await input.CopyToAsync(buffer, cancellationToken);
-        var bytes = buffer.ToArray();
-
+        var stage = "opening the browser upload stream";
         try
         {
-            StudentProfile? profile = null;
-            List<ScheduleItem> classes;
-            if (extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+            await using var input = file.OpenReadStream(MaxFileSize, cancellationToken);
+            await using var buffer = new MemoryStream();
+            stage = "reading the browser upload stream";
+            await input.CopyToAsync(buffer, cancellationToken);
+            var bytes = buffer.ToArray();
+            logger.LogInformation("Read {ByteCount} bytes for COR file {FileName}.", bytes.Length, file.Name);
+            stage = extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase) ? "parsing the PDF" : "starting image OCR";
+            return await Task.Run(() => ParseBytesAsync(bytes, extension, file.Name, cancellationToken), cancellationToken);
+        }
+        catch (PdfDocumentEncryptedException exception)
+        {
+            logger.LogWarning(exception, "Rejected password-protected COR PDF {FileName} during {Stage}.", file.Name, stage);
+            return CorImportResult.Failure("This PDF is password-protected. Remove its password or upload a clear image of the COR.");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Failed to import COR file {FileName} during {Stage}.", file.Name, stage);
+            return CorImportResult.Failure(extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase)
+                ? "We couldn't read this PDF. It may be damaged or use an unsupported feature. Re-export it without a password or upload a clear image of the COR."
+                : "The COR could not be imported. Please try again or enter your classes manually.");
+        }
+    }
+
+    private async Task<CorImportResult> ParseBytesAsync(
+        byte[] bytes, string extension, string fileName, CancellationToken cancellationToken)
+    {
+        StudentProfile? profile = null;
+        List<ScheduleItem> classes;
+        var oversizedImageFound = false;
+        if (extension.Equals(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            using var buffer = new MemoryStream(bytes, writable: false);
+            using var document = PdfDocument.Open(buffer);
+            classes = [];
+            var pageCount = 0;
+            foreach (var page in document.GetPages())
             {
-                buffer.Position = 0;
-                using var document = PdfDocument.Open(buffer);
-                var pages = document.GetPages().ToList();
-                classes = [];
-                foreach (var page in pages)
+                if (++pageCount > MaxPdfPages)
+                    return CorImportResult.Failure($"The PDF has more than {MaxPdfPages} pages. Upload a shorter COR PDF.");
+
+                profile ??= CorProfileParser.Parse(page.Text);
+                var pageClasses = ParseTableRows(GetPdfWords(page), page.Width);
+                if (pageClasses.Count == 0)
+                    pageClasses = ParseClasses(page.Text);
+
+                // Some COR PDFs contain selectable headers/footers plus a scanned
+                // timetable image. If text parsing found no classes, OCR the embedded
+                // images even when the page has some unrelated text.
+                if (pageClasses.Count == 0)
                 {
-                    profile ??= CorProfileParser.Parse(page.Text);
-                    if (profile is not { Email: not null })
+                    foreach (var image in page.GetImages())
                     {
-                        foreach (var image in page.GetImages())
+                        try
                         {
-                            try
+                            var pixelCount = (long)image.WidthInSamples * image.HeightInSamples;
+                            if (pixelCount <= 0 || pixelCount > MaxOcrImagePixels)
                             {
-                                var imageBytes = image.TryGetPng(out var png) ? png : image.RawBytes.ToArray();
-                                if (imageBytes.Length == 0) continue;
-                                profile = ReadImageProfile(imageBytes);
-                                if (profile is { Email: not null }) break;
+                                oversizedImageFound = true;
+                                logger.LogWarning("Skipping embedded image with {PixelCount} pixels in {FileName}.", pixelCount, fileName);
+                                continue;
                             }
-                            catch (Exception exception) when (exception is not OperationCanceledException)
-                            {
-                                // Keep profile OCR independent from schedule row parsing.
-                            }
+
+                            var imageBytes = image.TryGetPng(out var png) ? png : image.RawBytes.ToArray();
+                            if (imageBytes.Length == 0)
+                                continue;
+
+                            logger.LogInformation("Using OCR for COR PDF page {PageNumber} image {Width}x{Height} in {FileName}.",
+                                pageCount, image.WidthInSamples, image.HeightInSamples, fileName);
+                            var ocr = await RunOcrWorkerAsync(imageBytes, fileName, cancellationToken);
+                            if (ocr.Error is not null)
+                                return CorImportResult.Failure(ocr.Error);
+
+                            profile ??= CorProfileParser.Parse(ocr.Text!);
+                            pageClasses = ParseOcrTableText(ocr.Text!);
+                            if (pageClasses.Count == 0)
+                                pageClasses = ParseClasses(ocr.Text!);
+                            if (pageClasses.Count > 0)
+                                break;
+                        }
+                        catch (Exception exception) when (exception is not OperationCanceledException)
+                        {
+                            // A PDF may contain non-text images such as logos; keep looking for its scan.
+                            logger.LogWarning(exception, "Unable to OCR an embedded image in {FileName}.", fileName);
                         }
                     }
-                    var pageClasses = ParseTableRows(GetPdfWords(page), page.Width);
-                    if (pageClasses.Count == 0)
-                        pageClasses = ParseClasses(page.Text);
-
-                    if (pageClasses.Count == 0)
-                    {
-                        foreach (var image in page.GetImages())
-                        {
-                            try
-                            {
-                                var imageBytes = image.TryGetPng(out var png) ? png : image.RawBytes.ToArray();
-                                if (imageBytes.Length == 0)
-                                    continue;
-                                pageClasses = ReadImageClasses(imageBytes);
-                                if (pageClasses.Count > 0)
-                                    break;
-                            }
-                            catch (Exception exception) when (exception is not OperationCanceledException)
-                            {
-                                // A PDF may contain non-text images such as logos; keep looking for its scan.
-                            }
-                        }
-                    }
-
-                    pageClasses = ApplyTextTitles(pageClasses, page.Text);
-                    classes.AddRange(pageClasses);
                 }
-            }
-            else
-            {
-                profile = ReadImageProfile(bytes);
-                classes = ReadImageClasses(bytes);
-            }
 
-            classes = classes
-                .GroupBy(item => (item.CourseCode, item.Section), StringTupleComparer.Instance)
-                .Select(group => group.First()).ToList();
-            var section = classes.Where(c => !string.IsNullOrWhiteSpace(c.Section))
-                .GroupBy(c => c.Section!, StringComparer.OrdinalIgnoreCase)
-                .OrderByDescending(g => g.Count()).Select(g => g.Key).FirstOrDefault();
-            profile = profile is null ? null : profile with { Section = section };
-
-            return classes.Count == 0
-                ? CorImportResult.Failure("No class rows were recognized. Use a clear COR image or PDF and review the file format.")
-                : CorImportResult.Success(classes, profile);
+                pageClasses = ApplyTextTitles(pageClasses, page.Text);
+                logger.LogInformation("Processed COR PDF page {PageNumber} for {FileName}: {TextCharacterCount} text characters, {ClassCount} classes.",
+                    pageCount, fileName, page.Text.Length, pageClasses.Count);
+                classes.AddRange(pageClasses);
+            }
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        else
         {
-            return CorImportResult.Failure("The file could not be scanned. Check that it is a valid, clear PDF or image.");
+            var ocr = await RunOcrWorkerAsync(bytes, fileName, cancellationToken);
+            if (ocr.Error is not null)
+                return CorImportResult.Failure(ocr.Error);
+
+            profile = CorProfileParser.Parse(ocr.Text!);
+            classes = ParseOcrTableText(ocr.Text!);
+            if (classes.Count == 0)
+                classes = ParseClasses(ocr.Text!);
         }
+
+        classes = classes
+            .GroupBy(item => (item.CourseCode, item.Section), StringTupleComparer.Instance)
+            .Select(group => group.First()).ToList();
+        var section = classes.Where(c => !string.IsNullOrWhiteSpace(c.Section))
+            .GroupBy(c => c.Section!, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(g => g.Count()).Select(g => g.Key).FirstOrDefault();
+        profile = profile is null ? null : profile with { Section = section };
+
+        logger.LogInformation("COR parse finished for {FileName}: {ClassCount} classes recognized.", fileName, classes.Count);
+        return classes.Count == 0
+            ? CorImportResult.Failure(oversizedImageFound
+                ? "The scanned PDF image is too large to process safely. Use a lower-resolution scan or upload a clear photo."
+                : "No class rows were recognized. Use a clear COR image or PDF and review the file format.")
+            : CorImportResult.Success(classes, profile);
     }
 
-    private static List<ScheduleItem> ReadImageClasses(byte[] bytes)
+    private async Task<OcrWorkerResult> RunOcrWorkerAsync(
+        byte[] imageBytes, string fileName, CancellationToken cancellationToken)
     {
-        var tessdata = Path.Combine(AppContext.BaseDirectory, "tessdata");
-        if (!File.Exists(Path.Combine(tessdata, "eng.traineddata")))
-            throw new InvalidOperationException("English OCR data is not installed.");
+        var tessdataDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "tessdata"));
+        if (!File.Exists(Path.Combine(tessdataDirectory, "eng.traineddata")))
+        {
+            logger.LogError("OCR data is missing at {TessdataDirectory} for {FileName}.", tessdataDirectory, fileName);
+            return new OcrWorkerResult(null, "OCR data is missing on the server. Contact the administrator.");
+        }
 
-        using var engine = new TesseractEngine(tessdata, "eng", EngineMode.LstmOnly);
-        engine.SetVariable("preserve_interword_spaces", true);
-        engine.SetVariable("user_defined_dpi", 300);
-        using var image = Pix.LoadFromMemory(bytes);
-        return ReadImageClasses(engine, image);
-    }
+        var workerDirectory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "OcrWorker"));
+        var workerPath = Path.Combine(workerDirectory, "AWYKEN.OcrWorker.dll");
+        if (!File.Exists(workerPath))
+        {
+            logger.LogError("OCR worker is missing at {WorkerPath} for {FileName}.", workerPath, fileName);
+            return new OcrWorkerResult(null, "OCR is unavailable on the server. Contact the administrator.");
+        }
 
-    private static StudentProfile? ReadImageProfile(byte[] bytes)
-    {
-        var tessdata = Path.Combine(AppContext.BaseDirectory, "tessdata");
-        if (!File.Exists(Path.Combine(tessdata, "eng.traineddata")))
-            return null;
+        var imagePath = Path.Combine(Path.GetTempPath(), $"awyken-cor-{Guid.NewGuid():N}.img");
+        await File.WriteAllBytesAsync(imagePath, imageBytes, cancellationToken);
+        var stopwatch = Stopwatch.StartNew();
+        logger.LogInformation("OCR started for {FileName}.", fileName);
         try
         {
-            using var engine = new TesseractEngine(tessdata, "eng", EngineMode.LstmOnly);
-            engine.SetVariable("preserve_interword_spaces", true);
-            engine.SetVariable("user_defined_dpi", 300);
-            using var image = Pix.LoadFromMemory(bytes);
-            foreach (var mode in new[] { PageSegMode.SparseText, PageSegMode.Auto, PageSegMode.SingleBlock })
+            var startInfo = new ProcessStartInfo
             {
-                using var page = engine.Process(image, mode);
-                var profile = CorProfileParser.Parse(page.GetText());
-                if (profile is { Email: not null } or { StudentNumber: not null })
-                    return profile;
-            }
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            // Profile OCR runs independently from class-table extraction.
-        }
-        return null;
-    }
+                FileName = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH") ?? "dotnet",
+                WorkingDirectory = workerDirectory,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+            startInfo.ArgumentList.Add(workerPath);
+            startInfo.ArgumentList.Add(imagePath);
 
-    private static List<ScheduleItem> ReadImageClasses(TesseractEngine engine, Pix image)
-    {
-        var passes = new List<List<ScheduleItem>>();
-        List<ScheduleItem>? croppedTextCandidates = null;
-        var portraitCor = image.Height > image.Width * 1.08;
-        AddPass(image, PageSegMode.Auto);
-        AddPass(image, PageSegMode.SingleBlock);
-        AddPass(image, PageSegMode.SparseText);
+            logger.LogInformation("Launching OCR worker {WorkerPath} using host {DotnetHost} for {FileName}.",
+                workerPath, startInfo.FileName, fileName);
+            using var process = new Process { StartInfo = startInfo };
+            if (!process.Start())
+                return new OcrWorkerResult(null, "OCR could not be started. Please try again or enter your classes manually.");
 
-        // Small or compressed uploads often have too few pixels for the COR
-        // table. Upscale and run both grayscale and adaptive-threshold variants.
-        var largestSide = Math.Max(image.Width, image.Height);
-        if (largestSide < 2600)
-        {
-            var scale = portraitCor || largestSide < 900 ? 3f : 2f;
-            using var enlarged = image.Scale(scale, scale);
-            AddPass(enlarged, PageSegMode.Auto);
-            AddPass(enlarged, PageSegMode.SingleBlock);
-            AddPass(enlarged, PageSegMode.SparseText);
-
-            // On portrait CORs the encoded-course table occupies a small band
-            // of the page. OCRing the whole page makes its rows too tiny, so
-            // scan that band separately at the enlarged resolution.
-            if (portraitCor && TryGetCourseTableRegion(enlarged, out var tableRegion))
-            {
-                AddPass(enlarged, PageSegMode.Auto, tableRegion);
-                AddPass(enlarged, PageSegMode.SingleBlock, tableRegion);
-                AddPass(enlarged, PageSegMode.SparseText, tableRegion);
-            }
-
+            var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            using var timeoutSource = new CancellationTokenSource(OcrTimeout);
+            using var waitSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutSource.Token);
             try
             {
-                using var gray = enlarged.ConvertRGBToGray();
-                if (portraitCor && TryGetCourseTableRegion(gray, out var grayTableRegion))
-                    AddPass(gray, PageSegMode.SingleBlock, grayTableRegion);
-                else
-                    AddPass(gray, PageSegMode.Auto);
-                using var thresholded = gray.BinarizeOtsuAdaptiveThreshold(32, 32, 2, 2, 0.1f);
-                if (portraitCor && TryGetCourseTableRegion(thresholded, out var thresholdTableRegion))
-                {
-                    AddPass(thresholded, PageSegMode.Auto, thresholdTableRegion);
-                    AddPass(thresholded, PageSegMode.SingleBlock, thresholdTableRegion);
-                }
-                else
-                {
-                    AddPass(thresholded, PageSegMode.Auto);
-                    AddPass(thresholded, PageSegMode.SingleBlock);
-                }
+                await process.WaitForExitAsync(waitSource.Token);
             }
-            catch (Exception exception) when (exception is InvalidOperationException or TesseractException or ArgumentException)
+            catch (OperationCanceledException)
             {
-                // Some image formats are already grayscale or binary; the
-                // enlarged original passes above remain available.
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+                await process.WaitForExitAsync(CancellationToken.None);
+                var errorOutput = await errorTask;
+                logger.LogError("OCR worker timed out or was canceled for {FileName}; exit code {ExitCode}, stderr: {StandardError}.",
+                    fileName, process.ExitCode, errorOutput);
+                cancellationToken.ThrowIfCancellationRequested();
+                return new OcrWorkerResult(null, "COR scanning took too long. Please try again or enter your classes manually.");
             }
+
+            var output = await outputTask;
+            var standardError = await errorTask;
+            if (process.ExitCode != 0)
+            {
+                logger.LogError("OCR worker failed for {FileName}; exit code {ExitCode}, stderr: {StandardError}.",
+                    fileName, process.ExitCode, standardError);
+                var message = standardError.Contains("OCR data is missing", StringComparison.OrdinalIgnoreCase)
+                    ? "OCR data is missing on the server. Contact the administrator."
+                    : "COR scanning failed. Please try again or enter your classes manually.";
+                return new OcrWorkerResult(null, message);
+            }
+
+            var response = JsonSerializer.Deserialize<OcrWorkerResponse>(output, WorkerJsonOptions);
+            if (response is null || string.IsNullOrWhiteSpace(response.Text))
+            {
+                logger.LogError("OCR worker returned no recognized text for {FileName}; stderr: {StandardError}.",
+                    fileName, standardError);
+                return new OcrWorkerResult(null, "No text could be read from the COR. Please try again or enter your classes manually.");
+            }
+
+            return new OcrWorkerResult(response.Text, null);
         }
-
-        return croppedTextCandidates is { Count: >= 2 }
-            ? MergeOcrCandidates([croppedTextCandidates])
-            : MergeOcrCandidates(passes);
-
-        void AddPass(Pix source, PageSegMode mode, Rect? region = null)
+        finally
         {
-            using var page = region is null
-                ? engine.Process(source, mode)
-                : engine.Process(source, region.Value, mode);
-            var words = new List<LayoutWord>();
-            using var iterator = page.GetIterator();
-            iterator.Begin();
-            do
-            {
-                var text = iterator.GetText(PageIteratorLevel.Word)?.Trim();
-                if (!string.IsNullOrWhiteSpace(text)
-                    && iterator.TryGetBoundingBox(PageIteratorLevel.Word, out var bounds))
-                    words.Add(new LayoutWord(text, bounds.X1, (bounds.Y1 + bounds.Y2) / 2d));
-            } while (iterator.Next(PageIteratorLevel.Word));
-
-            var parsed = ParseTableRows(words, source.Width);
-            // Text-line parsing is useful on a cropped table but noisy on the
-            // full-page OCR, where the profile/footer can resemble course rows.
-            if (region is not null && mode == PageSegMode.SingleBlock)
-            {
-                var textCandidates = ParseOcrTableText(page.GetText());
-                if (textCandidates.Count > (croppedTextCandidates?.Count ?? 0))
-                    croppedTextCandidates = textCandidates;
-            }
-
-            parsed = parsed
-                .Select(item => item with
-                {
-                    CourseCode = NormalizeCourseCode(item.CourseCode),
-                    Title = NormalizeOcrTitle(item.Title)
-                }).ToList();
-            if (parsed.Count > 0)
-                passes.Add(parsed);
+            logger.LogInformation("OCR finished for {FileName} in {ElapsedMilliseconds} ms.", fileName, stopwatch.ElapsedMilliseconds);
+            File.Delete(imagePath);
         }
     }
 
-    private static bool TryGetCourseTableRegion(Pix image, out Rect region)
-    {
-        // The standard University of Makati COR layout places Encoded Course(s)
-        // between roughly 24% and 47% of a portrait page's height.
-        var x1 = (int)(image.Width * 0.035);
-        var x2 = (int)(image.Width * 0.975);
-        var y1 = (int)(image.Height * 0.235);
-        var y2 = (int)(image.Height * 0.47);
-        region = new Rect(x1, y1, x2 - x1, y2 - y1);
-        return region.Width > 0 && region.Height > 0;
-    }
-
-    private static List<ScheduleItem> MergeOcrCandidates(IEnumerable<List<ScheduleItem>> passes) =>
-        passes.SelectMany(items => items)
-            .Where(item => IsPlausibleCfn(item.Cfn)
-                && Regex.IsMatch(item.CourseCode, @"^[A-Z]{2,10}(?:\s*\d{1,3})?(?:-[A-Z]{2,10})?$", RegexOptions.IgnoreCase)
-                && item.Title.Count(char.IsLetter) >= 4
-                && item.Title.Length <= 140
-                && item.Location.Length <= 80)
-            .GroupBy(OcrMergeKey,
-                StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.OrderByDescending(OcrQualityScore).First())
-            .OrderBy(item => item.SortTime)
-            .ToList();
-
-    private static int OcrQualityScore(ScheduleItem item)
-    {
-        var score = 0;
-        if (CfnPattern.IsMatch(item.Cfn ?? "")) score += 4;
-        if (Regex.IsMatch(item.CourseCode, @"^[A-Z]{2,10}(?:\s*\d{1,3})?$", RegexOptions.IgnoreCase)) score += 3;
-        if (item.Title.Any(char.IsLetter)) score += 2;
-        if (item.Title.Contains(' ')) score += 2;
-        score += Math.Min(item.Title.Length / 25, 4);
-        if (TimeRangePattern.IsMatch(item.MeetingTimes ?? "")) score += 2;
-        if (!string.IsNullOrWhiteSpace(item.Location)) score++;
-        if (item.Units.HasValue) score++;
-        if (item.Title.Length > 85) score -= 4;
-        if (Regex.IsMatch(item.Title, @"(?:[IVX]+|[A-Z0-9]+)-[A-Z][A-Z0-9-]+|\b\d{1,2}:\d{2}\s*(?:AM|PM)\b", RegexOptions.IgnoreCase))
-            score -= 12;
-        if (Regex.IsMatch(item.Title, @"SOC\s*STUD|[=§#]", RegexOptions.IgnoreCase)) score -= 8;
-        if (Regex.IsMatch(item.Location, @"\b(?:CFN|Course|Descriptive|Section|Units|Time|Days|Room|Encoded)\b", RegexOptions.IgnoreCase))
-            score -= 8;
-        return score;
-    }
-
-    private static string OcrMergeKey(ScheduleItem item)
-    {
-        var code = NormalizeCourseCode(item.CourseCode);
-        var title = Regex.Replace(item.Title.ToUpperInvariant(), @"[^A-Z0-9]", "");
-        title = Regex.Replace(title, @"^THE", "");
-        var titleStem = title[..Math.Min(12, title.Length)];
-        return titleStem.Length == 0 ? $"{code}|{item.StartTime}" : titleStem;
-    }
+    private sealed record OcrWorkerResponse(string Text);
+    private sealed record OcrWorkerResult(string? Text, string? Error);
 
     private static string NormalizeCourseCode(string value)
     {

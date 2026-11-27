@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <DisableHotReload>true</DisableHotReload>
@@ -9,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AWYKEN.Shared\AWYKEN.Shared.csproj" />
+    <ProjectReference Include="..\AWYKEN.OcrWorker\AWYKEN.OcrWorker.csproj" ReferenceOutputAssembly="false" />
     <!-- Design-time package lets dotnet-ef scaffold migrations into Shared. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13">
       <PrivateAssets>all</PrivateAssets>
@@ -23,5 +25,41 @@
   <ItemGroup>
     <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <Target Name="CopyOcrWorkerArtifacts" AfterTargets="Build">
+    <!-- Collect these after the referenced worker project has built. A project-level
+         glob is evaluated too early on a clean checkout, before its bin folder exists. -->
+    <ItemGroup>
+      <OcrWorkerOutput Include="..\AWYKEN.OcrWorker\bin\$(Configuration)\net10.0\**\*" />
+      <TessDataFiles Include="..\AWYKEN.Shared\tessdata\**\*" />
+    </ItemGroup>
+    <Error Condition="'@(OcrWorkerOutput)' == ''"
+           Text="The OCR worker did not produce output files; COR image/PDF scanning would not work." />
+    <MakeDir Directories="$(OutDir)OcrWorker;$(OutDir)tessdata" />
+    <Copy SourceFiles="@(OcrWorkerOutput)"
+          DestinationFiles="@(OcrWorkerOutput->'$(OutDir)OcrWorker\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(TessDataFiles)"
+          DestinationFiles="@(TessDataFiles->'$(OutDir)tessdata\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyOcrWorkerArtifactsToPublish" AfterTargets="Publish">
+    <!-- The worker is launched as a child process, so it must be copied beside the
+         published web app as well as into the normal build output. -->
+    <ItemGroup>
+      <OcrWorkerPublishOutput Include="..\AWYKEN.OcrWorker\bin\$(Configuration)\net10.0\**\*" />
+      <TessDataPublishFiles Include="..\AWYKEN.Shared\tessdata\**\*" />
+    </ItemGroup>
+    <Error Condition="'@(OcrWorkerPublishOutput)' == ''"
+           Text="The OCR worker was not included in publish output; COR image/PDF scanning would not work." />
+    <MakeDir Directories="$(PublishDir)OcrWorker;$(PublishDir)tessdata" />
+    <Copy SourceFiles="@(OcrWorkerPublishOutput)"
+          DestinationFiles="@(OcrWorkerPublishOutput->'$(PublishDir)OcrWorker\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(TessDataPublishFiles)"
+          DestinationFiles="@(TessDataPublishFiles->'$(PublishDir)tessdata\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>

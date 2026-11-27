@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<OutputType>Exe</OutputType>
+	<TargetFramework>net10.0</TargetFramework>
+	<PlatformTarget>x64</PlatformTarget>
+	<Nullable>enable</Nullable>
+	<ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+	<PackageReference Include="Tesseract" Version="5.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+	<Content Include="..\AWYKEN.Shared\tessdata\eng.traineddata"
+			 Link="tessdata\eng.traineddata"
+			 CopyToOutputDirectory="PreserveNewest"
+			 CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
