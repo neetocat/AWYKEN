@@ -13,6 +13,19 @@
 .profile-stats > div + div { border-left: 1px solid #34385f; }
 .profile-stats strong { color: #161b4d; font-size: 27px; font-weight: 800; }
 .profile-stats span { color: #737b9b; font-size: 14px; }
+.profile-edit-form { margin: 0; }
+.profile-edit-field { display: grid; gap: 7px; padding: 14px 20px; border-bottom: 1px solid #dce3ef; color: #68738e; font-size: 13px; font-weight: 650; }
+.profile-edit-field:last-child { border-bottom: 0; }
+.profile-edit-field input { width: 100%; min-height: 42px; box-sizing: border-box; padding: 9px 12px; border: 1px solid #dce3ef; border-radius: 10px; background: #fff; color: #191b2d; font: inherit; font-size: 15px; font-weight: 500; }
+.profile-edit-field input:focus { outline: 2px solid #c9ccef; border-color: #858dc6; }
+.profile-edit-hint { margin: 0; padding: 12px 20px; color: #68738e; font-size: 12px; line-height: 1.5; }
+.profile-edit-message { margin: 14px 0 0; padding: 12px 14px; border-radius: 12px; background: #edf8f1; color: #28643d; font-size: 13px; }
+.profile-edit-message.error { background: #fff0f0; color: #a33c42; }
+.profile-edit-actions { display: flex; justify-content: flex-end; gap: 10px; margin: 18px 0 0; }
+.profile-edit-actions button { min-height: 44px; padding: 0 18px; border: 0; border-radius: 12px; font: inherit; font-size: 14px; font-weight: 750; cursor: pointer; }
+.profile-cancel-button { background: #e9edf5; color: #30384e; }
+.profile-save-button { background: #080d3d; color: #fff; }
+.profile-edit-actions button:disabled { opacity: .65; cursor: wait; }
 .bottom-nav { position: fixed; z-index: 5; right: 0; bottom: 0; left: 0; }
 @media (max-width: 600px) {
     .profile-content { padding: 18px 16px 100px; }
@@ -25,4 +38,8 @@
     .profile-hero h2 { font-size: 22px; }
     .profile-hero > p { font-size: 13px; }
     .profile-stats span { font-size: 12px; }
+    .profile-edit-field { padding: 12px 14px; font-size: 12px; }
+    .profile-edit-field input { min-height: 40px; font-size: 14px; }
+    .profile-edit-hint { padding: 10px 14px; font-size: 11px; }
+    .profile-edit-actions button { min-height: 42px; padding: 0 14px; font-size: 13px; }
 }
