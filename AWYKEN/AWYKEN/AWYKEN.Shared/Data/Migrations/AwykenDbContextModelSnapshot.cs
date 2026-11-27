@@ -602,6 +602,10 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
 
+                    b.Property<string>("Phone")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<string>("DisplayName")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
