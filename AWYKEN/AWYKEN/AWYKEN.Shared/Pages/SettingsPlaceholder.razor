@@ -1,0 +1,41 @@
+@page "/settings/location-access"
+@page "/settings/notifications-reminders"
+@page "/settings/location-commute-history"
+@page "/settings/clear-my-data"
+@page "/settings/delete-account"
+@page "/settings/privacy-policy"
+@page "/settings/terms-of-use"
+@page "/settings/third-party-map-credits"
+@page "/settings/about"
+@page "/settings/help"
+@inject NavigationManager Navigation
+
+<PageTitle>@Title - AWYKEN</PageTitle>
+
+<div class="flow-shell settings-screen">
+    <main class="flow-scroll">
+        <div class="flow-content">
+            <header class="flow-header">
+                <button class="back-button" aria-label="Back to settings" @onclick='() => Navigation.NavigateTo("/settings")'>‹</button>
+                <div><h1>@Title</h1></div>
+            </header>
+        </div>
+    </main>
+</div>
+
+@code {
+    private string Title => Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', 2)[0] switch
+    {
+        "settings/location-access" => "Location Access",
+        "settings/notifications-reminders" => "Notifications & Reminders",
+        "settings/location-commute-history" => "Location & Commute History",
+        "settings/clear-my-data" => "Clear My Data",
+        "settings/delete-account" => "Delete Account",
+        "settings/privacy-policy" => "Privacy Policy",
+        "settings/terms-of-use" => "Terms of Use",
+        "settings/third-party-map-credits" => "Third-Party & Map Credits",
+        "settings/about" => "About this App",
+        "settings/help" => "Help / Report an Issue",
+        _ => "Settings"
+    };
+}
