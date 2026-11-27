@@ -440,6 +440,11 @@ namespace AWYKEN.Shared.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<bool>("ReminderEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("MeetingTimes")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
@@ -636,6 +641,11 @@ namespace AWYKEN.Shared.Data.Migrations
                     b.Property<double?>("HomeLongitude")
                         .HasColumnType("float");
 
+                    b.Property<bool>("LeaveReminderEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("IsAdmin")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -645,6 +655,9 @@ namespace AWYKEN.Shared.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("ConsentGivenAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("LastActivityAt")
                         .HasColumnType("datetime2");

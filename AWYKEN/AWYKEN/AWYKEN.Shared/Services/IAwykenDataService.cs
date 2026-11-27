@@ -10,7 +10,7 @@ public interface IAwykenDataService
 {
     bool IsAuthenticated { get; }
     Task InitializeAsync(CancellationToken cancellationToken = default);
-    Task<string?> SignUpAsync(string displayName, string email, string password, CancellationToken cancellationToken = default);
+    Task<string?> SignUpAsync(string displayName, string email, string password, bool consentGiven, CancellationToken cancellationToken = default);
     Task<string?> SignInAsync(string email, string password, CancellationToken cancellationToken = default);
     Task<bool> AccountExistsAsync(string email, CancellationToken cancellationToken = default);
     /// <summary>True when the signed-in account is an administrator (sees <c>/admin</c>).</summary>

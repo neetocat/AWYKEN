@@ -54,7 +54,7 @@ public sealed class DashboardState
         ImportProfilePreview = snapshot.ImportProfilePreview;
         Notifications = snapshot.Notifications.Count > 0
             ? snapshot.Notifications.ToList()
-            : Schedule.Select(item => new AppNotification(
+            : Schedule.Where(item => item.ReminderEnabled).Select(item => new AppNotification(
             $"class-{item.Id}", "Today", item.Title, $"{item.CourseCode} starts at {item.StartTime}.",
             item.StartTime, item.Mode == "Online" ? "online" : "clock", true,
             item.Mode == "Online" ? "Join meeting" : null)).ToList();
@@ -72,7 +72,7 @@ public sealed class DashboardState
         Schedule = schedule.OrderBy(item => item.SortTime).ToList();
 
         // Build simple alerts from real class rows. An empty database remains quiet.
-        Notifications = Schedule.Select(item => new AppNotification(
+        Notifications = Schedule.Where(item => item.ReminderEnabled).Select(item => new AppNotification(
             $"class-{item.Id}",
             "Today",
             item.Title,
@@ -181,7 +181,8 @@ public sealed class DashboardState
 /// <summary>Saved address and map coordinates for the two commute endpoints.</summary>
 public sealed record CommuteLocationSettings(
     string? HomeAddress, double? HomeLatitude, double? HomeLongitude,
-    string? SchoolAddress, double? SchoolLatitude, double? SchoolLongitude)
+    string? SchoolAddress, double? SchoolLatitude, double? SchoolLongitude,
+    bool LeaveReminderEnabled = true)
 {
     public static CommuteLocationSettings Empty { get; } = new(null, null, null, null, null, null);
 }
@@ -203,7 +204,8 @@ public sealed record ScheduleItem(
     string Location, string Instructor, string InstructorInitials, string Mode,
     string ColorCode, string? Link, string? Cfn = null, string? Section = null,
     decimal? Units = null, string? Days = null, string? MeetingTimes = null,
-    DateOnly? ScheduledDate = null, string? Notes = null, string? AttendanceStatus = null)
+    DateOnly? ScheduledDate = null, string? Notes = null, string? AttendanceStatus = null,
+    bool ReminderEnabled = true)
 {
     public string DisplayTimes => string.IsNullOrWhiteSpace(MeetingTimes)
         ? $"{StartTime}{(string.IsNullOrWhiteSpace(EndTime) ? "" : $" – {EndTime}")}"

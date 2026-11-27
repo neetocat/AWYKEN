@@ -1,7 +1,4 @@
 <Solution>
   <Project Path="AWYKEN/AWYKEN.Shared/AWYKEN.Shared.csproj" />
   <Project Path="AWYKEN/AWYKEN.Web/AWYKEN.Web.csproj" />
-  <Project Path="AWYKEN/AWYKEN/AWYKEN.csproj">
-    <Build Solution="Debug|*" Project="false" />
-  </Project>
 </Solution>

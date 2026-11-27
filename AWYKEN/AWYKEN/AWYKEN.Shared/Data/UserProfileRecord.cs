@@ -17,6 +17,7 @@ public sealed class UserProfileRecord
     // Administrators see /admin. New public sign-ups always start without this role.
     public bool IsAdmin { get; set; }
     public bool IsDisabled { get; set; }
+    public DateTime? ConsentGivenAtUtc { get; set; }
     public string? FullName { get; set; }
     public string? StudentEmail { get; set; }
     public string? StudentNumber { get; set; }
@@ -37,4 +38,5 @@ public sealed class UserProfileRecord
     public string? SchoolAddress { get; set; }
     public double? SchoolLatitude { get; set; }
     public double? SchoolLongitude { get; set; }
+    public bool LeaveReminderEnabled { get; set; } = true;
 }

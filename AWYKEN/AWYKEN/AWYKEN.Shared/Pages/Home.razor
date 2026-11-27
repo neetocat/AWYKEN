@@ -157,9 +157,7 @@
 
                             @if (item.Type == "online")
                             {
-                                @* TODO: wire this button to the actual meeting URL from the backend.
-                                   For external URLs, use NavigationManager or a MAUI-aware launcher as appropriate. *@
-                                <button class="join-button" @onclick="JoinMeeting">Join</button>
+                                <button class="join-button" @onclick="() => JoinMeeting(item.Link)">Join</button>
                             }
                             else
                             {
@@ -309,11 +307,25 @@
         Message = null;
     }
 
-    // TODO: connect to ScheduleItem.Link when the real meeting URLs are available.
-    // This placeholder deliberately avoids calling a MAUI-only API from AWYKEN.Shared.
-    private void JoinMeeting()
+    private void JoinMeeting(string? meetingLink)
     {
-        ShowMessage("Google Meet", "Connect this button to the meeting URL when the backend is ready.");
+        if (string.IsNullOrWhiteSpace(meetingLink))
+        {
+            ShowMessage("Meeting link unavailable", "No meeting URL has been saved for this class.");
+            return;
+        }
+
+        var link = meetingLink.Trim();
+        if (!Uri.TryCreate(link, UriKind.Absolute, out var meetingUri))
+            Uri.TryCreate($"https://{link}", UriKind.Absolute, out meetingUri);
+
+        if (meetingUri is null || meetingUri.Scheme is not ("http" or "https"))
+        {
+            ShowMessage("Invalid meeting link", "Add a valid http or https meeting URL to this class.");
+            return;
+        }
+
+        Navigation.NavigateTo(meetingUri.AbsoluteUri, forceLoad: true);
     }
 
 }

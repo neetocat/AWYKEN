@@ -9,9 +9,9 @@
         <section class="class-reminder-dialog" role="alertdialog" aria-modal="true" aria-labelledby="class-reminder-title" @onclick:stopPropagation="true">
             <div class="class-reminder-icon" aria-hidden="true">◷</div>
             <div>
-                <h2 id="class-reminder-title">Class starting soon</h2>
-                <p><strong>@reminder.Title</strong> (@reminder.CourseCode) starts in 5 minutes.</p>
-                <p class="class-reminder-details">@reminder.StartTime · @reminder.Location</p>
+                <h2 id="class-reminder-title">@reminderHeading</h2>
+                <p><strong>@reminder.Title</strong> (@reminder.CourseCode) @reminderMessage</p>
+                <p class="class-reminder-details">@reminderDetails</p>
             </div>
             <button class="class-reminder-dismiss" @onclick="Dismiss">Got it</button>
         </section>
@@ -22,6 +22,9 @@
     private readonly HashSet<string> notifiedClasses = [];
     private CancellationTokenSource? cancellation;
     private ScheduleItem? reminder;
+    private string reminderHeading = "";
+    private string reminderMessage = "";
+    private string reminderDetails = "";
 
     protected override void OnInitialized()
     {
@@ -59,23 +62,53 @@
             var start = today.ToDateTime(TimeOnly.FromTimeSpan(parsedStart.TimeOfDay));
             var key = $"{today:yyyy-MM-dd}:{item.Id}:{start:HHmm}";
 
-            if (notifiedClasses.Contains(key) || now < start.AddMinutes(-5) || now >= start)
+            if (State.CommuteLocations.LeaveReminderEnabled
+                && State.EstimatedTravelMinutes is int travelMinutes)
+            {
+                var leaveTime = start.AddMinutes(-travelMinutes - 5);
+                var alertTime = leaveTime.AddMinutes(-5);
+                var commuteKey = $"commute:{key}";
+                if (!notifiedClasses.Contains(commuteKey) && now >= alertTime && now < leaveTime)
+                {
+                    notifiedClasses.Add(commuteKey);
+                    State.AppendNotifications([new AppNotification(
+                        commuteKey, "Today", $"Leave for {item.Title}",
+                        $"Leave by {leaveTime:h:mm tt} for {item.CourseCode}.",
+                        alertTime.ToString("h:mm tt"), "route", true, "View commute plan")]);
+                    await ShowReminderAsync(item, "Time to leave soon",
+                        $"starts at {item.StartTime}. Leave by {leaveTime:h:mm tt}.",
+                        $"Estimated drive: {travelMinutes} min · {item.Location}");
+                    break;
+                }
+            }
+
+            if (!item.ReminderEnabled || notifiedClasses.Contains(key)
+                || now < start.AddMinutes(-5) || now >= start)
                 continue;
 
             notifiedClasses.Add(key);
-            reminder = item;
-            await InvokeAsync(StateHasChanged);
-
-            try
-            {
-                await JS.InvokeVoidAsync("awykenNotifications.playReminderSound");
-            }
-            catch (JSException)
-            {
-                // The popup remains available when the browser blocks autoplay.
-            }
-
+            await ShowReminderAsync(item, "Class starting soon", "starts in 5 minutes.",
+                $"{item.StartTime} · {item.Location}");
             break;
+        }
+    }
+
+    private async Task ShowReminderAsync(
+        ScheduleItem item, string heading, string message, string details)
+    {
+        reminder = item;
+        reminderHeading = heading;
+        reminderMessage = message;
+        reminderDetails = details;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await JS.InvokeVoidAsync("awykenNotifications.playReminderSound");
+        }
+        catch (JSException)
+        {
+            // The popup remains available when the browser blocks autoplay.
         }
     }
 

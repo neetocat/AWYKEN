@@ -1,0 +1,23 @@
+<div class="account-privacy-consent">
+    <label>
+        <input type="checkbox" @bind="IsChecked" />
+        <span>I agree to the <button type="button" class="account-privacy-link" aria-expanded="@ShowNotice"
+                @onclick="() => ShowNotice = !ShowNotice" @onclick:stopPropagation="true">Data Privacy Act notice</button> (Republic Act No. 10173).</span>
+    </label>
+    @if (ShowNotice)
+    {
+        <p class="account-privacy-details" role="note">
+            The information you provide on this website will be collected, processed, and stored in accordance with the Data Privacy Act of 2012 (Republic Act No. 10173). It will be used only for AWYKEN's academic and account purposes.
+        </p>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public bool IsChecked { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> IsCheckedChanged { get; set; }
+
+    private bool ShowNotice;
+}

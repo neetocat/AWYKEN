@@ -18,6 +18,7 @@ public sealed class ScheduleRecord
     public required string Mode { get; set; }
     public required string ColorCode { get; set; }
     public string? MeetingLink { get; set; }
+    public bool ReminderEnabled { get; set; } = true;
     public string? Cfn { get; set; }
     public string? Section { get; set; }
     public decimal? Units { get; set; }

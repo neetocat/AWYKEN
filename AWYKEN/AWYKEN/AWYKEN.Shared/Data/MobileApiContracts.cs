@@ -5,7 +5,7 @@ using AWYKEN.Shared.Services;
 namespace AWYKEN.Shared.Data;
 
 public sealed record ApiSignInRequest(string Email, string Password);
-public sealed record ApiSignUpRequest(string DisplayName, string Email, string Password);
+public sealed record ApiSignUpRequest(string DisplayName, string Email, string Password, bool ConsentGiven);
 public sealed record ApiSessionReply(string? Error, string? AccessToken, int? ProfileId,
     bool IsAdmin, ApiDashboardSnapshot? Dashboard);
 public sealed record ApiSessionSnapshot(int? ProfileId, bool IsAuthenticated, bool IsAdmin,

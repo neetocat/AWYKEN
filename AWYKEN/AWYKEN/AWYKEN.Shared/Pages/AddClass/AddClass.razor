@@ -289,8 +289,9 @@ else if (ShowResult)
             initials,
             Mode,
             "#5268ca",
-            null,
-            Days: days);
+            Mode == "Online" ? Location.Trim() : null,
+            Days: days,
+            ReminderEnabled: ReminderEnabled);
 
         IsSaving = true;
         ShowResult = false;

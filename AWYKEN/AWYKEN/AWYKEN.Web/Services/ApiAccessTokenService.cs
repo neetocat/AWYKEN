@@ -10,11 +10,11 @@ public sealed class ApiAccessTokenService(
     IDbContextFactory<AwykenDbContext> contextFactory,
     byte[] signingKey)
 {
-    private static readonly TimeSpan Lifetime = TimeSpan.FromHours(8);
+    public static TimeSpan TokenLifetime => TimeSpan.FromHours(8);
 
     public string Issue(int profileId)
     {
-        var payload = $"{profileId}:{DateTimeOffset.UtcNow.Add(Lifetime).ToUnixTimeSeconds()}:{Convert.ToHexString(RandomNumberGenerator.GetBytes(16))}";
+        var payload = $"{profileId}:{DateTimeOffset.UtcNow.Add(TokenLifetime).ToUnixTimeSeconds()}:{Convert.ToHexString(RandomNumberGenerator.GetBytes(16))}";
         var encoded = Base64Url(Encoding.UTF8.GetBytes(payload));
         var signature = HMACSHA256.HashData(signingKey, Encoding.ASCII.GetBytes(encoded));
         return $"{encoded}.{Base64Url(signature)}";

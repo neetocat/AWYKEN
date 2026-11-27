@@ -56,6 +56,7 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(profile => profile.Phone).HasMaxLength(40);
             entity.Property(profile => profile.HomeAddress).HasMaxLength(300);
             entity.Property(profile => profile.SchoolAddress).HasMaxLength(300);
+            entity.Property(profile => profile.LeaveReminderEnabled).HasDefaultValue(true);
             // One row per email, while the anonymous Guest profile keeps a null email.
             // The filter uses SQL Server bracket syntax rather than SQLite double quotes.
             entity.HasIndex(profile => profile.Email).IsUnique().HasFilter("[Email] IS NOT NULL");
@@ -71,6 +72,7 @@ public sealed class AwykenDbContext(DbContextOptions<AwykenDbContext> options)
             entity.Property(item => item.Mode).HasMaxLength(30).IsRequired();
             entity.Property(item => item.ColorCode).HasMaxLength(20).IsRequired();
             entity.Property(item => item.MeetingLink).HasMaxLength(500);
+            entity.Property(item => item.ReminderEnabled).HasDefaultValue(true);
             entity.Property(item => item.Cfn).HasMaxLength(40);
             entity.Property(item => item.Section).HasMaxLength(80);
             entity.Property(item => item.Days).HasMaxLength(40);

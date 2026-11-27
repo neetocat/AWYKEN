@@ -1,4 +1,13 @@
-<Router AppAssembly="typeof(AWYKEN.Web.Components.Pages.Admin.Admin).Assembly"
+@using AWYKEN.Shared.Data
+@using AWYKEN.Shared.Services
+@using Microsoft.Extensions.Logging
+@inject IJSRuntime JS
+@inject LocalAccountSession Account
+@inject IAwykenDataService Data
+@inject ILogger<WebRoutes> Logger
+
+<Router @key="sessionVersion"
+        AppAssembly="typeof(AWYKEN.Web.Components.Pages.Admin.Admin).Assembly"
         AdditionalAssemblies="new[] { typeof(AWYKEN.Shared._Imports).Assembly }"
         NotFoundPage="typeof(AWYKEN.Shared.Pages.NotFound)">
     <Found Context="routeData">
@@ -6,3 +15,30 @@
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
+
+@code {
+    private int sessionVersion;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        try
+        {
+            var profileId = await JS.InvokeAsync<int?>("awykenAccountSession.restore");
+            if (profileId is not int signedInProfileId)
+                return;
+
+            Account.SignIn(signedInProfileId);
+            await Data.InitializeAsync();
+            await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+            sessionVersion++;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (JSException exception)
+        {
+            Logger.LogWarning(exception, "The browser sign-in session could not be restored.");
+        }
+    }
+}

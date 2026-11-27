@@ -17,7 +17,7 @@
             <article class="student-metric"><span>Suspended</span><strong>@students.Count(s => s.AccountStatus == "Suspended")</strong></article>
         </div>
         <section class="feature-card student-admin-panel">
-            <div class="student-admin-heading"><div><h2>Registered students</h2><p>View accounts, edit student information, and manage sign-in access.</p></div><span class="live-dot">LIVE DATA</span></div>
+            <div class="student-admin-heading"><div><h2>Registered students</h2><p>View accounts, edit student information, and manage sign-in access.</p></div></div>
             <div class="student-tools"><label class="student-search">⌕ <input @bind="search" @bind:event="oninput" placeholder="Search name, email, student number..." /></label><select @bind="statusFilter"><option value="All">All statuses</option><option value="Active">Active</option><option value="Deactivated">Deactivated</option><option value="Suspended">Suspended</option></select><select @bind="programFilter"><option value="All">All programs</option>@foreach (var program in programs) { <option value="@program">@program</option> }</select></div>
             <div class="table-wrap"><table><thead><tr><th>STUDENT</th><th>STUDENT NUMBER</th><th>PROGRAM / SECTION</th><th>ACCOUNT STATUS</th><th>REGISTERED</th><th>ACTIVITY</th><th></th></tr></thead><tbody>
             @foreach (var student in FilteredStudents)

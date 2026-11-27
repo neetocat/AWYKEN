@@ -43,7 +43,8 @@ public class ApiAwykenDataService : DispatchProxy
         if (targetMethod.Name == nameof(IAwykenDataService.SignInAsync))
             return SignInAsync((string)args[0]!, (string)args[1]!, GetCancellationToken(args));
         if (targetMethod.Name == nameof(IAwykenDataService.SignUpAsync))
-            return SignUpAsync((string)args[0]!, (string)args[1]!, (string)args[2]!, GetCancellationToken(args));
+            return SignUpAsync((string)args[0]!, (string)args[1]!, (string)args[2]!,
+                (bool)args[3]!, GetCancellationToken(args));
         if (targetMethod.Name == nameof(IAwykenDataService.SignOutAsync))
             return SignOutAsync(GetCancellationToken(args));
 
@@ -105,10 +106,10 @@ public class ApiAwykenDataService : DispatchProxy
     }
 
     private async Task<string?> SignUpAsync(string displayName, string email, string password,
-        CancellationToken cancellationToken)
+        bool consentGiven, CancellationToken cancellationToken)
     {
         var reply = await AuthenticateAsync("/api/v1/auth/sign-up",
-            new ApiSignUpRequest(displayName, email, password), cancellationToken);
+            new ApiSignUpRequest(displayName, email, password, consentGiven), cancellationToken);
         return await ApplyAuthReplyAsync(reply, cancellationToken);
     }
 

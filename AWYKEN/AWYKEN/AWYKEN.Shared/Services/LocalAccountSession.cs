@@ -1,6 +1,6 @@
 namespace AWYKEN.Shared.Services;
 
-/// <summary>Holds the signed-in local profile for the current app session.</summary>
+/// <summary>Holds the signed-in profile for the current circuit; the web host restores it from its secure session cookie.</summary>
 public sealed class LocalAccountSession
 {
     public int? ProfileId { get; private set; }

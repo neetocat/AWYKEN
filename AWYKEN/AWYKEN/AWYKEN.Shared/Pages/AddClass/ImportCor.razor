@@ -1,6 +1,9 @@
 @page "/import-cor"
 @using AWYKEN.Shared.Services
+@using AWYKEN.Shared.Components
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject IFormFactor FormFactor
 @inject DashboardState State
 @inject CorScheduleImporter Importer
 @inject AWYKEN.Shared.Data.IAwykenDataService Data
@@ -49,8 +52,9 @@
                             </span>
                         </label>
                     }
+                    <AccountPrivacyNotice @bind-IsChecked="ConsentGiven" />
                     @if (!string.IsNullOrWhiteSpace(status)) { <p class="import-account-error" role="alert">@status</p> }
-                    <button class="import-auth-submit" disabled="@Working" @onclick="Authenticate">@(Working ? "Please wait…" : CreateAccount ? "Create account and continue" : "Log in and continue")</button>
+                    <button class="import-auth-submit" disabled="@(Working || !ConsentGiven)" @onclick="Authenticate">@(Working ? "Please wait…" : CreateAccount ? "Create account and continue" : "Log in and continue")</button>
                     <small>Your COR importer and review flow stay the same after sign-in.</small>
                 </section>
             }
@@ -87,6 +91,7 @@
     private bool Working;
     private bool ShowPassword;
     private bool ShowConfirmPassword;
+    private bool ConsentGiven;
     private string Email = "";
     private string Password = "";
     private string ConfirmPassword = "";
@@ -98,6 +103,11 @@
     private async Task Authenticate()
     {
         status = null;
+        if (!ConsentGiven)
+        {
+            status = "Agree to the Data Privacy Act notice before continuing.";
+            return;
+        }
         if (string.IsNullOrWhiteSpace(Email) || !Email.Contains('@'))
         {
             status = "Enter the email address for your AWYKEN account.";
@@ -118,12 +128,18 @@
         try
         {
             status = CreateAccount
-                ? await Data.SignUpAsync(string.IsNullOrWhiteSpace(DisplayName) ? Email.Trim() : DisplayName.Trim(), Email, Password)
+                ? await Data.SignUpAsync(string.IsNullOrWhiteSpace(DisplayName) ? Email.Trim() : DisplayName.Trim(), Email, Password, ConsentGiven)
                 : await Data.SignInAsync(Email, Password);
             if (status is null && Data.IsAuthenticated)
-                status = null;
+            {
+                if (string.Equals(FormFactor.GetFormFactor(), "Web", StringComparison.OrdinalIgnoreCase)
+                    && !await JS.InvokeAsync<bool>("awykenAccountSession.signIn", Email, Password))
+                    status = "You are signed in, but this browser session could not be saved. Please try again.";
+            }
             else if (status is null)
+            {
                 status = "We couldn't sign you in. Please try again.";
+            }
         }
         catch (Exception)
         {

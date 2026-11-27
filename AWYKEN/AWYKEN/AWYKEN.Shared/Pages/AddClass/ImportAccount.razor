@@ -1,6 +1,9 @@
 @page "/import-account"
 @using AWYKEN.Shared.Data
 @using AWYKEN.Shared.Services
+@using AWYKEN.Shared.Components
+@inject IJSRuntime JS
+@inject IFormFactor FormFactor
 @inject DashboardState State
 @inject IAwykenDataService Data
 @inject NavigationManager Navigation
@@ -68,11 +71,12 @@
                         </label>
                         <small class="import-account-hint">Use at least 8 characters. This password is not part of your COR.</small>
                     }
+                    <AccountPrivacyNotice @bind-IsChecked="ConsentGiven" />
                     @if (!string.IsNullOrWhiteSpace(Error))
                     {
                         <p class="import-account-error" role="alert">@Error</p>
                     }
-                    <button class="primary-action" disabled="@Working" @onclick="Continue">
+                    <button class="primary-action" disabled="@(Working || !ConsentGiven)" @onclick="Continue">
                         @(Working ? "Please wait…" : AccountExists ? "Log in and continue" : "Sign up and continue")
                     </button>
                 </section>
@@ -88,6 +92,7 @@
     private bool Working;
     private bool ShowPassword;
     private bool ShowConfirmPassword;
+    private bool ConsentGiven;
     private string Password = "";
     private string ConfirmPassword = "";
     private string? Error;
@@ -120,6 +125,11 @@
     {
         if (Student is null || string.IsNullOrWhiteSpace(Student.Email)) return;
         Error = null;
+        if (!ConsentGiven)
+        {
+            Error = "Agree to the Data Privacy Act notice before continuing.";
+            return;
+        }
         if (string.IsNullOrWhiteSpace(Password))
         {
             Error = "Enter your password to continue.";
@@ -136,8 +146,14 @@
         {
             Error = AccountExists
                 ? await Data.SignInAsync(Student.Email, Password)
-                : await Data.SignUpAsync(Student.FullName ?? Student.FirstName ?? "Student", Student.Email, Password);
+                : await Data.SignUpAsync(Student.FullName ?? Student.FirstName ?? "Student", Student.Email, Password, ConsentGiven);
             if (Error is not null) return;
+            if (string.Equals(FormFactor.GetFormFactor(), "Web", StringComparison.OrdinalIgnoreCase)
+                && !await JS.InvokeAsync<bool>("awykenAccountSession.signIn", Student.Email, Password))
+            {
+                Error = "You are signed in, but this browser session could not be saved. Please try again.";
+                return;
+            }
 
             await Data.SaveImportedProfileAsync(Student, DateOnly.FromDateTime(DateTime.Today));
             Navigation.NavigateTo("/verify-schedule");

@@ -9,7 +9,19 @@ namespace AWYKEN.Web.Services;
 
 public static class AwykenApiEndpoints
 {
+    private const string SessionCookieName = "awyken-session";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    private static void SetSessionCookie(HttpContext context, string token) =>
+        context.Response.Cookies.Append(SessionCookieName, token, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            IsEssential = true,
+            Path = "/",
+            Expires = DateTimeOffset.UtcNow.Add(ApiAccessTokenService.TokenLifetime)
+        });
 
     public static void MapAwykenApi(this WebApplication app)
     {
@@ -17,22 +29,28 @@ public static class AwykenApiEndpoints
         {
             if (!context.Request.Path.StartsWithSegments("/api/v1", out var remainder)
                 || remainder.StartsWithSegments("/auth/sign-in")
-                || remainder.StartsWithSegments("/auth/sign-up"))
+                || remainder.StartsWithSegments("/auth/sign-up")
+                || remainder.StartsWithSegments("/auth/web-sign-in")
+                || remainder.StartsWithSegments("/auth/sign-out"))
             {
                 await next();
                 return;
             }
 
             var authorization = context.Request.Headers.Authorization.ToString();
-            if (authorization.Length > 0)
+            var token = authorization.Length > 0
+                ? authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                    ? authorization[7..].Trim()
+                    : null
+                : context.Request.Cookies[SessionCookieName];
+            if (authorization.Length > 0 && token is null)
             {
-                if (!authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                {
-                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return;
-                }
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return;
+            }
 
-                var token = authorization[7..].Trim();
+            if (!string.IsNullOrWhiteSpace(token))
+            {
                 var tokenService = context.RequestServices.GetRequiredService<ApiAccessTokenService>();
                 var profileId = await tokenService.ValidateAsync(token, context.RequestAborted);
                 if (profileId is null)
@@ -64,6 +82,22 @@ public static class AwykenApiEndpoints
                 isAdmin, ApiDashboardSnapshot.From(state)));
         }).RequireRateLimiting("auth");
 
+        app.MapPost("/api/v1/auth/web-sign-in", async (
+            ApiSignInRequest request,
+            IAwykenDataService data,
+            LocalAccountSession account,
+            ApiAccessTokenService tokens,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var error = await data.SignInAsync(request.Email, request.Password, ct);
+            if (error is not null || account.ProfileId is not int profileId)
+                return Results.Ok(new { error = error ?? "Sign-in failed." });
+
+            SetSessionCookie(context, tokens.Issue(profileId));
+            return Results.Ok(new { error = (string?)null });
+        }).RequireRateLimiting("auth");
+
         app.MapPost("/api/v1/auth/sign-up", async (
             ApiSignUpRequest request,
             IAwykenDataService data,
@@ -72,12 +106,14 @@ public static class AwykenApiEndpoints
             DashboardState state,
             CancellationToken ct) =>
         {
-            var error = await data.SignUpAsync(request.DisplayName, request.Email, request.Password, ct);
+            var error = await data.SignUpAsync(request.DisplayName, request.Email, request.Password,
+                request.ConsentGiven, ct);
             if (error is not null || account.ProfileId is not int profileId)
                 return Results.Ok(new ApiSessionReply(error ?? "Sign-up failed.", null, null, false, null));
 
+            var token = tokens.Issue(profileId);
             var isAdmin = await data.IsAdminAsync(ct);
-            return Results.Ok(new ApiSessionReply(null, tokens.Issue(profileId), profileId,
+            return Results.Ok(new ApiSessionReply(null, token, profileId,
                 isAdmin, ApiDashboardSnapshot.From(state)));
         }).RequireRateLimiting("auth");
 
@@ -88,6 +124,18 @@ public static class AwykenApiEndpoints
             await data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today), ct);
             return Results.Ok(new ApiSessionSnapshot(account.ProfileId, data.IsAuthenticated,
                 await data.IsAdminAsync(ct), ApiDashboardSnapshot.From(state)));
+        });
+
+        app.MapPost("/api/v1/auth/sign-out", (HttpContext context) =>
+        {
+            context.Response.Cookies.Delete(SessionCookieName, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Path = "/"
+            });
+            return Results.NoContent();
         });
 
         app.MapPost("/api/v1/data/rpc", InvokeDataOperationAsync);

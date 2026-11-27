@@ -208,8 +208,12 @@ public sealed class SqlServerAwykenDataService(
         $"Underlying error: {cause.Message}";
 
     public async Task<string?> SignUpAsync(
-        string displayName, string email, string password, CancellationToken cancellationToken = default)
+        string displayName, string email, string password, bool consentGiven,
+        CancellationToken cancellationToken = default)
     {
+        if (!consentGiven)
+            return "Agree to the Data Privacy Act notice before creating an account.";
+
         await InitializeAsync(cancellationToken);
         var normalizedEmail = NormalizeEmail(email);
         if (!IsValidEmail(normalizedEmail))
@@ -239,6 +243,7 @@ public sealed class SqlServerAwykenDataService(
             IsAdmin = false,
             PasswordHash = await Task.Run(() => LocalPasswordHasher.Hash(password), cancellationToken),
             AccountStatus = "Active",
+            ConsentGivenAtUtc = DateTime.UtcNow,
             RegisteredAt = DateTime.UtcNow,
             LastActivityAt = DateTime.UtcNow
         };
@@ -895,7 +900,8 @@ public sealed class SqlServerAwykenDataService(
         var commute = profile is null
             ? CommuteLocationSettings.Empty
             : new CommuteLocationSettings(profile.HomeAddress, profile.HomeLatitude, profile.HomeLongitude,
-                profile.SchoolAddress, profile.SchoolLatitude, profile.SchoolLongitude);
+                profile.SchoolAddress, profile.SchoolLatitude, profile.SchoolLongitude,
+                profile.LeaveReminderEnabled);
         state.ReplaceFromDatabase(profile?.DisplayName, profile?.Email, rows.Select(ToScheduleItem), student, commute);
     }
 
@@ -950,6 +956,12 @@ public sealed class SqlServerAwykenDataService(
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
         var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
         var profile = await db.Profiles.SingleAsync(item => item.Id == profileId, cancellationToken);
+        var endpointsChanged = profile.HomeAddress != locations.HomeAddress
+            || profile.HomeLatitude != locations.HomeLatitude
+            || profile.HomeLongitude != locations.HomeLongitude
+            || profile.SchoolAddress != locations.SchoolAddress
+            || profile.SchoolLatitude != locations.SchoolLatitude
+            || profile.SchoolLongitude != locations.SchoolLongitude;
 
         profile.HomeAddress = locations.HomeAddress;
         profile.HomeLatitude = locations.HomeLatitude;
@@ -957,10 +969,11 @@ public sealed class SqlServerAwykenDataService(
         profile.SchoolAddress = locations.SchoolAddress;
         profile.SchoolLatitude = locations.SchoolLatitude;
         profile.SchoolLongitude = locations.SchoolLongitude;
+        profile.LeaveReminderEnabled = locations.LeaveReminderEnabled;
 
         await db.SaveChangesAsync(cancellationToken);
-        // A changed endpoint invalidates the in-memory estimate until the next route lookup.
-        state.SetEstimatedTravelMinutes(null);
+        if (endpointsChanged)
+            state.SetEstimatedTravelMinutes(null);
         await RefreshAsync(refreshDate, cancellationToken);
     }
 
@@ -1027,6 +1040,7 @@ public sealed class SqlServerAwykenDataService(
         }
         profile.HomeAddress = locations.HomeAddress;
         profile.SchoolAddress = locations.SchoolAddress;
+        profile.LeaveReminderEnabled = locations.LeaveReminderEnabled;
 
         await db.SaveChangesAsync(cancellationToken);
         state.SetEstimatedTravelMinutes(null);
@@ -1073,6 +1087,7 @@ public sealed class SqlServerAwykenDataService(
         record.Mode = item.Mode;
         record.ColorCode = item.ColorCode;
         record.MeetingLink = item.Link;
+        record.ReminderEnabled = item.ReminderEnabled;
         record.Cfn = item.Cfn;
         record.Section = item.Section;
         record.Units = item.Units;
@@ -1132,6 +1147,7 @@ public sealed class SqlServerAwykenDataService(
             record.Days = NormalizeDays(item.Days);
             record.MeetingTimes = item.MeetingTimes;
             record.MeetingLink = item.Link;
+            record.ReminderEnabled = item.ReminderEnabled;
             db.Schedule.Add(record);
         }
 
@@ -1340,7 +1356,8 @@ public sealed class SqlServerAwykenDataService(
             row.MeetingTimes,
             row.Days is null ? DateOnly.FromDateTime(row.StartsAt) : null,
             row.Notes,
-            row.AttendanceStatus);
+            row.AttendanceStatus,
+            row.ReminderEnabled);
     }
 
     private static DateTime CombineDateAndTimeOrDefault(DateOnly date, string time, DateTime? fallback = null)

@@ -1,11 +1,13 @@
 ﻿@page "/commute"
 @using AWYKEN.Shared.Data
 @using AWYKEN.Shared.Services
+@using Microsoft.Extensions.Logging
 @inject AWYKEN.Shared.Services.DashboardState State
 @inject IAwykenDataService Data
 @inject ICommuteMapService MapService
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@inject ILogger<AWYKEN.Shared.Pages.Commute> Logger
 
 <PageTitle>AWYKEN</PageTitle>
 
@@ -605,6 +607,7 @@
         await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
         HomeAddressInput = State.CommuteLocations.HomeAddress ?? "";
         SchoolAddressInput = State.CommuteLocations.SchoolAddress ?? "";
+        ReminderOn = State.CommuteLocations.LeaveReminderEnabled;
     }
 
     // Leaflet is loaded by the shared JS helper; subsequent renders update its markers and route.
@@ -728,7 +731,22 @@
         ? LeaveTime is DateTime leave ? $"We'll alert you at {leave.AddMinutes(-5):h:mm tt}" : "Add a class and calculate a route to set a reminder time"
         : "Turn on to get alerted before you leave";
 
-    private void ToggleReminder() => ReminderOn = !ReminderOn;
+    private async Task ToggleReminder()
+    {
+        var enabled = !ReminderOn;
+        var locations = State.CommuteLocations with { LeaveReminderEnabled = enabled };
+        try
+        {
+            await Data.SaveCommuteLocationsAsync(locations, DateOnly.FromDateTime(DateTime.Today));
+            ReminderOn = enabled;
+            MapError = null;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.LogError(exception, "Could not save commute reminder preference.");
+            MapError = "The commute reminder setting could not be saved. Please try again.";
+        }
+    }
 
     private void GoBack() => Navigation.NavigateTo("/");
 }

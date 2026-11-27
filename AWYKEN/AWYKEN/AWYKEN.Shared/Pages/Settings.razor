@@ -1,11 +1,14 @@
 @page "/settings"
 @using AWYKEN.Shared.Data
+@using AWYKEN.Shared.Components
+@using Microsoft.Extensions.Logging
 @using Microsoft.JSInterop
 @inject AWYKEN.Shared.Services.DashboardState State
 @inject IAwykenDataService Data
 @inject NavigationManager Navigation
 @inject AWYKEN.Shared.Services.IFormFactor FormFactor
 @inject IJSRuntime JS
+@inject ILogger<AWYKEN.Shared.Pages.Settings> Logger
 
 <PageTitle>Settings - @AppName</PageTitle>
 
@@ -61,7 +64,7 @@
                             aria-label="Log in or sign up"
                             @onclick="OpenLoginCard"
                             @onclick:stopPropagation="true">
-                        ♢
+                        Sign in
                     </button>
                 }
             </section>
@@ -161,7 +164,7 @@
                     </span>
 
                     <button class="toggle @(commuteEnabled ? "on" : "")"
-                            @onclick="() => commuteEnabled = !commuteEnabled"
+                            @onclick="ToggleCommuteReminderAsync"
                             role="switch"
                             aria-checked="@commuteEnabled"
                             aria-label="Toggle commute reminders">
@@ -484,6 +487,8 @@
                 </p>
             }
 
+            <AccountPrivacyNotice @bind-IsChecked="AccountConsentGiven" />
+
             @if (!string.IsNullOrWhiteSpace(AccountError))
             {
                 <p class="account-error" role="alert">
@@ -492,7 +497,7 @@
             }
 
             <button class="account-submit"
-                    disabled="@Working"
+                    disabled="@(Working || !AccountConsentGiven)"
                     @onclick="SubmitAccount">
 
                 @(Working
@@ -571,6 +576,7 @@
     private string ConfirmPasswordInput = "";
     private bool ShowAccountPassword;
     private bool ShowConfirmAccountPassword;
+    private bool AccountConsentGiven;
 
     // Shows the ADMIN settings row for accounts flagged as administrators.
     private bool IsAdminUser;
@@ -646,6 +652,7 @@
     protected override async Task OnInitializedAsync()
     {
         await Data.RefreshAsync(DateOnly.FromDateTime(DateTime.Today));
+        commuteEnabled = State.CommuteLocations.LeaveReminderEnabled;
         IsWebHost = string.Equals(FormFactor.GetFormFactor(), "Web", StringComparison.OrdinalIgnoreCase);
         IsAdminUser = await Data.IsAdminAsync();
         var appSettings = await Data.GetAppSettingsAsync();
@@ -682,6 +689,23 @@
         TimeFormatLoaded = true;
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleCommuteReminderAsync()
+    {
+        var enabled = !commuteEnabled;
+        var locations = State.CommuteLocations with { LeaveReminderEnabled = enabled };
+        try
+        {
+            await Data.SaveCommuteLocationsAsync(locations, DateOnly.FromDateTime(DateTime.Today));
+            commuteEnabled = enabled;
+            message = "Commute reminder setting saved.";
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.LogError(exception, "Could not save commute reminder preference from Settings.");
+            message = "The commute reminder setting could not be saved. Please try again.";
+        }
     }
 
     // TIME FORMAT
@@ -805,6 +829,8 @@
 
     private async Task Logout()
     {
+        if (IsWebHost)
+            await JS.InvokeVoidAsync("awykenAccountSession.signOut");
         await Data.SignOutAsync(
             DateOnly.FromDateTime(DateTime.Today));
 
@@ -850,7 +876,19 @@
                 : await Data.SignUpAsync(
                     DisplayNameInput,
                     EmailInput,
-                    PasswordInput);
+                    PasswordInput,
+                    AccountConsentGiven);
+
+            if (AccountError is null && IsWebHost)
+            {
+                var sessionSaved = await JS.InvokeAsync<bool>(
+                    "awykenAccountSession.signIn", EmailInput, PasswordInput);
+                if (!sessionSaved)
+                {
+                    AccountError = "Your account is signed in, but this browser session could not be saved. Please try again.";
+                    return;
+                }
+            }
 
             if (AccountError is null)
             {
