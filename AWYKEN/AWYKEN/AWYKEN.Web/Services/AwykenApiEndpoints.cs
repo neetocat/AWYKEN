@@ -117,8 +117,8 @@ public static class AwykenApiEndpoints
         DashboardState state,
         CancellationToken cancellationToken)
     {
-        // Authentication is handled by dedicated endpoints so passwords can never be
-        // passed through the generic operation route or echoed in an error response.
+        // Sign-in and sign-up use dedicated endpoints so credentials are not sent through
+        // the generic operation route or echoed in an error response.
         if (request.Method is nameof(IAwykenDataService.SignInAsync)
             or nameof(IAwykenDataService.SignUpAsync)
             or nameof(IAwykenDataService.SignOutAsync))
