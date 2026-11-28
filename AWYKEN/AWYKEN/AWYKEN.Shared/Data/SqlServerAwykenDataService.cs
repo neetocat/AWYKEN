@@ -296,6 +296,34 @@ public sealed class SqlServerAwykenDataService(
         return null;
     }
 
+    public async Task<string?> ChangePasswordAsync(string currentPassword, string newPassword,
+        string confirmation, CancellationToken cancellationToken = default)
+    {
+        if (!IsAuthenticated)
+            return "Sign in to change your password.";
+        if (string.IsNullOrEmpty(currentPassword))
+            return "Enter your current password.";
+        if (newPassword.Length < 8)
+            return "Use a password with at least 8 characters.";
+        if (!string.Equals(newPassword, confirmation, StringComparison.Ordinal))
+            return "The new passwords do not match.";
+        if (string.Equals(currentPassword, newPassword, StringComparison.Ordinal))
+            return "Choose a password different from your current one.";
+
+        await InitializeAsync(cancellationToken);
+        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var profileId = await GetCurrentProfileIdAsync(db, cancellationToken);
+        var profile = await db.Profiles.SingleOrDefaultAsync(item => item.Id == profileId && item.Email != null,
+            cancellationToken);
+        if (profile?.PasswordHash is null || !await Task.Run(
+                () => LocalPasswordHasher.Verify(currentPassword, profile.PasswordHash), cancellationToken))
+            return "Your current password is incorrect.";
+
+        profile.PasswordHash = await Task.Run(() => LocalPasswordHasher.Hash(newPassword), cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return null;
+    }
+
     public async Task<bool> IsAdminAsync(CancellationToken cancellationToken = default)
     {
         await InitializeAsync(cancellationToken);
