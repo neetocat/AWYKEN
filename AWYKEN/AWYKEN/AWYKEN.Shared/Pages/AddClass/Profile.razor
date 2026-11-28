@@ -113,8 +113,43 @@
         }
 
         <ProfileGroup Title="Account &amp; security">
-            <ProfileRow Icon="lock" Label="Change password" Value="Last updated: not available" IsAction="true" />
+            <button type="button" class="profile-security-action" @onclick="OpenPasswordDialog">
+                <ProfileRow Icon="lock" Label="Change password" Value="Update your account password" IsAction="true" />
+            </button>
         </ProfileGroup>
+
+        @if (ShowPasswordDialog)
+        {
+            <div class="profile-password-overlay" @onclick="ClosePasswordDialog">
+                <section class="profile-password-dialog" role="dialog" aria-modal="true" aria-labelledby="change-password-title" @onclick:stopPropagation="true">
+                    <h2 id="change-password-title">Change password</h2>
+                    <p>Enter your current password, then choose a new one.</p>
+                    <form @onsubmit="ChangePassword" @onsubmit:preventDefault="true">
+                        <label class="profile-edit-field">Current password
+                            <span class="profile-password-input-wrap"><input type="@(ShowCurrentPassword ? "text" : "password")" @bind="CurrentPasswordInput" autocomplete="current-password" required />
+                                <button type="button" class="profile-password-toggle" aria-label="@(ShowCurrentPassword ? "Hide current password" : "Show current password")" aria-pressed="@ShowCurrentPassword" @onclick="() => ShowCurrentPassword = !ShowCurrentPassword"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>@if (ShowCurrentPassword) { <path d="m4 4 16 16"/> }</svg></button>
+                            </span>
+                        </label>
+                        <label class="profile-edit-field">New password
+                            <span class="profile-password-input-wrap"><input type="@(ShowNewPassword ? "text" : "password")" @bind="NewPasswordInput" autocomplete="new-password" minlength="8" required />
+                                <button type="button" class="profile-password-toggle" aria-label="@(ShowNewPassword ? "Hide new password" : "Show new password")" aria-pressed="@ShowNewPassword" @onclick="() => ShowNewPassword = !ShowNewPassword"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>@if (ShowNewPassword) { <path d="m4 4 16 16"/> }</svg></button>
+                            </span>
+                        </label>
+                        <label class="profile-edit-field">Confirm new password
+                            <span class="profile-password-input-wrap"><input type="@(ShowPasswordConfirmation ? "text" : "password")" @bind="PasswordConfirmationInput" autocomplete="new-password" minlength="8" required />
+                                <button type="button" class="profile-password-toggle" aria-label="@(ShowPasswordConfirmation ? "Hide confirmed password" : "Show confirmed password")" aria-pressed="@ShowPasswordConfirmation" @onclick="() => ShowPasswordConfirmation = !ShowPasswordConfirmation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>@if (ShowPasswordConfirmation) { <path d="m4 4 16 16"/> }</svg></button>
+                            </span>
+                        </label>
+                        @if (!string.IsNullOrWhiteSpace(PasswordError)) { <p class="profile-edit-message error" role="alert">@PasswordError</p> }
+                        @if (!string.IsNullOrWhiteSpace(PasswordMessage)) { <p class="profile-edit-message" role="status">@PasswordMessage</p> }
+                        <div class="profile-edit-actions">
+                            <button type="button" class="profile-cancel-button" @onclick="ClosePasswordDialog" disabled="@IsChangingPassword">Cancel</button>
+                            <button type="submit" class="profile-save-button" disabled="@IsChangingPassword">@(IsChangingPassword ? "Saving…" : "Change password")</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        }
     </main>
 
     <nav class="bottom-nav" aria-label="Main navigation">
@@ -130,6 +165,16 @@
     private StudentProfile Student => State.Student;
     private bool IsEditing;
     private bool IsSaving;
+    private bool ShowPasswordDialog;
+    private bool ShowCurrentPassword;
+    private bool ShowNewPassword;
+    private bool ShowPasswordConfirmation;
+    private bool IsChangingPassword;
+    private string CurrentPasswordInput = "";
+    private string NewPasswordInput = "";
+    private string PasswordConfirmationInput = "";
+    private string? PasswordError;
+    private string? PasswordMessage;
     private string? EditError;
     private string? EditMessage;
     private string FullNameInput = "";
@@ -153,6 +198,40 @@
         ? "Not set · tap Edit to add" : State.CommuteLocations.HomeAddress;
     private string Campus => string.IsNullOrWhiteSpace(State.CommuteLocations.SchoolAddress)
         ? "University of Makati" : State.CommuteLocations.SchoolAddress;
+
+    private void OpenPasswordDialog()
+    {
+        ShowPasswordDialog = true;
+        ShowCurrentPassword = ShowNewPassword = ShowPasswordConfirmation = false;
+        PasswordError = PasswordMessage = null;
+    }
+
+    private void ClosePasswordDialog()
+    {
+        if (IsChangingPassword) return;
+        ShowPasswordDialog = false;
+        ShowCurrentPassword = ShowNewPassword = ShowPasswordConfirmation = false;
+        CurrentPasswordInput = NewPasswordInput = PasswordConfirmationInput = "";
+        PasswordError = PasswordMessage = null;
+    }
+
+    private async Task ChangePassword()
+    {
+        PasswordError = PasswordMessage = null;
+        IsChangingPassword = true;
+        try
+        {
+            PasswordError = await Data.ChangePasswordAsync(CurrentPasswordInput, NewPasswordInput, PasswordConfirmationInput);
+            if (PasswordError is null)
+            {
+                PasswordMessage = "Your password has been changed.";
+                CurrentPasswordInput = NewPasswordInput = PasswordConfirmationInput = "";
+                ShowCurrentPassword = ShowNewPassword = ShowPasswordConfirmation = false;
+            }
+        }
+        catch (Exception ex) { PasswordError = ex.GetBaseException().Message; }
+        finally { IsChangingPassword = false; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
